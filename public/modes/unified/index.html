@@ -7433,11 +7433,4 @@ function closeViewer(){document.querySelector('#p5-public-view')?.remove();}
  return Object.freeze({makeLink,showShare,showPublish,publish,showRevoke,revoke,readPublished,officialUrl,snapshot,pack,unpack,openFromHash});
 })();
 
-</script><script>
-    document.addEventListener('click',function(ev){
-      const a=ev.target.closest&&ev.target.closest('a[href="../../"],a[href="../../#setup"]');
-      if(!a)return;
-      ev.preventDefault();
-      parent.postMessage({type:'PADEL5IVE_PREVIEW_GO_HOME',setup:a.getAttribute('href').includes('#setup')},'*');
-    },true);
-    </script></body></html>
+</script><!-- v5.4.13.1 production navigation: use native same-origin links for Home and Change mode. --></body></html>

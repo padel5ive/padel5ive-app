@@ -28,12 +28,12 @@
     "sha256": "2d1a2c76decfba0a9edb3bf0cc1d51608d612a708e86104f7221df6021e5ffe5"
   },
   "public/modes/club-match/index.html": {
-    "size": 3931429,
-    "sha256": "ab4e356e3a4d41ef4944585507048e7cc798e416b5d135894ba2f44e6404fe65"
+    "size": 3931182,
+    "sha256": "54201d088c57692b80a3504632b9c3caed81b8d2b00d3c35911e7646cafcecaf"
   },
   "public/modes/unified/index.html": {
-    "size": 3061933,
-    "sha256": "8dd52a4bf5a83b986557de1e5540ad945681b146072c1fe2c46d7289a11d931c"
+    "size": 3061686,
+    "sha256": "59f974dadddae54be833764f3eef745f19a89faf101219944aac2a22fb7a4b0e"
   },
   "public/og-cover.jpg": {
     "size": 37198,

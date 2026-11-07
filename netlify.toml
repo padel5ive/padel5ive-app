@@ -1,0 +1,33 @@
+# PADEL 5IVE · Unified v5.4.13 · Production-ready project layout
+# Important: keep functions outside the public publish directory.
+[build]
+  command = "npm run build"
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/unified-results"
+  to = "/.netlify/functions/unified-results"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/results"
+  to = "/.netlify/functions/results"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/u/*"
+  to = "/modes/unified/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/r/*"
+  to = "/modes/club-match/index.html"
+  status = 200
+  force = true

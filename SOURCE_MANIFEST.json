@@ -1,0 +1,46 @@
+{
+  ".gitignore": {
+    "size": 46,
+    "sha256": "8ddc2713e57ad8b198a979337a14ad1a4f67fd4aa18e6954c10c0eec705b5d36"
+  },
+  "README_DEPLOY.md": {
+    "size": 4496,
+    "sha256": "98f25f65bcd5540b92a18e6d34d8bf70f0dd1229e2fe9113a5222b0d94996de3"
+  },
+  "netlify/functions/results.mjs": {
+    "size": 1926,
+    "sha256": "e0fc8316fff6d47998558a897e47beadd44727774a70a77863347b4fe40ab1c4"
+  },
+  "netlify/functions/unified-results.mjs": {
+    "size": 7206,
+    "sha256": "420de57f93df5fa161c89ed733e069b4cea68bdd620fcdb3b18ca548a1a798cc"
+  },
+  "netlify.toml": {
+    "size": 687,
+    "sha256": "dc2498ac93b14b101df0a42d45439aa5f7e1a581143702a3a056903a11a3f5f9"
+  },
+  "package.json": {
+    "size": 261,
+    "sha256": "12364ab357e778986fc02cabc6633f4163d20e382f5c11217e7ffc9b5411bd3e"
+  },
+  "public/index.html": {
+    "size": 1615199,
+    "sha256": "2d1a2c76decfba0a9edb3bf0cc1d51608d612a708e86104f7221df6021e5ffe5"
+  },
+  "public/modes/club-match/index.html": {
+    "size": 3931429,
+    "sha256": "ab4e356e3a4d41ef4944585507048e7cc798e416b5d135894ba2f44e6404fe65"
+  },
+  "public/modes/unified/index.html": {
+    "size": 3061933,
+    "sha256": "8dd52a4bf5a83b986557de1e5540ad945681b146072c1fe2c46d7289a11d931c"
+  },
+  "public/og-cover.jpg": {
+    "size": 37198,
+    "sha256": "cd5129e2283ea9502fed874f42ae1789bd48aaeab6e12bf5eaeaecfb61d499b6"
+  },
+  "scripts/verify-deploy.mjs": {
+    "size": 1270,
+    "sha256": "f64516c23ef05664565619926cbd523af78f34349c9235823193aff60a94e1ee"
+  }
+}

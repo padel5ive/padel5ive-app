@@ -1,0 +1,19 @@
+{
+  "app": "PADEL 5IVE Unified Match Control",
+  "release": "5.5.16",
+  "baseline": "5.5.15",
+  "changes": [
+    "Initial setup and registration Tab, Shift+Tab, Enter/Next navigation in Unified and Team Showdown",
+    "Public Team Showdown champion card styled to dashboard finale; no runner-up"
+  ],
+  "mode_engine_changes": false,
+  "pdf_generator_changes": false,
+  "publishing_backend_changes": false,
+  "public_results_routes": [
+    "/u/{id}",
+    "/r/{id}"
+  ],
+  "live_netlify_tested": false,
+  "native_ipad_safari_tested": false,
+  "production_lock": false
+}

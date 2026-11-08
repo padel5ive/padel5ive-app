@@ -50,7 +50,10 @@ try{
  const meta=root.querySelectorAll('.p5-meta-stat-row .p5-meta-stat strong');
  if(meta.length>=3){meta[0].textContent=String(data.setup.courts||'—');meta[1].textContent=String((data.roster.A||[]).length+(data.roster.B||[]).length);meta[2].textContent=String(played);}
  set('.winner h2',winner?label(winner):'Final Results Pending');
- set('.winner .sub',hasStage3?'Official Championship Winners · The Decider':hasStage2?'Official Championship Winners · Team Duel':'Official Round Robin Winners');
+ set('.winner .p5-win-session',data.setup.sessionName||'TEAM SHOWDOWN');
+ const stageWinners=[{number:1,winner:stats.winner},...(hasStage2&&s2?.complete?[{number:2,winner:s2.winner}]:[]),...(hasStage3&&s3?.complete?[{number:3,winner:s3.winner}]:[])];
+ const championPills=root.querySelector('.p5-win-stages');
+ if(championPills)championPills.innerHTML=stageWinners.map(x=>'<span class="p5-win-stage-pill">Stage '+x.number+' · '+esc(x.winner?label(x.winner):'Draw')+'</span>').join('');
 
  root.querySelector('.top-status').textContent=winner?'FINAL':'PUBLISHED';
  const result=root.querySelector('#team-result');

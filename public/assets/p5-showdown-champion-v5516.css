@@ -1,0 +1,45 @@
+/* PADEL 5IVE 5.5.16 · Dashboard-matched Team Showdown public champion card */
+.winner.p5-dashboard-champion{
+ isolation:isolate!important;position:relative!important;display:flex!important;flex-direction:column!important;
+ align-items:stretch!important;justify-content:space-between!important;gap:0!important;
+ padding:0!important;min-height:354px!important;
+ border:1px solid rgba(226,191,136,.72)!important;border-radius:16px!important;
+ background:linear-gradient(126deg,#0b1724 0%,#101b27 30%,#1a2028 55%,#101b27 75%,#0a1522 100%)!important;
+ box-shadow:0 16px 44px rgba(0,0,0,.23),inset 0 1px rgba(255,239,209,.06)!important;
+ overflow:hidden!important;text-align:center
+}
+.winner.p5-dashboard-champion:before{
+ content:""!important;display:block!important;position:absolute!important;inset:0!important;pointer-events:none!important;
+ background:radial-gradient(ellipse 40% 86% at 50% 50%,rgba(231,172,91,.15),rgba(225,177,111,.075) 31%,transparent 79%),
+ radial-gradient(ellipse 70% 100% at 50% 110%,rgba(173,118,60,.14),transparent 68%),
+ linear-gradient(90deg,rgba(2,11,22,.29),transparent 30%,transparent 70%,rgba(2,11,22,.29))!important;z-index:0!important
+}
+.winner.p5-dashboard-champion:after{
+ content:""!important;display:block!important;position:absolute!important;inset:0!important;pointer-events:none!important;
+ background:linear-gradient(90deg,transparent 21%,rgba(232,182,106,.07) 50%,transparent 79%)!important;z-index:0!important
+}
+.winner.p5-dashboard-champion>*{position:relative;z-index:2}
+.p5-dashboard-champion .p5-win-watermark{position:absolute!important;top:48%;left:50%;transform:translate(-50%,-50%);width:280px;height:220px;z-index:1!important;opacity:.05;pointer-events:none}
+.p5-dashboard-champion .p5-win-watermark svg{width:100%;height:100%}
+.p5-dashboard-champion .p5-win-session{padding:25px 36px 2px;min-height:50px;display:flex;align-items:flex-start;justify-content:center;color:#e6cda8;font-size:clamp(10px,1vw,13px);font-weight:690;line-height:1.4;letter-spacing:.17em;text-transform:uppercase;overflow-wrap:anywhere;text-wrap:balance}
+.p5-dashboard-champion .p5-win-session:before,.p5-dashboard-champion .p5-win-session:after{content:"";width:25px;height:1px;flex:0 0 25px;margin:7px 12px 0;background:linear-gradient(90deg,transparent,rgba(227,181,113,.62))}
+.p5-dashboard-champion .p5-win-session:after{transform:rotate(180deg)}
+.p5-dashboard-champion .p5-win-center{display:flex;align-items:center;justify-content:center;flex-direction:column;flex:1;gap:0;min-width:0;padding:0 32px 30px}
+.p5-dashboard-champion .p5-win-trophy{width:124px;height:83px;margin:2px auto 9px;filter:drop-shadow(0 0 16px rgba(241,185,89,.23))}
+.p5-dashboard-champion .p5-win-trophy svg{width:100%;height:100%;display:block}
+.p5-dashboard-champion .p5-win-caption{font-size:clamp(10px,1vw,12px);line-height:1.5;letter-spacing:.24em;font-weight:740;color:#f0d4a9}
+.p5-dashboard-champion .p5-win-caption:before,.p5-dashboard-champion .p5-win-caption:after{content:"";display:inline-block;vertical-align:middle;width:22px;height:1px;background:rgba(223,175,109,.7);margin:0 10px}
+.winner.p5-dashboard-champion h2{font-size:clamp(37px,5.2vw,66px)!important;line-height:1.05!important;font-weight:740!important;letter-spacing:0!important;color:#ffe1b2!important;max-width:100%;margin:9px 0 15px!important;text-wrap:balance;overflow-wrap:anywhere;text-shadow:0 4px 25px rgba(0,0,0,.58),0 0 25px rgba(236,185,106,.2)!important}
+.p5-dashboard-champion .p5-win-stages{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;max-width:100%;min-height:29px}
+.p5-dashboard-champion .p5-win-stage-pill{color:#f3d5a8;font-size:clamp(10px,.95vw,12px);line-height:1.35;padding:7px 12px;border:1px solid rgba(213,178,125,.63);border-radius:999px;background:rgba(10,17,25,.55);overflow-wrap:anywhere}
+@media(max-width:670px){
+ .winner.p5-dashboard-champion{min-height:338px!important}
+ .p5-dashboard-champion .p5-win-session{padding:20px 14px 2px;font-size:10px;min-height:50px;letter-spacing:.075em}
+ .p5-dashboard-champion .p5-win-session:before,.p5-dashboard-champion .p5-win-session:after{display:none}
+ .p5-dashboard-champion .p5-win-center{padding:1px 16px 25px}
+ .p5-dashboard-champion .p5-win-trophy{width:106px;height:73px}
+ .p5-dashboard-champion .p5-win-caption{font-size:9px;letter-spacing:.14em}
+ .p5-dashboard-champion .p5-win-caption:before,.p5-dashboard-champion .p5-win-caption:after{width:11px;margin:0 5px}
+ .winner.p5-dashboard-champion h2{font-size:clamp(31px,8vw,48px)!important}
+ .p5-dashboard-champion .p5-win-stage-pill{font-size:10px;padding:6px 10px}
+}

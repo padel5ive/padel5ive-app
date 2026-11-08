@@ -1,6 +1,6 @@
 # PADEL 5IVE · Match Control
 
-Production source for **PADEL 5IVE Unified Match Control**, version **5.5.15**.
+Production source for **PADEL 5IVE Unified Match Control**, version **5.5.16**.
 
 **Website:** https://padel5ive.netlify.app  
 **Source:** https://github.com/padel5ive/padel5ive-app
@@ -50,6 +50,6 @@ Both are read-only public viewers; scores and published data are managed through
 
 ## Release status
 
-The v5.5.15 source and repository build were verified. **Live Netlify result publication, iPad Safari behavior, and end-to-end smoke tests must be checked separately** before treating the release as a locked production master.
+The v5.5.16 source and repository build were verified. **Live Netlify result publication, iPad Safari behavior, and end-to-end smoke tests must be checked separately** before treating the release as a locked production master.
 
 For rollback use Git history or restore the previous successful deployment on the existing Netlify site. Historical QA notes and earlier release manifests remain retrievable through Git history.

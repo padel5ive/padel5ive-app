@@ -1,0 +1,33 @@
+/* PADEL 5IVE 5.5.17 — persistent Team Showdown public results wallpaper.
+ * Move venue off body::before (-1 stacking context) onto its own
+ * GPU-composited viewport layer to prevent iPad Safari scroll jitter.
+ * Only /r/* public results loads this stylesheet.
+ */
+html { background:#0a1825; }
+body { background:transparent!important; }
+body::before { content:none!important; display:none!important; }
+.p5-showdown-fixed-backdrop {
+  position:fixed!important;
+  top:0!important;left:0!important;
+  right:0!important;bottom:0!important;
+  width:100%!important;
+  height:100vh!important;
+  height:100lvh!important;
+  z-index:0!important;
+  pointer-events:none!important;
+  overflow:hidden!important;
+  background-color:#0a1825;
+  background-image:
+    linear-gradient(180deg,rgba(8,19,30,.90),rgba(8,18,29,.955) 58%,rgba(7,17,27,.97)),
+    url('/assets/p5-master-share-hero.webp');
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  transform:translate3d(0,0,0);
+  -webkit-transform:translate3d(0,0,0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  contain:paint;
+}
+/* Content remains above viewport-locked wallpaper. */
+body>.site { position:relative;z-index:1; }

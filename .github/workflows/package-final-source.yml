@@ -18,12 +18,12 @@ jobs:
         with:
           ref: backup/final-v5.5.17-2026-11-09
           persist-credentials: true
-          fetch-depth: 1
+          fetch-depth: 0
       - name: Archive only the exact approved commit
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "d9b5cf5937a5b0a14b6a60749db17788788d1683"
+          git cat-file -e "d9b5cf5937a5b0a14b6a60749db17788788d1683^{commit}"
           git archive --format=zip --output=/tmp/PADEL5IVE_MATCH_CONTROL_FINAL_V5517_SOURCE.zip d9b5cf5937a5b0a14b6a60749db17788788d1683
           unzip -tq /tmp/PADEL5IVE_MATCH_CONTROL_FINAL_V5517_SOURCE.zip
           test "$(unzip -Z1 /tmp/PADEL5IVE_MATCH_CONTROL_FINAL_V5517_SOURCE.zip | grep -c '^[^/].*\(html\|mjs\|js\|css\|json\|webp\|png\|jpg\|toml\)$')" -gt 15

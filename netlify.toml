@@ -28,6 +28,6 @@
 
 [[redirects]]
   from = "/r/*"
-  to = "/modes/club-match/index.html"
+  to = "/results/showdown/index.html"
   status = 200
   force = true

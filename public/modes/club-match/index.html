@@ -2441,7 +2441,7 @@ body.sd-public-only .sr-cover-venue {
 </style>
 <style id="p54-shell-style">
 .p54-app-nav{position:relative;z-index:35;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(18px,env(safe-area-inset-right));background:#0a1621;border-bottom:1px solid rgba(210,178,132,.28);color:#d4b58c;letter-spacing:.12em;font-size:10px;font-weight:700}.p54-app-nav a{color:#e1c7a3;text-decoration:none;border-radius:6px;padding:5px 0}.p54-app-nav a:focus-visible{outline:2px solid #f1d5aa;outline-offset:5px}.p54-app-nav .p54-app-context{font-size:9px;color:#8e9eab;font-weight:500;letter-spacing:.1em}.p54-selected-mode{grid-column:1/-1;background:rgba(209,174,125,.06);border:1px solid rgba(209,174,125,.3);border-radius:12px;padding:13px 16px;display:flex;gap:12px;justify-content:space-between;align-items:center}.p54-selected-mode b{font-size:14px;color:#f1dfc3;display:block;margin-top:5px}.p54-selected-mode small{color:#d1af80;letter-spacing:.15em;font-size:9px;font-weight:700}.p54-selected-mode a{color:#d1b792;font-size:11px;text-decoration:underline;text-underline-offset:3px}.p54-home-nav:focus-visible{outline:2px solid #c9ab82}.p54-app-nav button{color:inherit}.p54-selected-mode a:focus-visible{outline:2px solid #d1af80;outline-offset:4px}@media(max-width:570px){.p54-app-nav{font-size:9px;padding:13px 20px}.p54-app-context{font-size:8px!important}.p54-back-label{display:none}.p54-selected-mode{align-items:flex-start;gap:5px;flex-direction:column}}@media print{.p54-app-nav{display:none!important}}
-</style></head>
+</style><script defer src="/assets/p5-direct-pdf.js"></script><link rel="stylesheet" href="/assets/p5-reporting-foundation.css"><script defer src="/assets/p5-reporting-foundation.js"></script></head>
 <body data-team-showdown-version="0.8.49-P54"><nav class="p54-app-nav" aria-label="PADEL 5IVE platform navigation"><a href="../../" class="p54-back-home" id="p54-home-link"><span aria-hidden="true">←</span> PADEL 5IVE <span class="p54-back-label">/ HOME</span></a><span class="p54-app-context">TEAM SHOWDOWN · PHASE 5.4</span></nav><div class="wrap">
 <header class="brand-banner master-brand"><div class="hero-scrim"></div><div class="hero-heading"><div class="brand-logo" role="img" aria-label="Original PADEL 5IVE logo"></div><div class="hero-titles"><div class="over">PADEL 5IVE</div><h1>TEAM SHOWDOWN</h1><div class="hero-sub">TWO TEAMS. ONE CHAMPION.</div></div></div><div class="hero-right"><div class="signature" aria-label="Beyond 5IVE. Beyond Play."><span>BEYOND <strong>5IVE.</strong></span><span>BEYOND PLAY.</span></div><div class="pill" id="headerStatus">SETUP</div></div></header>
 <div class="global-dock" aria-label="Tournament settings">
@@ -2466,7 +2466,7 @@ body.sd-public-only .sr-cover-venue {
 <button type="button" class="p5-4852-action" data-action="reset-stage3" data-menu-stage="stage3">Reset Stage 3 Scores</button>
 <button type="button" class="p5-4852-action danger" data-action="cancel-stage3" data-menu-stage="stage3">Cancel Stage 3</button>
 <p class="p5-4852-note">Viewing stages preserves scores. Reset and cancellation require confirmation.</p></div></details>
-<details class="p5-4852-section" data-menu-section="Share &amp; Export"><summary><span class="p5-4852-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.1"/><circle cx="5.5" cy="12" r="2.1"/><circle cx="18" cy="19" r="2.1"/><path d="m7.6 11 8.3-4.8M7.6 13l8.3 4.8"/></svg></span><span class="p5-4852-label">Share &amp; Export</span><span class="p5-4852-chevron">›</span></summary><div class="p5-4852-content"><button type="button" class="p5-4852-action" data-action="pdf" id="exportPdf">Export / Save as PDF</button><button type="button" class="p5-4852-action" data-action="share" id="shareResults" disabled><span class="p5-share-label-copy">Share Final Results Link<small>PIN · 55 55 55 55</small></span></button><p class="ts-stage-menu-status">Enabled after the overall champion is finalized.</p></div></details>
+<details class="p5-4852-section" data-menu-section="Share &amp; Export"><summary><span class="p5-4852-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.1"/><circle cx="5.5" cy="12" r="2.1"/><circle cx="18" cy="19" r="2.1"/><path d="m7.6 11 8.3-4.8M7.6 13l8.3 4.8"/></svg></span><span class="p5-4852-label">Share &amp; Export</span><span class="p5-4852-chevron">›</span></summary><div class="p5-4852-content"><button type="button" class="p5-4852-action" data-action="pdf" id="exportPdf">Export / Save as PDF</button><button type="button" class="p5-4852-action" data-action="share" id="shareResults" disabled><span class="p5-share-label-copy">Share Final Results Link<small>Organizer PIN required</small></span></button><p class="ts-stage-menu-status">Enabled after the overall champion is finalized.</p></div></details>
 </section>
 <details class="mc32-advanced"><summary>Advanced Settings</summary><div class="mc32-advanced-body">
 <button type="button" class="p5-4852-action" data-action="backup" >↓ Backup Data</button>
@@ -2475,7 +2475,7 @@ body.sd-public-only .sr-cover-venue {
 </div></details>
 <div class="p5-4857-new-row"><button type="button" class="menu-new-tournament" data-action="new">New Tournament</button></div>
 </div></details></div>
-<main id="app"><div class="card"><h2>Team Showdown</h2><p class="muted">Preparing dashboard…</p></div></main><footer class="foot">PADEL 5IVE · BEYOND 5IVE. BEYOND PLAY.</footer></div>
+<main id="app"><div class="card"><h2>Team Showdown</h2><p class="muted">Preparing dashboard…</p></div></main><footer class="foot">PADEL 5IVE · <span class="p5-brand-signature">BEYOND 5IVE. BEYOND PLAY.</span></footer></div>
 <div id="confirmLayer" class="showdown-confirm-overlay" hidden role="presentation"><section class="showdown-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage"><div class="showdown-confirm-overline">PADEL 5IVE · MATCH MANAGEMENT</div><h2 id="confirmTitle">Confirm Action</h2><p id="confirmMessage"></p><div class="showdown-confirm-actions"><button type="button" data-confirm="no" id="confirmCancel">Keep Current Tournament</button><button type="button" data-confirm="yes" id="confirmApprove">Confirm</button></div></section></div>
 <div id="toast" role="status" aria-live="polite"></div><input id="restoreInput" type="file" accept=".json,application/json" hidden><section id="printArea" aria-hidden="true"></section>
 <script>
@@ -3321,6 +3321,7 @@ function viewerHTML(){
  const s1=E.stage1Stats(state),s2=E.stage2Stats(state),s3=E.stage3Stats(state),v=E.verdict(state);
  const matches1=E.matchPool(state).filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).slice().sort((a,b)=>(a.completedSequence??a.sequence??9999)-(b.completedSequence??b.sequence??9999)||String(a.id).localeCompare(String(b.id)));
  const matches2=state.stage2?.matches||[],matches3=E.stage3Matches(state);
+ const multiStage=!!(state.stage2||state.stage3);
  const niceFmt=f=>f?(f.startsWith('total')?'Total of ':'First to ')+String(f).slice(-1):'—';
  const fn=(id)=>esc(playerName(id));
  const pair=(team,i)=>esc(pairName(team,i));
@@ -3335,7 +3336,7 @@ function viewerHTML(){
   {n:3,name:'The Decider',fmt:fmt3,stats:s3,exists:!!state.stage3,winner:s3.winner,detail:`${s3.wA}–${s3.wB} duel wins`,note:`${s3.pA}–${s3.pB} games`,nMatches:s3.total,played:s3.completed}
  ];
  const badge=(winner)=>winner?`<span class="sr-win">${esc(club(winner))}</span>`:'<span class="sr-draw">DRAW</span>';
- const stageCards=stageData.filter(st=>st.exists).reverse().map(st=>`<div class="sr-stage-card"><div class="sr-eyebrow">STAGE ${st.n} · ${esc(st.name)}</div><h3>${st.winner?badge(st.winner):'DRAW'}</h3><div class="sr-stage-metric">${esc(st.detail)}</div><div class="sr-stage-detail">${esc(st.fmt)} · ${st.played}/${st.nMatches} matches</div></div>`).join('');
+ const stageCards=stageData.filter(st=>st.exists).reverse().map(st=>`<div class="sr-stage-card"><div class="sr-eyebrow">${multiStage?'STAGE '+st.n+' · ':''}${esc(st.name)}</div><h3>${st.winner?badge(st.winner):'DRAW'}</h3><div class="sr-stage-metric">${esc(st.detail)}</div><div class="sr-stage-detail">${esc(st.fmt)} · ${st.played}/${st.nMatches} matches</div></div>`).join('');
  // Every registered player has an individual record. Stage 1 belongs to the fixed pair;
  // Stage 2/3 are counted only if the player's ID occurs in that duel's actual lineup.
  const individual={A:[],B:[]};
@@ -3396,28 +3397,29 @@ function viewerHTML(){
  <path d="M85 175h70" stroke="#fff0bf" stroke-opacity=".55" stroke-width="1.8"/>
  <g fill="#fff0c8"><path d="M165 21l2.8 8.6 8.7 2.5-8.7 2.5-2.8 8.6-2.7-8.6-8.7-2.5 8.7-2.5z"/><circle cx="62" cy="29" r="2.4" opacity=".72"/><circle cx="188" cy="50" r="1.8" opacity=".58"/></g>
  </svg>`;
- const pairLeaderboard=`<section class="sr-stage1-leaderboard" id="srStage1Leaderboard" aria-label="Stage 1 fixed pair leaderboard">
- <div class="sr-title-row"><div><div class="sr-eyebrow">03 / STAGE 1 · ROUND ROBIN</div><h2>Stage 1 Leaderboard</h2><p>Stage 1 only · Fixed partners · Ranked by Wins → DIFF → Points</p></div><span class="sr-count" data-sr-pair-count>${s1.overallRanking.length} PAIRS</span></div>
- <div class="sr-pair-board"><div class="sr-pair-tools" role="group" aria-label="Filter Stage 1 pair leaderboard"><button type="button" class="sr-pair-filter active" data-sr-pair-filter="all" aria-pressed="true">All</button><button type="button" class="sr-pair-filter" data-sr-pair-filter="A" aria-pressed="false" title="Team A">${esc(club('A'))}</button><button type="button" class="sr-pair-filter" data-sr-pair-filter="B" aria-pressed="false" title="Team B">${esc(club('B'))}</button></div><div class="sr-pair-head"><span>#</span><span>PLAYERS</span><span>W–L–T</span><span>DIFF</span><span>P</span><span>G</span></div>
+ const pairLeaderboard=`<section class="sr-stage1-leaderboard" id="srStage1Leaderboard" aria-label="Round Robin fixed pair leaderboard">
+ <div class="sr-title-row"><div><div class="sr-eyebrow">03 / ${multiStage?'STAGE 1 · ':''}ROUND ROBIN</div><h2>${multiStage?'Stage 1':'Round Robin'} Leaderboard</h2><p>Fixed partners · Ranked by Wins → DIFF → Points</p></div><span class="sr-count" data-sr-pair-count>${s1.overallRanking.length} PAIRS</span></div>
+ <div class="sr-pair-board"><div class="sr-pair-tools" role="group" aria-label="Filter Round Robin pair leaderboard"><button type="button" class="sr-pair-filter active" data-sr-pair-filter="all" aria-pressed="true">All</button><button type="button" class="sr-pair-filter" data-sr-pair-filter="A" aria-pressed="false" title="Team A">${esc(club('A'))}</button><button type="button" class="sr-pair-filter" data-sr-pair-filter="B" aria-pressed="false" title="Team B">${esc(club('B'))}</button></div><div class="sr-pair-head"><span>#</span><span>PLAYERS</span><span>W–L–T</span><span>DIFF</span><span>P</span><span>G</span></div>
  <div class="sr-pair-rows">${s1.overallRanking.map(r=>`<div class="sr-pair-row" data-sr-pair-team="${r.team}"><span class="sr-pair-rank">${String(r.rank).padStart(2,'0')}</span><span class="sr-pair-name"><strong>${pair(r.team,r.index)}</strong><small>${esc(club(r.team))}</small></span><span class="sr-pair-stat">${r.w}–${r.l}–${r.d}</span><span class="sr-pair-stat ${r.diff>0?'sr-pair-pos':''}">${r.diff>0?'+':''}${r.diff}</span><span class="sr-pair-stat">${r.p}</span><span class="sr-pair-stat">${r.played}</span></div>`).join('')}</div>
  <p class="sr-pair-legend">W–L–T: Wins · Losses · Ties <span>·</span> DIFF: Games won − lost <span>·</span> P: Games won <span>·</span> G: Matches played</p></div></section>`;
  const resultCell=m=>!Number.isInteger(m.scoreA)?'<span class="sr-note">PENDING</span>':m.winner?`<b class="sr-win-label">${esc(club(m.winner))}${m.scoreA===m.scoreB?' · TB':''}</b>`:'<span class="sr-note">Draw</span>';
- const scoredMatches=(arr,stage)=>arr.map((m,i)=>{
+ const scoredMatches=(arr,stage)=>arr.map((m,i)=>({...m,__p5Original:i+1})).reverse().map((m,i)=>{
   const isRound=stage===1;
   const a=isRound?pair('A',m.a):(m.playersA||[]).map(fn).join(' / ');
   const b=isRound?pair('B',m.b):(m.playersB||[]).map(fn).join(' / ');
-  const court=isRound?`Court ${m.court||'—'}`:`Wave ${m.wave||Math.floor(i/Math.max(1,state.setup.courts))+1} · Court ${m.court||'—'}`;
-  return `<div class="sr-match"><div class="sr-match-number"><b>${isRound?'MATCH':'DUEL'} ${String(i+1).padStart(2,'0')}</b><small>${court}</small></div><div class="sr-match-teams"><span>${a||'—'}</span><b>${score(m)}</b><span>${b||'—'}</span></div><div class="sr-match-winner">${resultCell(m)}</div></div>`;
+  const court=isRound?`Court ${m.court||'—'}`:`Wave ${m.wave||Math.floor((m.__p5Original-1)/Math.max(1,state.setup.courts))+1} · Court ${m.court||'—'}`;
+  return `<div class="sr-match"><div class="sr-match-number"><b>${isRound?'MATCH':'DUEL'} ${String(m.__p5Original).padStart(2,'0')}</b><small>${court}</small></div><div class="sr-match-teams"><span>${a||'—'}</span><b>${score(m)}</b><span>${b||'—'}</span></div><div class="sr-match-winner">${resultCell(m)}</div></div>`;
  }).join('');
  const sections=[
   {num:1, name:'Round Robin',arr:matches1,format:fmt1,defaultOpen:false},
   ...(state.stage2?[{num:2,name:'Custom Team Duel',arr:matches2,format:fmt2,defaultOpen:true}]:[]),
   ...(state.stage3?[{num:3,name:'The Decider',arr:matches3,format:fmt3,defaultOpen:true}]:[])
  ];
- const matchSections=sections.slice().reverse().map(s=>`<details class="sr-section sr-match-section" ${s.defaultOpen?'open':''}><summary><span class="sr-section-icon">0${s.num}</span><span class="sr-section-label"><strong>Stage ${s.num} · ${s.name}</strong><small>${s.format} · ${s.arr.filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).length} match results</small></span><span class="sr-section-chevron">⌄</span></summary><div class="sr-matches">${scoredMatches(s.arr,s.num)}</div></details>`).join('');
+ const matchSections=sections.slice().reverse().map(s=>`<details class="sr-section sr-match-section" ${s.defaultOpen?'open':''}><summary><span class="sr-section-icon">0${s.num}</span><span class="sr-section-label"><strong>${multiStage?'Stage '+s.num+' · ':''}${s.name}</strong><small>${s.format} · ${s.arr.filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).length} match results</small></span><span class="sr-section-chevron">⌄</span></summary><div class="sr-matches">${scoredMatches(s.arr,s.num)}</div></details>`).join('');
   const lastStage=state.stage3?3:state.stage2?2:1;
   const coverStatus=hasChampion?'COMPLETED':'IN PROGRESS';
-  const cover=`<section class="sr-official-cover" aria-label="Official Team Showdown results cover"><div class="sr-cover-inner"><div class="sr-cover-brand">TEAM SHOWDOWN</div><div class="sr-cover-rule" aria-hidden="true"></div><div class="sr-cover-title">OFFICIAL RESULTS</div><div class="sr-cover-session">${esc(state.setup.sessionName||'TEAM SHOWDOWN')}</div><div class="sr-cover-subtitle">${coverStatus}</div><div class="sr-cover-facts">${esc(niceGameDate(state.setup.date))} <span>·</span> ${state.setup.pairs*2} fixed pairs <span>·</span> ${lastStage} stage${lastStage===1?'':'s'}</div><div class="sr-cover-venue">VENUE <span>·</span> PADEL 5IVE, KELAPA GADING</div></div></section>`;
+  const dayDate=(()=>{const v=state.setup.date,m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||'');if(!m)return niceGameDate(v);const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}).format(d).replace(/^([^,]+),\s*/,'$1 · ');})();
+  const cover=`<section class="sr-official-cover" aria-label="Official Team Showdown results cover"><div class="sr-cover-inner"><div class="sr-cover-brand">TEAM SHOWDOWN</div><div class="sr-cover-rule" aria-hidden="true"></div><div class="sr-cover-title">OFFICIAL RESULTS</div><div class="sr-cover-session">${esc(state.setup.sessionName||'TEAM SHOWDOWN')}</div><div class="sr-cover-subtitle">${coverStatus}</div><div class="sr-cover-facts">DAY · DATE: ${esc(dayDate)} <span>·</span> ${state.setup.pairs*2} fixed pairs <span>·</span> ${multiStage?lastStage+' stages':'ROUND ROBIN'}</div><div class="sr-cover-venue">VENUE <span>·</span> PADEL 5IVE, KELAPA GADING</div></div></section>`;
   return `<div class="sr-root" aria-label="Shared Team Showdown results">
   ${cover}
  <section class="sr-hero sr-cinematic ${hasChampion?'sr-has-winner':'sr-awaiting'}" aria-label="${hasChampion?'Congratulations to the championship winner':'Championship result'}">
@@ -3435,7 +3437,7 @@ function viewerHTML(){
  </section>
  <section class="sr-stage-grid" aria-label="Stage results">${stageCards}</section>
  <section class="sr-content">
- <div class="sr-title-row sr-matches-heading"><div><div class="sr-eyebrow">02 / MATCH HISTORY</div><h2>Full Match Scores</h2><p>Every completed match · tap each stage to expand or collapse</p></div></div>${matchSections}
+ <div class="sr-title-row sr-matches-heading"><div><div class="sr-eyebrow">02 / MATCH HISTORY</div><h2>Full Match Scores</h2><p>${multiStage?'Latest stage and latest match first':'Latest match first'} · tap to expand or collapse</p></div></div>${matchSections}
  ${pairLeaderboard}
  ${personalAnalysis}
  <div class="sr-public-footer"><span>TEAM SHOWDOWN · RESULTS REPORT</span><span>Read-only tournament record</span></div></section></div>`;
@@ -3554,10 +3556,47 @@ function setDuelAutoScore(input){const id=input.dataset.id,kind=input.dataset.cu
 function getLineup(kind,id,c){const els=Array.from(document.querySelectorAll(`[data-lineup="${id}"][data-club="${c}"]`));return [0,1].map(i=>els.find(e=>Number(e.dataset.player)===i)?.value||'');}
 function getData(){return {schema:'padel5ive-team-showdown-results-v1',generatedAt:new Date().toISOString(),setup:state.setup,roster:state.roster,schedule:state.schedule,stage:state.stage,stage2:state.stage2,stage3:state.stage3};}
 function downloadFile(data,name,type='application/json'){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type}));a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
-async function shareResults(){if(!state.finalized||!['champion','stage1-champion'].includes(E.verdict(state).status))throw Error('Finalize the championship before sharing final results');if(location.protocol!=='https:'&&location.hostname!=='localhost')throw Error('Short links require the deployed Netlify site');let pin=sessionStorage.getItem(PIN_KEY);if(!pin){pin=prompt('Enter TEAM SHOWDOWN Share Results PIN from Netlify settings:');if(!pin)return;}
- const result=await fetch('/api/results',{method:'POST',headers:{'Content-Type':'application/json','X-Padel-Pin':pin},body:JSON.stringify({id:shareId||undefined,data:getData()})});const data=await result.json().catch(()=>({}));if(!result.ok){if(result.status===401)sessionStorage.removeItem(PIN_KEY);throw Error(data.error||'Sharing failed');}sessionStorage.setItem(PIN_KEY,pin);shareId=data.id;localStorage.setItem('padel5ive-showdown-share-id',shareId);const url=new URL('/r/'+encodeURIComponent(data.id),location.origin).toString();if(navigator.share){try{await navigator.share({title:(state.setup.sessionName||'Team Showdown')+' · Results',url});return;}catch(e){if(e.name==='AbortError')return;}}if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);notify('Results link copied');}else prompt('Copy Results Link:',url);}
+function shareResults(){
+ if(!state.finalized||!['champion','stage1-champion'].includes(E.verdict(state).status))throw Error('Finalize the championship before sharing final results');
+ if(!window.P5ReportUI)throw Error('Shared Reporting Foundation could not load. Please refresh.');
+ const lastUrl=shareId?new URL('/r/'+encodeURIComponent(shareId),location.origin).toString():'';
+ return P5ReportUI.openShare({
+  session:state.setup.sessionName||'Team Showdown',
+  existingUrl:lastUrl,
+  pinRequired:!sessionStorage.getItem(PIN_KEY),
+  previewOnly:location.protocol!=='https:',
+  onNewLink:shareId?()=>{shareId=null;try{localStorage.removeItem('padel5ive-showdown-share-id');}catch(e){}shareResults();}:null,
+  onSubmit:async pin=>{
+   if(!pin){pin=sessionStorage.getItem(PIN_KEY)||'';}
+   if(!pin)throw Error('Enter TEAM SHOWDOWN organizer publishing PIN');
+   const result=await fetch('/api/results',{method:'POST',headers:{'Content-Type':'application/json','X-Padel-Pin':pin},body:JSON.stringify({id:shareId||undefined,data:getData()})});
+   const data=await result.json().catch(()=>({}));
+   if(!result.ok){if(result.status===401)sessionStorage.removeItem(PIN_KEY);throw Error(data.error||'Sharing failed');}
+   sessionStorage.setItem(PIN_KEY,pin);shareId=data.id;
+   localStorage.setItem('padel5ive-showdown-share-id',shareId);
+   return new URL('/r/'+encodeURIComponent(data.id),location.origin).toString();
+  }
+ });
+}
 
 /* v0.8.37 Signature Report: cover, per-stage rules, roster & final verdict. */
+function showdownReportData(){
+ const st=E.stage1Stats(state),s2=E.stage2Stats(state),s3=E.stage3Stats(state),v=E.verdict(state);
+ const isScored=m=>Number.isInteger(m?.scoreA)&&Number.isInteger(m?.scoreB);
+ const present=m=>({court:m.court??'—',a:pairName('A',m.a),b:pairName('B',m.b),score:isScored(m)?m.scoreA+' - '+m.scoreB:'PENDING'});
+ const duels=(list)=>list.map((m,i)=>({no:i+1,court:m.court??'—',a:(m.playersA||[]).map(id=>id?playerName(id):'—').join(' / '),b:(m.playersB||[]).map(id=>id?playerName(id):'—').join(' / '),score:isScored(m)?m.scoreA+' - '+m.scoreB+(m.scoreA===m.scoreB&&m.winner?' (TB)':''):'PENDING'}));
+ const matches1=state.schedule.flat().map((m,i)=>({...m,__idx:i})).sort((a,b)=>(a.sequence??100000+a.__idx)-(b.sequence??100000+b.__idx)).map((m,i)=>({...present(m),no:i+1}));
+ const matches2=duels(state.stage2?.matches||[]),matches3=duels(state.stage3?E.stage3Matches(state):[]);
+ const format=f=>f?(String(f).startsWith('total')?'Total of ':'First to ')+String(f).slice(-1):'Not scheduled';
+ const stg=(type,stats,enabled,fmt)=>({format:format(fmt),aWins:stats?.wA??stats?.team?.A?.w??0,bWins:stats?.wB??stats?.team?.B?.w??0,status:enabled?(stats?.complete?'COMPLETED':'IN PROGRESS'):'NOT REQUIRED'});
+ return {p5showdown:1,session:state.setup.sessionName||'Team Showdown',date:state.setup.date?niceGameDate(state.setup.date):'NOT SET',courts:state.setup.courts,pairs:state.setup.pairs,teamA:club('A'),teamB:club('B'),
+  roster:Array.from({length:state.setup.pairs},(_,i)=>({a:pairName('A',i),b:pairName('B',i)})),
+  standings:st.overallRanking.map(p=>({rank:p.rank,name:pairName(p.team,p.index),team:club(p.team),w:p.w,l:p.l,d:p.d,diff:p.diff,p:p.p,g:p.played})),
+  matches1,matches2,matches3,confirmed:[...state.schedule.flat(),...(state.stage2?.matches||[]),...(state.stage3?E.stage3Matches(state):[])].filter(isScored).length,
+  stage1:{format:format(state.setup.format),aWins:st.team.A.w,bWins:st.team.B.w,status:st.complete?'COMPLETED':'IN PROGRESS'},
+  stage2:stg('2',s2,!!state.stage2,state.stage2?.format),stage3:stg('3',s3,!!state.stage3,state.stage3?.format),
+  winner:(v.status==='champion'||v.status==='stage1-champion')?club(v.champion):'',pointsA:v.points.A,pointsB:v.points.B};
+}
 function printReport(){
  const st=E.stage1Stats(state),s2=E.stage2Stats(state),s3=E.stage3Stats(state),v=E.verdict(state);
  const teamA=esc(club('A')),teamB=esc(club('B'));
@@ -3605,18 +3644,21 @@ function printReport(){
   <path d="M60 110 L230 110" stroke="url(#pr37gold)" stroke-width="3"/><path d="M60 625 L1060 625" stroke="#bc9b69" stroke-width="2" opacity=".5"/>
   <g transform="translate(903,260) scale(1.1)" fill="none" stroke="#d5b889" stroke-width="4" opacity=".16"><path d="M-44 -55 h88 v43 c0 43 -29 67 -44 67s-44-24 -44-67z"/><path d="M-44 -43h-31c-20 0-16 41 6 46l26 5M44-43h31c20 0 16 41-6 46l-26 5M0 55v43M-33 98h66M-45 111h90"/></g>
  </svg>`;
- add('pr-cover',`
-  ${coverArt}
-  <div class="pr-cover-top"><span>TEAM SHOWDOWN</span><span>MATCH RESULTS · REPORT</span></div>
-  <div class="pr-cover-main">
-   <div class="pr-cover-eyebrow">THE SESSION REPORT <span>·</span> ${dt}</div>
-   <div class="pr-cover-label">COMPETITION RECORD</div>
-   <h1>${session}</h1>
-   <div class="pr-cover-versus"><span>${teamA}</span><b>VS</b><span>${teamB}</span></div>
-   <div class="pr-cover-rule"></div>
-   <div class="pr-cover-champion"><small>${hasFinal?'TEAM SHOWDOWN CHAMPION':'CURRENT STATUS'}</small><strong>${hasFinal?esc(club(v.champion)):'MATCHES IN PROGRESS'}</strong><div class="pr-cover-points">CHAMPIONSHIP POINTS <b>${pointsText(v.points.A)} – ${pointsText(v.points.B)}</b></div></div>
+ add('pr-cover p5-shared-print-cover',`
+  <img class="p5-report-cover-photo" src="/assets/p5-master-share-hero.webp" alt="" aria-hidden="true">
+  <div class="p5-report-cover-scrim"></div>
+  <div class="p5-report-cover-content">
+   <div class="p5-report-cover-head"><img src="/assets/p5-master-logo-original.png" alt="PADEL 5IVE"><div class="p5-report-cover-brand">P A D E L   5 I V E<small>MATCH CONTROL</small></div></div>
+   <div class="p5-report-cover-eyebrow">THE OFFICIAL RECORD</div>
+   <h1>${session}</h1><div class="p5-report-cover-sub">Official Session Report</div>
+   <div class="p5-report-cover-teams">TEAM SHOWDOWN / ${teamA} VS ${teamB}</div>
+   <div class="p5-report-cover-metrics">
+    <div><span>DAY · DATE</span><b>${dt}</b></div>
+    <div><span>REGISTERED PAIRS</span><b>${state.setup.pairs} / TEAM</b></div>
+    <div><span>COURTS</span><b>${state.setup.courts}</b></div>
+    <div><span>CONFIRMED MATCHES</span><b>${st.team.A.played+(state.stage2?.matches||[]).filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).length+(state.stage3?E.stage3Matches(state).filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).length:0)}</b></div>
+   </div><div class="p5-report-cover-tagline">BEYOND 5IVE. BEYOND PLAY.</div>
   </div>
-  <div class="pr-cover-end"><div><small>DATE</small><b>${dt}</b></div><div><small>VENUE</small><b>PADEL 5IVE · KELAPA GADING</b></div><div><small>REGISTERED</small><b>${state.setup.pairs} PAIRS / TEAM</b></div><div><small>COURTS</small><b>${state.setup.courts}</b></div></div>
  `);
  // Stage-specific rules are descriptive of the *actual* engine and session settings.
  const stageCard=(n,label,fmt,status,rules,score)=>`<div class="pr-rule-card"><div class="pr-rule-index">${n}</div><div class="pr-rule-copy"><div class="pr-rule-name">${label}<span>${status}</span></div><div class="pr-rule-format">${fmt}</div><p>${rules}</p><div class="pr-rule-metric">${score}</div></div></div>`;
@@ -3755,19 +3797,22 @@ async function shareStageText(phase){
  const st=E.stage1Stats(state),s2=E.stage2Stats(state),v=E.verdict(state);
  const date=state.setup.date||'',session=state.setup.sessionName||'PADEL 5IVE TEAM SHOWDOWN';
  const lines=[`PADEL 5IVE · TEAM SHOWDOWN`,session,`${club('A')} vs ${club('B')}${date?' · '+date:''}`,''];
- if(phase==='1'||phase==='full'){
+ const block1=()=>{
   if(!st.complete)throw Error('Stage 1 must finish before sharing its final result');
-  lines.push('STAGE 1 · TEAM ROUND ROBIN',`${club('A')} ${st.team.A.w} – ${st.team.B.w} ${club('B')} (match wins)`, `Points (P): ${st.team.A.p} – ${st.team.B.p}`,`Winner: ${st.winner?club(st.winner):'Draw'}`,'');
- }
- if(phase==='2'||(phase==='full'&&state.stage2)){
+  return ['STAGE 1 · TEAM ROUND ROBIN',`${club('A')} ${st.team.A.w} – ${st.team.B.w} ${club('B')} (match wins)`, `Points (P): ${st.team.A.p} – ${st.team.B.p}`,`Winner: ${st.winner?club(st.winner):'Draw'}`,''];
+ };
+ const block2=()=>{
   if(!s2.complete)throw Error('Stage 2 must finish before sharing its final result');
-  lines.push('STAGE 2 · CUSTOM TEAM DUEL',`${club('A')} ${s2.wA} – ${s2.wB} ${club('B')} (duels won)`,`Games won: ${s2.pA} – ${s2.pB}`,`Winner: ${club(s2.winner)}`,'');
- }
+  return ['STAGE 2 · CUSTOM TEAM DUEL',`${club('A')} ${s2.wA} – ${s2.wB} ${club('B')} (duels won)`,`Games won: ${s2.pA} – ${s2.pB}`,`Winner: ${club(s2.winner)}`,''];
+ };
  if(phase==='full'){
   if(v.status!=='champion'&&v.status!=='stage1-champion')throw Error('The championship is not finalized');
+  lines.push(`🏆 CHAMPION · ${club(v.champion)}`,`CHAMPIONSHIP POINTS · ${v.points.A} – ${v.points.B}`,'');
   if(state.stage3){const s3=E.stage3Stats(state);lines.push('STAGE 3 · THE DECIDER',`${club('A')} ${s3.wA} – ${s3.wB} ${club('B')} (duels won)`,`Games won: ${s3.pA} – ${s3.pB}`,'');}
-  lines.push(`CHAMPIONSHIP POINTS · ${v.points.A} – ${v.points.B}`,`🏆 CHAMPION · ${club(v.champion)}`,'');
- }
+  if(state.stage2)lines.push(...block2());
+  lines.push(...block1());
+ }else if(phase==='2')lines.push(...block2());
+ else if(phase==='1')lines.push(...block1());
  lines.push('BEYOND 5IVE. BEYOND PLAY.');
  const text=lines.join('\n');
  if(navigator.share){try{await navigator.share({title:session,text});return;}catch(err){if(err.name==='AbortError')return;}}
@@ -4024,7 +4069,7 @@ case 'cancel-stage2':confirmAction('Cancel Stage 2 and return to the Stage 1 res
 case 'new':confirmAction('Start a brand-new Team Showdown? Back up your current session first.',()=>{state=freshState();setupStep='session';registrationSide='A';editRoster=false;rosterBeforeEdit=null;roundDrawerOpen=false;arrivalDrawerOpen=true;inspectedRound=null;pendingResult=null;leaderboardFilter='ALL';shareId=null;localStorage.removeItem('padel5ive-showdown-share-id');});break;
 case 'backup':downloadFile(JSON.stringify(state,null,2),`PADEL5IVE_SHOWDOWN_BACKUP_${new Date().toISOString().slice(0,10)}.json`);break;
 case 'restore':document.getElementById('restoreInput').click();break;
-case 'pdf':printReport();break;
+case 'pdf':P5DirectPDF.exportShowdown(showdownReportData()).then(o=>{if(o.cancelled)return;notify(o.shared?'PDF sent to iOS share sheet':'Official PDF saved · Open Downloads / Save to Files');}).catch(e=>{console.error(e);notify('PDF export failed: '+e.message,true);});break;
 case 'share':shareResults().catch(e=>notify(e.message||String(e),true));break;
 default:break;
 }}catch(e){console.error(e);notify(e.message||String(e),true);}}

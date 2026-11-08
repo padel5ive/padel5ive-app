@@ -30,3 +30,10 @@ body.share-photo-results .leader-card{position:relative;isolation:isolate;overfl
 body.share-photo-results .leader-card::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(14,24,35,.85),rgba(14,24,35,.86) 44%,rgba(14,24,35,.97)),url("/assets/p5-master-share-court.webp") center 32%/cover no-repeat}
 body.share-photo-results .leader-card .leader{position:relative;z-index:1}
 @media(max-width:600px){body.share-photo-results .hero{padding:30px 14px 25px}body.share-photo-results .champion::before{background-position:center,72% center}}
+
+/* v5.4.14.0 · final-result-first hierarchy; original master cards unchanged. */
+.p5-share-stage-divider{scroll-margin-top:24px;margin:38px 0 18px;padding:18px 20px;background:linear-gradient(112deg,#1d2b36,#122330);border-left:3px solid #bc9971;border-top:1px solid #46535d;border-right:1px solid #35454f;border-bottom:1px solid #35454f;border-radius:0 12px 12px 0;display:flex;align-items:start;gap:6px;flex-direction:column}
+.p5-share-stage-divider span{font-size:9px;font-weight:700;letter-spacing:.22em;color:#c6a47d}
+.p5-share-stage-divider strong{font-size:clamp(15px,2vw,21px);letter-spacing:.07em;color:#f5eee1}
+.p5-share-stage-divider small{font-size:11px;color:#abb7bd;letter-spacing:.015em}
+@media(max-width:600px){.p5-share-stage-divider{margin:28px 0 14px;padding:15px}.p5-share-stage-divider small{line-height:1.5}}

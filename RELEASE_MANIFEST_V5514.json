@@ -1,0 +1,14 @@
+{
+  "app": "PADEL 5IVE Unified Match Control",
+  "release": "5.5.14-full-deploy-qa",
+  "baseline": "5.5.6 Conditional Stage Labels Full Source QA",
+  "public_reporting_visual_reference": "5.5.14 Final Review",
+  "mode_engine_changes": false,
+  "direct_pdf_generator_changes": false,
+  "unified_results_url": "/u/{id}",
+  "showdown_results_url": "/r/{id}",
+  "publishing_backends_changed": false,
+  "production_lock": false,
+  "live_netlify_tested": false,
+  "native_ipad_safari_tested": false
+}

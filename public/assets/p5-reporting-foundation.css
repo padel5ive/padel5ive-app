@@ -1,0 +1,209 @@
+/* PADEL 5IVE Phase 5.5 · one reporting design language shared by both engines. */
+:root{--p5-report-navy:#132330;--p5-report-midnight:#0c1825;--p5-report-gold:#d5b88b;--p5-report-ivory:#f2eee5;--p5-report-line:#51606d}
+.p5-report-signature,.p5-brand-signature,.brand-footer,.share-topbar .p5-brand-signature,.share-footer .p5-brand-signature{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;font-size:11px!important;font-style:italic!important;font-weight:350!important;letter-spacing:.105em!important;text-transform:uppercase!important;color:#d7c2a6!important;line-height:1.4!important}
+.p5-report-overlay{position:fixed;inset:0;z-index:120000;background:rgba(5,12,21,.9);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,30px);overflow:auto}
+.p5-report-modal{box-sizing:border-box;position:relative;max-width:550px;width:100%;max-height:min(94dvh,850px);overflow-y:auto;border:1px solid #8d785a;border-radius:18px;background:linear-gradient(155deg,#213340,#142533 62%,#10202d);box-shadow:0 28px 80px #000a;color:var(--p5-report-ivory);padding:clamp(22px,4vw,32px);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.p5-report-modal *{box-sizing:border-box}.p5-report-modal-header{display:flex;align-items:start;justify-content:space-between;gap:10px}.p5-report-brand{font-size:10px;letter-spacing:.22em;color:var(--p5-report-gold);font-weight:720}.p5-report-close{cursor:pointer;border:1px solid #667582;color:#d6dce0;background:#233748;border-radius:50%;font-size:20px;line-height:25px;width:34px;height:34px;padding:0;min-height:0;flex:none}
+.p5-report-modal h2{font-size:clamp(24px,5vw,31px);line-height:1.14;letter-spacing:-.035em;margin:17px 0 4px;color:#f9f1e5}.p5-report-session{font-size:16px;font-weight:650;color:#dec197;margin:0}.p5-report-intro{font-size:13px;color:#bdc9ce;margin:18px 0}.p5-report-state{display:inline-block;color:#cfc2ac;font-size:10px;font-weight:700;letter-spacing:.15em;border-top:1px solid #52616f;padding-top:15px;width:100%;margin:4px 0 12px}
+.p5-report-pinwrap{font-size:11px;font-weight:650;color:#d6ccb9;display:flex;flex-direction:column;gap:8px;margin-bottom:15px}.p5-report-pinwrap[hidden],.p5-report-urlbox[hidden],.p5-report-actions button[hidden]{display:none!important}.p5-report-modal input{width:100%;height:45px;min-height:44px;background:#0e1c28;border:1px solid #607383;color:#fff;border-radius:9px;padding:10px 12px;font-size:15px}.p5-report-urlbox{font-size:11px;color:#bdc6cc;margin:0 0 15px}.p5-report-urlbox input{margin-top:6px;font-size:12px;color:#f4d9b3}.p5-report-message{min-height:20px;color:#ddc198;font-size:12px}.p5-report-message.error{color:#ffc8b9}.p5-report-actions{display:flex;gap:9px;flex-wrap:wrap}.p5-report-actions button{border-radius:9px;border:1px solid #647487;background:#283d4a;color:#f3eee4;padding:11px 14px;min-height:42px;cursor:pointer;font-size:12px;font-weight:650;line-height:1.3;flex:1 1 auto}.p5-report-actions button.p5-report-primary{flex-basis:100%;background:#d4b68d;color:#162636;border-color:#d4b68d;font-weight:760}.p5-report-actions button:disabled{opacity:.6;cursor:wait}.p5-report-modal-foot{border-top:1px solid #41515e;margin-top:17px;padding-top:13px;display:flex;gap:10px;flex-direction:column}.p5-report-note{font-size:11px;color:#a6b3b9;line-height:1.55;margin:0}.p5-report-text-button{align-self:start;background:transparent;border:0;padding:3px 0;color:#e1c7a2;text-decoration:underline;cursor:pointer;font-size:12px}
+.p5-report-modal :focus-visible,body .p5-report-overlay :focus-visible{outline:2px solid #e7c18e!important;outline-offset:2px}
+/* Public viewer: Team Showdown tone; reduce competing photo and improve reading comfort. */
+body.share-photo-results .share-topbar .p5-brand-signature{font-size:10px!important}
+body.share-photo-results .wrap{width:min(100%,1220px);max-width:1220px!important;margin:0 auto;padding-bottom:calc(56px + env(safe-area-inset-bottom))!important}
+body.share-photo-results .hero{min-height:225px!important;padding:27px clamp(18px,4vw,48px) 29px!important}
+body.share-photo-results .hero::before{background:linear-gradient(90deg,rgba(12,22,33,.91),rgba(12,22,33,.84)),linear-gradient(0deg,rgba(10,18,28,.81),transparent 75%),url('/assets/p5-master-share-hero.webp') center 42%/cover no-repeat!important}
+body.share-photo-results .hero h1{font-size:clamp(30px,4.3vw,49px)!important;letter-spacing:-.025em!important}
+body.share-photo-results .champion{min-height:185px!important;padding:18px 20px!important}
+body.share-photo-results .champion::before{background:linear-gradient(90deg,rgba(16,25,36,.96),rgba(16,25,36,.92) 60%,rgba(16,25,36,.82)),url('/assets/p5-master-share-champion.webp') 76% 42%/cover no-repeat!important}
+body.share-photo-results .leader-card{background:#152533!important;overflow-x:auto!important}
+body.share-photo-results .leader-card::before{background:linear-gradient(180deg,rgba(14,24,35,.97),rgba(14,24,35,.975)),url('/assets/p5-master-share-court.webp') center 32%/cover no-repeat!important}
+body.share-photo-results .leader{width:100%;font-size:clamp(11px,1.1vw,14px)!important}
+body.share-photo-results .leader thead th{font-size:10px!important;letter-spacing:.06em!important}
+body.share-photo-results .leader td{padding-top:13px!important;padding-bottom:13px!important}
+body.share-photo-results .leader .pick{color:#e7d3b2!important}
+body.share-photo-results .share-footer{padding-bottom:env(safe-area-inset-bottom)!important}
+body.sd-public-only .sr-root{width:min(100%,1120px);max-width:1120px!important;margin:0 auto clamp(40px,5vw,70px)!important}
+@media(max-width:720px){.p5-report-modal{max-height:94dvh}.p5-report-actions button{flex:1 1 calc(50% - 9px)}body.share-photo-results .hero{min-height:205px!important}body.share-photo-results .champion{min-height:160px!important}body.share-photo-results .leader{font-size:11px!important}.p5-report-brand{font-size:9px}}
+/* Shared PDF cover in the Team Showdown browser-print fallback. Source of the
+   graphic hierarchy is the approved Americano/Mexicano direct-PDF cover. */
+@media print{
+  #printArea .pr-cover.p5-shared-print-cover{position:relative!important;isolation:isolate!important;display:block!important;padding:0!important;min-height:0!important;height:184mm!important;overflow:hidden!important;color:#f5f0e4!important;background:#10202d!important}
+  #printArea .p5-report-cover-photo{position:absolute!important;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3}
+  #printArea .p5-report-cover-scrim{position:absolute!important;inset:0;background:linear-gradient(90deg,rgba(8,19,30,.94),rgba(8,19,30,.77) 76%,rgba(8,19,30,.66));z-index:-2}
+  #printArea .p5-report-cover-content{position:relative;z-index:1;padding:13mm 14mm 7mm;height:100%;display:flex;flex-direction:column}
+  #printArea .p5-report-cover-head{display:flex;align-items:center;gap:5mm;padding-bottom:6mm;border-bottom:1px solid #b99b6f}
+  #printArea .p5-report-cover-head img{width:18mm;height:25mm;object-fit:contain}
+  #printArea .p5-report-cover-brand{font-weight:800;font-size:15px;letter-spacing:.22em;color:#f6ead7}
+  #printArea .p5-report-cover-brand small{display:block;font-size:9px;letter-spacing:.18em;color:#e4c59a}
+  #printArea .p5-report-cover-eyebrow{font-size:12px;letter-spacing:.12em;color:#d4b486;font-weight:750;margin-top:8mm}
+  #printArea .p5-report-cover-content h1{font-size:42px!important;line-height:1.08!important;color:#f4f0e9!important;margin:10mm 0 3mm!important;max-width:95%!important}
+  #printArea .p5-report-cover-sub{font-family:Georgia,serif;font-style:italic;font-size:23px;color:#dcc19b}
+  #printArea .p5-report-cover-teams{font-size:13px;letter-spacing:.13em;font-weight:700;margin-top:6mm;color:#f5e8d1}
+  #printArea .p5-report-cover-metrics{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:5mm;border-top:1px solid #b89c76;padding-top:5mm}
+  #printArea .p5-report-cover-metrics span{display:block;font-size:8px;letter-spacing:.08em;color:#d8b88c}
+  #printArea .p5-report-cover-metrics b{display:block;font-size:12px;color:#f6f0e4;margin-top:2mm}
+  #printArea .p5-report-cover-tagline{position:absolute;bottom:1.5mm;left:14mm;color:#efe3d2;font-family:Arial,sans-serif;font-style:italic;font-weight:300;letter-spacing:.12em;font-size:9px}
+  #printArea .p5-shared-print-cover>.pr-footer{display:none!important}
+}
+
+/* 5.5.1 · KO presentation polish. Standard bracket direction stays left-to-right. */
+.share-tree-frame{background:#14222e!important;border-color:#63707a!important;}
+.share-tree-heading{border-bottom:1px solid #b6996e!important;padding-bottom:11px!important;}
+.share-tree-heading strong{font-size:13px!important;line-height:1.35!important;}
+.share-tree-card{background:#1d2d3a!important;border:1px solid #5d6d79!important;border-left:3px solid #9f8a6e!important;box-shadow:0 3px 12px rgba(0,0,0,.13)!important;}
+.share-tree-team.is-winner{color:#f4d49f!important;font-weight:700!important;}
+.share-tree-card:hover,.share-tree-card:focus-visible,.share-tree-card.active{border-color:#e2c28d!important;box-shadow:0 0 0 1px #e2c28d!important;}
+.share-tree-mobile-hint{font-weight:600!important;color:#cfbb9b!important;}
+.share-tree-lines{stroke:#75818b!important;stroke-width:1.5!important;}
+.share-tree-lines .share-tree-route-gold{stroke:#d5b37f!important;stroke-width:2!important;}
+
+
+/* ============================================================
+   PADEL 5IVE 5.5.2 — Unified Reporting Visual Polish
+   Approved: venue = cover/hero/winner only; no photography beneath
+   leaderboards, scorecards, standings, bracket or match history.
+   Emboss is optional, never behind statistical information.
+   Shared stylesheet is loaded by BOTH engine pages and public
+   Americano/Mexicano page. No changes to scheduling/scoring logic.
+   ============================================================ */
+:root{
+ --p5-r-bg:#101b28;
+ --p5-r-surface:#172736;
+ --p5-r-surface-alt:#1b2c3c;
+ --p5-r-navy-deep:#0d1926;
+ --p5-r-stroke:#405362;
+ --p5-r-muted:#b9c3c9;
+ --p5-r-ink:#f3eee5;
+ --p5-r-champagne:#d4b789;
+}
+/* Match report page — equal container rhythm for every mode. */
+body.share-photo-results,body.sd-public-only{background:#101b28!important;color:var(--p5-r-ink)!important;}
+body.share-photo-results .wrap{max-width:1160px!important;padding-left:clamp(13px,2.4vw,27px)!important;padding-right:clamp(13px,2.4vw,27px)!important;}
+body.share-photo-results .hero{min-height:206px!important;padding:27px clamp(16px,4vw,44px)!important;background:#142433!important;border-color:rgba(212,183,137,.38)!important;}
+body.share-photo-results .hero::before{
+ background:linear-gradient(96deg,rgba(12,24,36,.88),rgba(12,24,36,.72)),linear-gradient(0deg,rgba(9,20,31,.55),transparent 70%),url('/assets/p5-master-share-hero.webp') center 42% / cover no-repeat!important;
+}
+body.share-photo-results .hero h1{font-size:clamp(28px,4vw,46px)!important;line-height:1.1!important;}
+body.share-photo-results .champion{min-height:166px!important;padding:16px 18px!important;margin-bottom:20px!important;background:#172736!important;border-color:rgba(212,183,137,.52)!important;box-shadow:0 12px 28px rgba(0,0,0,.18)!important;}
+body.share-photo-results .champion::before{
+ background:linear-gradient(95deg,rgba(14,27,40,.96),rgba(14,27,40,.90) 55%,rgba(14,27,40,.80)),url('/assets/p5-master-share-champion.webp') 76% 42% / cover no-repeat!important;
+}
+/* Tables and data remain on one clean matte navy plane: no photo/watermark. */
+body.share-photo-results .leader-card{background:var(--p5-r-surface)!important;border-color:var(--p5-r-stroke)!important;box-shadow:none!important;isolation:auto!important;}
+body.share-photo-results .leader-card::before{content:none!important;background:none!important;display:none!important;}
+body.share-photo-results .leader{position:relative;z-index:1;font-size:clamp(12px,1.13vw,14px)!important;}
+body.share-photo-results .leader thead th{background:#213444!important;color:#dcc5a4!important;font-size:10px!important;letter-spacing:.065em!important;white-space:nowrap;}
+body.share-photo-results .leader tbody tr:nth-child(even){background:rgba(255,255,255,.021)!important;}
+body.share-photo-results .leader td{border-bottom:1px solid #344959!important;color:#f3eee5!important;padding-top:12px!important;padding-bottom:12px!important;}
+body.share-photo-results .leader tbody tr:first-child td{color:#e7c89a!important;}
+body.share-photo-results .section{margin-top:26px!important;}
+body.share-photo-results .section-head{margin-bottom:13px!important;}
+body.share-photo-results .rounds .round,body.share-photo-results .bracket-block,body.share-photo-results .details{background:var(--p5-r-surface)!important;border-color:var(--p5-r-stroke)!important;box-shadow:none!important;}
+body.share-photo-results .rounds .round:hover{background:#1a2b3a!important;}
+body.share-photo-results .share-tree-frame{background:#142331!important;border-color:var(--p5-r-stroke)!important;box-shadow:none!important;}
+body.share-photo-results .share-tree-card{background:#1a2c3a!important;border:1px solid #576a78!important;border-left:3px solid #b69a73!important;box-shadow:none!important;}
+body.share-photo-results .share-tree-card:hover,body.share-photo-results .share-tree-card:focus-visible,body.share-photo-results .share-tree-card.active{border-color:#d4b789!important;box-shadow:0 0 0 1px rgba(212,183,137,.6)!important;}
+body.share-photo-results .share-tree-lines{stroke:#82919b!important;}
+body.share-photo-results .share-tree-lines .share-tree-route-gold{stroke:#d4b789!important;}
+/* Team Showdown public viewer: same visual tokens and photography policy,
+   while preserving existing approved hierarchy, stage/duel functionality. */
+body.sd-public-only .wrap{width:min(100%,1200px)!important;max-width:1200px!important;padding-left:clamp(13px,2.4vw,27px)!important;padding-right:clamp(13px,2.4vw,27px)!important;}
+body.sd-public-only .sr-root{max-width:1120px!important;margin:0 auto 60px!important;}
+body.sd-public-only .sr-hero{background:linear-gradient(96deg,rgba(12,24,36,.91),rgba(12,24,36,.78)),url('/assets/p5-master-share-hero.webp') center 42% / cover no-repeat!important;border:1px solid rgba(212,183,137,.38)!important;border-radius:18px!important;padding:30px clamp(16px,3vw,34px) 28px!important;box-shadow:none!important;}
+body.sd-public-only .sr-hero h1{font-size:clamp(30px,5vw,55px)!important;text-shadow:none!important;}
+body.sd-public-only .sr-crown{text-shadow:none!important;}
+body.sd-public-only .sr-stage-card,body.sd-public-only .sr-player-box,body.sd-public-only .sr-section{background:var(--p5-r-surface)!important;border-color:var(--p5-r-stroke)!important;box-shadow:none!important;}
+body.sd-public-only .sr-stage-grid{gap:12px!important;margin-top:16px!important;}
+body.sd-public-only .sr-section>summary{background:#192b3a!important;}
+body.sd-public-only .sr-table th{background:#213444!important;color:#dcc5a4!important;}
+body.sd-public-only .sr-table td{border-color:#344959!important;color:var(--p5-r-ink)!important;}
+body.sd-public-only .sr-person:nth-of-type(even){background:rgba(255,255,255,.013)!important;}
+body.sd-public-only .sr-player-tools{background:#1a2b3a!important;border-color:#405362!important;}
+body.sd-public-only .sr-match,body.sd-public-only .sr-person-match{border-color:#344959!important;}
+body.sd-public-only .sr-public-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;}
+/* Keyboard and screen scaling: buttons remain tappable; no cropped score tables. */
+@media(max-width:720px){
+ body.share-photo-results .hero{min-height:188px!important;padding:23px 15px!important;}
+ body.share-photo-results .champion{min-height:150px!important;}
+ body.share-photo-results .leader{font-size:11.5px!important;}
+ body.sd-public-only .sr-hero{padding:25px 14px 23px!important;}
+ body.sd-public-only .sr-hero h1{font-size:clamp(29px,7vw,42px)!important;}
+ body.sd-public-only .sr-section>summary{min-height:64px!important;}
+}
+@media print{
+ /* The shared HTML print fallback uses the untouched approved cover;
+    direct-PDF export is the authoritative A4 landscape reporting path. */
+ body.share-photo-results .leader-card::before{display:none!important;}
+}
+
+
+/* ===============================================================
+   v5.5.3 — APPROVED: original standalone 5 numeral, no wordmark, 0° added rotation.
+   Original numeral 5 stays upright, anchored bottom-right BELOW legible content.
+   Source image is original logo (no reconstructed glyph) and clipped
+   above its wordmark. This is NOT used on cover/winner photographs.
+   =============================================================== */
+:root{--p5-report-five-image:url('/assets/p5-master-logo-original.png')}
+body.share-photo-results .leader-card,
+body.share-photo-results .rounds .round,
+body.share-photo-results .bracket-block,
+body.share-photo-results .share-tree-frame,
+body.share-photo-results .analysis-wrap,
+body.sd-public-only .sr-section,
+body.sd-public-only .sr-player-box,
+body.sd-public-only .sr-stage-card,
+body.sd-public-only .sr-stage1-leaderboard,
+body.sd-public-only .sr-pair-board{
+ position:relative!important;isolation:isolate!important;
+}
+/* A single authentic logo image, cropped at 84% height so PADEL 5IVE
+   lettering is entirely outside the visible region. */
+body.share-photo-results .leader-card::before,
+body.share-photo-results .rounds .round::before,
+body.share-photo-results .bracket-block::before,
+body.share-photo-results .share-tree-frame::before,
+body.share-photo-results .analysis-wrap::before,
+body.sd-public-only .sr-section::before,
+body.sd-public-only .sr-player-box::before,
+body.sd-public-only .sr-stage-card::before,
+body.sd-public-only .sr-stage1-leaderboard::before,
+body.sd-public-only .sr-pair-board::before{
+ content:""!important;display:block!important;position:absolute!important;
+ top:auto!important;bottom:-54px!important;right:-8%!important;width:min(54%,480px)!important;
+ height:550px!important;max-height:none!important;
+ transform:rotate(0deg)!important;transform-origin:50% 50%!important;
+ background:var(--p5-report-five-image) center center / 100% 100% no-repeat!important;
+ opacity:.033!important;pointer-events:none!important;z-index:0!important;
+ clip-path:inset(0 0 16% 0)!important;
+ border:0!important;box-shadow:none!important;
+}
+/* For dense sections, content remains above the watermark. */
+body.share-photo-results .leader-card > *,
+body.share-photo-results .rounds .round > *,
+body.share-photo-results .bracket-block > *,
+body.share-photo-results .share-tree-frame > *,
+body.share-photo-results .analysis-wrap > *,
+body.sd-public-only .sr-section > *,
+body.sd-public-only .sr-player-box > *,
+body.sd-public-only .sr-stage-card > *,
+body.sd-public-only .sr-stage1-leaderboard > *,
+body.sd-public-only .sr-pair-board > *{
+ position:relative;z-index:1;
+}
+body.share-photo-results .leader-card,
+body.share-photo-results .rounds .round,
+body.share-photo-results .share-tree-frame,
+body.sd-public-only .sr-section,
+body.sd-public-only .sr-stage-card {overflow:hidden!important}
+/* Bracket is horizontally scrollable: its existing inner scrolling container
+   stays available; this only clips exterior mark on the frame itself. */
+body.share-photo-results .share-tree-frame{overflow:auto!important}
+@media(max-width:720px){
+ body.share-photo-results .leader-card::before,
+ body.share-photo-results .rounds .round::before,
+ body.sd-public-only .sr-section::before{
+  right:-16%!important;bottom:-32px!important;width:75%!important;height:430px!important;
+ }
+}
+
+body.share-photo-results .leader-card{overflow-x:auto!important;overflow-y:hidden!important}

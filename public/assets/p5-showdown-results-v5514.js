@@ -41,7 +41,7 @@ try{
  const deciders=E.stage3Matches(data).filter(completed).slice().reverse();
  const stats=E.stage1Stats(data),s2=data.stage2?E.stage2Stats(data):null,s3=data.stage3?E.stage3Stats(data):null,verdict=E.verdict(data);
  const hasStage2=!!data.stage2,hasStage3=!!data.stage3;
- const winner=verdict.champion,loser=winner==='A'?'B':'A';
+ const winner=verdict.champion;
  const played=rr.length+duels.length+deciders.length;
  // Preserve the existing approved report cover, date and simple metrics.
  set('.hero .session',data.setup.sessionName||'TEAM SHOWDOWN');
@@ -51,7 +51,7 @@ try{
  if(meta.length>=3){meta[0].textContent=String(data.setup.courts||'—');meta[1].textContent=String((data.roster.A||[]).length+(data.roster.B||[]).length);meta[2].textContent=String(played);}
  set('.winner h2',winner?label(winner):'Final Results Pending');
  set('.winner .sub',hasStage3?'Official Championship Winners · The Decider':hasStage2?'Official Championship Winners · Team Duel':'Official Round Robin Winners');
- set('.winner .runner',winner?'RUNNER-UP · '+label(loser):'Final results are pending');
+
  root.querySelector('.top-status').textContent=winner?'FINAL':'PUBLISHED';
  const result=root.querySelector('#team-result');
  if(result){const teams=result.querySelectorAll('.team strong');if(teams.length===2){teams[0].textContent=names.A;teams[1].textContent=names.B;}

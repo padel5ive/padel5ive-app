@@ -1,0 +1,8 @@
+{
+  "release": "5.5.15-fairness-and-reporting",
+  "baseline": "5.5.14 integrated deployment",
+  "scope": ["Individual Americano fair-cycle scheduler for ideal 6-player-per-court configurations", "Visible moderator PIN hints", "Detailed Team Showdown Stage Highlights", "Matte navy Championship reveal", "Neutral version labels"],
+  "new_session_only": true,
+  "unchanged": ["Other game modes", "Existing saved session fixtures", "Direct PDF engine", "Publishing API and Netlify Blobs"],
+  "qa": "Required: full clean-build/browser test before live approval"
+}

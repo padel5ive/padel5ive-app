@@ -1,6 +1,6 @@
 # PADEL 5IVE · Match Control
 
-Production source for **PADEL 5IVE Unified Match Control**, version **5.5.14**.
+Production source for **PADEL 5IVE Unified Match Control**, version **5.5.15**.
 
 **Website:** https://padel5ive.netlify.app  
 **Source:** https://github.com/padel5ive/padel5ive-app
@@ -14,8 +14,14 @@ Production source for **PADEL 5IVE Unified Match Control**, version **5.5.14**.
 | `scripts/` | Build verification and PDF smoke tests |
 | `netlify.toml` | Netlify build/publish, Functions, and public results redirects |
 | `package.json`, `package-lock.json` | Node dependencies and build commands |
-| `RELEASE_MANIFEST_V5514.json` | Current release metadata |
-| `docs/QA_REPORT_V5514_INTEGRATED.md` | Last integrated pre-deploy QA report |
+| `RELEASE_MANIFEST_V5515.json` | Current release metadata |
+| `docs/QA_REPORT_V5515.md` | Last integrated pre-deploy QA report |
+
+## Fairness scheduler (new sessions)
+
+Individual Americano with ideal 6 players/court (6/1, 18/3, 24/4, 30/5) uses 3-round fair cycles: G gap never exceeds 1, and all players have equal G after each complete 3-round block until the final partial block. The certified 12/2 schedule is retained. Existing saved matches, other modes, PDF renderer, and published result URLs are unchanged.
+
+The moderator dashboard displays the publishing PIN per the venue operator’s preference. Do not share moderator access with unauthorized users.
 
 ## Deployment
 
@@ -44,6 +50,6 @@ Both are read-only public viewers; scores and published data are managed through
 
 ## Release status
 
-The v5.5.14 source and repository build were verified. **Live Netlify result publication, iPad Safari behavior, and end-to-end smoke tests must be checked separately** before treating the release as a locked production master.
+The v5.5.15 source and repository build were verified. **Live Netlify result publication, iPad Safari behavior, and end-to-end smoke tests must be checked separately** before treating the release as a locked production master.
 
 For rollback use Git history or restore the previous successful deployment on the existing Netlify site. Historical QA notes and earlier release manifests remain retrievable through Git history.

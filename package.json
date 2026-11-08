@@ -1,6 +1,6 @@
 {
   "name": "padel5ive-unified-match-control",
-  "version": "5.5.14-full-deploy-qa",
+  "version": "5.5.15-fairness-and-reporting",
   "private": true,
   "dependencies": {
     "@netlify/blobs": "^10.0.0"

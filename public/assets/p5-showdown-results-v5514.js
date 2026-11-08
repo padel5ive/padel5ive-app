@@ -61,11 +61,18 @@ try{
   set('#team-result .p5-championship-signoff span:last-child',winner?label(winner)+' · CHAMPIONS':'CHAMPIONSHIP IN PROGRESS');
  }
  const summaries=[];
- if(hasStage3){const champ=s3?.winner;const last=deciders[0];summaries.push({n:3,name:'THE DECIDER',winner:champ,desc:last?`Final deciding match · ${last.scoreA}–${last.scoreB}`:'No completed decider matches'});}
- if(hasStage2){summaries.push({n:2,name:'TEAM DUEL',winner:s2?.winner,desc:s2?`Team Duel · ${s2.wA}–${s2.wB} match wins`:'Team Duel'});}
- summaries.push({n:1,name:'ROUND ROBIN',winner:stats.winner,desc:`Full cross-club pair rotation · ${rr.length} matches`});
+ const stageLine=(completed,aWins,bWins,aGames,bGames,kind)=>({
+  desc:`${completed} ${kind} · ${names.A} ${aWins}W – ${bWins}W ${names.B}`,
+  detail:`Total games · ${names.A} ${aGames} – ${bGames} ${names.B}`
+ });
+ if(hasStage3){const champ=s3?.winner;const v=stageLine(s3?.completed||0,s3?.wA||0,s3?.wB||0,s3?.pA||0,s3?.pB||0,'deciding match'+((s3?.completed||0)===1?'':'es'));
+  summaries.push({n:3,name:'THE DECIDER',winner:champ,...v});}
+ if(hasStage2){const v=stageLine(s2?.completed||0,s2?.wA||0,s2?.wB||0,s2?.pA||0,s2?.pB||0,'team duel'+((s2?.completed||0)===1?'':'s'));
+  summaries.push({n:2,name:'TEAM DUEL',winner:s2?.winner,...v});}
+ const rrInfo=stageLine(stats.team.A.played,stats.team.A.w,stats.team.B.w,stats.team.A.p,stats.team.B.p,'matches');
+ summaries.push({n:1,name:'ROUND ROBIN',winner:stats.winner,...rrInfo});
  const summary=root.querySelector('#stage-summary .stage-summary');
- if(summary)summary.innerHTML=summaries.map(x=>`<article class="stage-card"><small>STAGE ${x.n} · ${x.name}</small><strong>${x.winner?esc(label(x.winner))+' Wins':'Stage Result Pending'}</strong><div class="desc">${esc(x.desc)}</div></article>`).join('');
+ if(summary)summary.innerHTML=summaries.map(x=>`<article class="stage-card"><small>STAGE ${x.n} · ${x.name}</small><strong>${x.winner?esc(label(x.winner))+' Wins':'Stage Result Pending'}</strong><div class="desc">${esc(x.desc)}<span class="p5-detail">${esc(x.detail)}</span></div></article>`).join('');
  const summaryTitle=root.querySelector('#stage-summary .heading h2');
  if(summaryTitle)summaryTitle.innerHTML='<span>02 /</span> Stage Highlights';
  const makeMatchRow=(m,stage)=>{

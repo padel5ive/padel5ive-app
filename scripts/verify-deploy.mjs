@@ -7,7 +7,7 @@ const must=[
  'public/assets/p5-direct-pdf.js','public/assets/p5-reporting-foundation.js',
  'public/assets/p5-reporting-foundation.css','public/assets/p5-interactive-results.js',
  'public/assets/p5-results-visual-v5514.css','public/assets/p5-results-nav-v5514.js',
- 'public/assets/p5-showdown-engine.js','public/assets/p5-showdown-results-v5514.js',
+ 'public/assets/p5-showdown-engine.js','public/assets/p5-fair-cycle-v5515.js','public/assets/p5-showdown-results-v5514.js',
  'public/assets/p5-showdown-results-v5514.css','public/assets/fixed-master-official-results.css'
 ];
 for(const p of must)if(!fs.existsSync(p)||fs.statSync(p).size<100)throw Error('Missing required deploy file: '+p);
@@ -28,4 +28,4 @@ if(!showdown.includes("fetch('/api/results?id='")||!showdown.includes('E.stage1S
 if(showdown.includes('DEMO_DATA')||showdown.includes('P5_QA_DATA'))throw Error('Team Showdown fixture leaked into production');
 const legacy=read('public/modes/unified/index.html');
 if(legacy.includes("act('Download Official Report HTML'"))throw Error('Legacy HTML report export present');
-console.log('PADEL 5IVE v5.5.14 integrated deployment checks passed:',must.length,'files.');
+console.log('PADEL 5IVE v5.5.15 fairness/reporting deployment checks passed:',must.length,'files.');

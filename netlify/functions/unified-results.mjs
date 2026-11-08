@@ -56,6 +56,22 @@ function validateReport(s){
       if(match.confirmed){if(match.score==null)return false;foundScore=true;}
     }
   }
+  // v5.4.13.7: optional confirmed knockout graph, serialized for the master-style
+  // interactive public bracket. Existing published snapshots without this field
+  // remain backwards compatible. Only canonical bracket match IDs may be sent.
+  if(s.publicKO!==undefined){
+    if(!Array.isArray(s.publicKO)||s.publicKO.length>31)return false;
+    const koIds=new Set();
+    for(const k of s.publicKO){
+      if(!Number.isInteger(k?.id)||k.id<1||k.id>31||koIds.has(k.id)||!['W','L','F'].includes(k.group))return false;
+      koIds.add(k.id);
+      if(!Number.isInteger(k.round)||k.round<1||k.round>12)return false;
+      if(!Array.isArray(k.teamA)||!Array.isArray(k.teamB)||k.teamA.length!==k.teamB.length||k.teamA.length!==(single?1:2))return false;
+      const all=[...k.teamA,...k.teamB];
+      if(new Set(all).size!==all.length||all.some(id=>!identifiers.has(id)))return false;
+      if(!Array.isArray(k.score)||k.score.length!==2||k.score.some(v=>!Number.isSafeInteger(v)||v<0||v>1000)||k.score[0]===k.score[1])return false;
+    }
+  }
   // The client requires >=1 confirmed score before it will publish.
   if(!foundScore)return false;
   return true;

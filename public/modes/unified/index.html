@@ -5869,7 +5869,7 @@ window.P5UI=(function(){'use strict';
  };
  const baseStat=s=>{const rows=statistics(s);return Math.max(0,...rows.map(x=>x.g))-Math.min(Infinity,...rows.map(x=>x.g));};
  function menu(s){
-  const icon={roster:'<circle cx="9" cy="8" r="3"></circle><path d="M3.7 19v-2a5.3 5.3 0 0 1 10.6 0v2"></path><path d="M17 8h5M19.5 5.5v5"></path>',courts:'<rect height="17" rx="2.5" width="17" x="3.5" y="3.5"></rect><path d="M12 3.5v17M3.5 12h17"></path>',match:'<path d="M4 7h16M4 17h16"></path><circle cx="9" cy="7" fill="#182531" r="2.4"></circle><circle cx="16" cy="17" fill="#182531" r="2.4"></circle>',share:'<circle cx="18" cy="5" r="2.1"></circle><circle cx="5.5" cy="12" r="2.1"></circle><circle cx="18" cy="19" r="2.1"></circle><path d="m7.6 11 8.3-4.8M7.6 13l8.3 4.8"></path>'};
+  const icon={roster:'<circle cx="9" cy="8" r="3"></circle><path d="M3.7 19v-2a5.3 5.3 0 0 1 10.6 0v2"></path><path d="M17 8h5M19.5 5.5v5"></path>',courts:'<rect height="17" rx="2.5" width="17" x="3.5" y="3.5"></rect><path d="M12 3.5v17M3.5 12h17"></path>',match:'<path d="M4 7h16M4 17h16"></path><circle cx="9" cy="7" fill="#182531" r="2.4"></circle><circle cx="16" cy="17" fill="#182531" r="2.4"></circle>',share:'<circle cx="18" cy="5" r="2.1"></circle><circle cx="5.5" cy="12" r="2.1"></circle><circle cx="18" cy="19" r="2.1"></circle><path d="m7.6 11 8.3-4.8M7.6 13l8.3 4.8"></path>',settings:'<circle cx="12" cy="12" r="3"></circle><path d="M10.3 2.6h3.4l.5 2.2 1.5.6 1.9-1.2 2.4 2.4-1.2 1.9.6 1.5 2.2.5v3.4l-2.2.5-.6 1.5 1.2 1.9-2.4 2.4-1.9-1.2-1.5.6-.5 2.2h-3.4l-.5-2.2-1.5-.6-1.9 1.2-2.4-2.4 1.2-1.9-.6-1.5-2.2-.5v-3.4l2.2-.5.6-1.5-1.2-1.9 2.4-2.4 1.9 1.2 1.5-.6z"></path>'};
   const entry=(name,ico,body)=>`<details class="p5-b3-menu-section" data-submenu="${ico}"><summary><span class="p5-4852-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewBox="0 0 24 24">${icon[ico]}</svg></span><span class="p5-4852-label">${name}</span><span class="p5-4852-chevron">›</span></summary><div class="p5-4852-content">${body}</div></details>`;
   const act=(label,id)=>`<button type="button" class="p5-4852-action p5-b31-menu-row" data-act="${id}">${label}<span aria-hidden="true">›</span></button>`;
   const actionLine=(label,id,enabled,danger=false)=>`<button type="button" class="p5-4852-action p5-b3-menu-action ${danger?'p5-b3-danger':''}" data-act="${id}" ${enabled?'':'disabled aria-disabled="true"'}>${label}</button>`;
@@ -5893,7 +5893,7 @@ window.P5UI=(function(){'use strict';
     actionLine('Cancel Stage 2','cancel-stage2',canKO,true),
     actionLine('Reset Stage 2','reset-stage2',canKO,true)
    ])));
-  const share=entry('Share & Export','share',act('Preview / Save as PDF','report-preview')+act('Download Official Report HTML','export-official-html')+act('Share Final Results Link · PIN 555555555555','share-result-link'));
+  const share=entry('Share & Export','share',act('Export / Save as PDF','pdf-download')+act('<span class="p5-share-label-copy">Share Final Results Link<small>PIN · 55 55 55 55 55 55</small></span>','share-result-link'));
   const played=statistics(s),fair=P5RecoveryAudit.inspect(s),count=fair.counts;
   const completedGap=baseStat(s),needsReview=fair.needsReview||completedGap>1;
   const status=P5AdvancedRules.constrained(s)?'ADVANCED RULES':needsReview?(fair.naturalLimit?'CAPACITY LIMIT':'REVIEW'):'BALANCED';
@@ -5901,7 +5901,7 @@ window.P5UI=(function(){'use strict';
   const bound=fair.naturalLimit?`<p class="muted">Capacity constraint: ${fair.naturalLimit==='PLAY_3_MAY_BE_UNAVOIDABLE'?'More than two-thirds of participants must play each full round. Three-game streaks can become unavoidable.':'Fewer than half of participants can play each full round. Two-round rest streaks can become unavoidable.'}</p>`:'';
   const audit=`<details class="p5-b31-fairness"><summary><span>Fairness Monitor</span><span class="p5-b31-fairness-status ${needsReview?'p5-b31-needs-review':''}">${status}<span class="p5-b31-caret">⌄</span></span></summary><div class="p5-b3-fairness-body"><p>${fairnessDetail}</p>${bound}${P5AdvancedRules.constrained(s)?'<p class="muted">Intentional scheduling constraints: active Coach plays every round, locked Fixed Partners share play/rest status. Unequal match counts can be expected until a coach sits out.</p>':''}<p class="muted">Precomputed modes: full planned cycle. Dynamic Mexicano: rounds scheduled so far. Sit Out/Return history is excluded where availability is recorded. Partial rounds and court changes can affect the result. No guarantee of perfect opponent multiplicity.</p>${s.roster.map(p=>`<div>${esc(p.names.join(' & '))}: ${played.find(x=>x.id===p.id)?.g??0} confirmed · ${count[p.id]} assigned</div>`).join('')}</div></details>`;
   const historyControls=`<div class="p5-b3-score-ops" role="group" aria-label="Undo and redo session changes"><button type="button" data-act="undo" ${s.ui?.undoAvailable?'':'disabled aria-disabled="true"'} title="Undo the latest session change">Undo</button><button type="button" data-act="redo" ${s.ui?.redoAvailable?'':'disabled aria-disabled="true"'} title="Restore the last undone change">Redo</button></div><p class="p5-b536-history-note">Recent changes in this session. History clears when you reload or restore a backup.</p>`;
-  const advanced=entry('Advanced','courts',block('UNDO / REDO',[historyControls])+block('SYSTEM DIAGNOSTICS',[audit,act('System Check','system-check'),act('Activity Log','activity-log')])+block('DATA MANAGEMENT',[act('Backup Data','backup'),act('Restore Backup','restore')])+`<input id="restore-input" type="file" accept="application/json,.json" style="display:none">`);
+  const advanced=entry('Advanced Settings','settings',block('UNDO / REDO',[historyControls])+block('SYSTEM DIAGNOSTICS',[audit,act('System Check','system-check'),act('Activity Log','activity-log')])+block('DATA MANAGEMENT',[act('Backup Data','backup'),act('Restore Backup','restore')])+`<input id="restore-input" type="file" accept="application/json,.json" style="display:none">`);
   return `<details class="compact-controls" data-menu-key="root"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section aria-label="Session management" class="p5-4852-menu">${playersCourts}${management}${share}${advanced}</section><div class="p5-4857-new-row"><button type="button" class="menu-new-tournament" data-act="new-tournament">New Session</button></div></div></details>`;
  }
  function identity(s,stage){
@@ -6155,7 +6155,7 @@ window.P5UI=(function(){'use strict';
   const stats=hasKO?`<span class="champion-pill">${s.ko.format==='double'?'DOUBLE':'SINGLE'} ELIMINATION</span><span class="champion-pill">${s.ko.history?.length||0} KO RESULTS</span>`:`<span class="champion-pill">${leader[0]?.w??0} WINS</span><span class="champion-pill">${leader[0]?.diff>0?'+':''}${leader[0]?.diff??0} DIFF</span><span class="champion-pill">${leader[0]?.p??0} POINTS</span>`;
   const reveal=`<div class="card champion-presentation is-revealing p5-b3-champion-master"><button type="button" data-act="replay-champion" class="champion-reveal-icon" aria-label="Replay champion reveal" title="Replay champion reveal">↻</button><div class="champion-stars" aria-hidden="true">${'<i></i>'.repeat(12)}</div><span class="champion-light-sweep" aria-hidden="true"></span><div class="champion-overline">${overline}</div><div class="champion-emblem" aria-hidden="true">${trophy}</div><h1>${esc(team(s,winner))}</h1><div class="champion-subline">${subline}</div><div class="champion-meta">${stats}</div>${runner?`<div class="champion-runner"><span class="champion-runner-label">RUNNER-UP${hasKO?' · SEED #'+s.ko.runnerUpSeed:''}</span><strong class="champion-runner-name">${esc(team(s,runner))}</strong></div>`:''}</div>`;
   const completed=hasKO?`<section class="card p5-ko-bracket-card p5-b3-completed-bracket" id="p5-ko-bracket"><div class="row between"><h2>COMPLETED KNOCKOUT BRACKET</h2><span class="badge">OFFICIAL KO RESULTS</span></div>${koBracket(s)}</section>${koHistory(s)}`:`${standing(s)}${stage1History(s)}`;
-  const actions=`<nav class="p5-b31-final-actions" aria-label="Tournament final actions"><button type="button" data-act="print">Export / Save as PDF</button><button type="button" data-act="share-result-link">Share Final Results Link · PIN 555555555555</button><button type="button" data-act="new-tournament">New Session</button></nav>`;
+  const actions=`<nav class="p5-b31-final-actions" aria-label="Tournament final actions"><button type="button" data-act="print">Export / Save as PDF</button><button type="button" data-act="share-result-link">Share Final Results Link</button><button type="button" data-act="new-tournament">New Session</button></nav>`;
   return `${menu(s)}${hasKO?stageTabs(s):''}${identity(s,'CHAMPION')}${reveal}${completed}${actions}`;
  }
  function modal(s){
@@ -6185,7 +6185,7 @@ window.P5UI=(function(){'use strict';
  const statusEl=document.getElementById('status');if(statusEl)statusEl.textContent=status(s);
  // Home Setup mode and pairing are independently chosen; no hidden automatic defaults.
  const modalEl=document.getElementById('p5-modal-root');modalEl.innerHTML=modal(s);
- const rep=document.getElementById('p5-report-preview-root');if(rep)rep.innerHTML=s.ui.reportPreview?`<div class="p5-v23-preview-backdrop"><div class="p5-v23-preview-frame"><div class="p5-v23-preview-actions"><strong>OFFICIAL REPORT · PREVIEW</strong><button type="button" data-act="print">Print / Save PDF</button><button type="button" data-act="export-official-html">Export HTML</button><button type="button" data-act="report-close">Close</button></div><div class="p5-v23-preview-body">${P5Report.pages(s)}</div></div></div>`:'';
+ const rep=document.getElementById('p5-report-preview-root');if(rep)rep.innerHTML=s.ui.reportPreview?`<div class="p5-v23-preview-backdrop"><div class="p5-v23-preview-frame"><div class="p5-v23-preview-actions"><strong>OFFICIAL REPORT · PREVIEW</strong><button type="button" data-act="print">Print / Save PDF</button><button type="button" data-act="report-close">Close</button></div><div class="p5-v23-preview-body">${P5Report.pages(s)}</div></div></div>`:'';
  if(s.ui.menuOpen){const q=document.querySelector('.compact-controls');if(q)q.open=true;}
  if(s.ui.submenus)for(const name of s.ui.submenus){const q=document.querySelector(`[data-submenu="${name}"]`);if(q)q.open=true;}
  }
@@ -7158,7 +7158,7 @@ window.P5App=(function(){'use strict';
    case 'back-stage1':case 'tab-stage1':s.ui.stageTab='stage1';closeMenu();render();break;
    case 'tab-stage2':s.ui.stageTab='stage2';closeMenu();render();break;
    case 'cancel-stage2':modal('confirm','Cancel Knockout?','Discard Stage 2 bracket while preserving all completed Stage 1 scores.',()=>{snapshot();s.ko=null;s.qualification=null;s.stage='stage1finished';s.koFormat='';s.koMatchFormat='';s.koFinalFormat='';s.ui.stageTab='stage1';save();render();});break;
-   case 'print':printReport();break;
+   case 'print':case 'pdf-download':try{P5DirectPDF.exportPDF(P5PublicResults.snapshot(s)).then(o=>{if(o.downloaded)toast('Official PDF downloaded · Open Downloads / Save to Files');else if(o.shared)toast('PDF sent to iOS sharing sheet');}).catch(e=>toast('PDF export failed: '+e.message));}catch(e){toast('PDF export unavailable: '+e.message);}break;
    case 'report-preview':s.ui.reportPreview=true;render();break;
    case 'report-close':s.ui.reportPreview=false;render();break;
    case 'export-official-html':exportOfficialHTML();break;
@@ -7356,7 +7356,15 @@ window.P5PublicResults=(function(){'use strict';
    courts:state.courts,matchFormat:state.matchFormat,koFormat:state.koFormat,
    roster:(state.roster||[]).map(x=>({id:x.id,names:[...x.names],group:x.group||null})),groupConfig:state.groupConfig||null,
    rounds:(state.rounds||[]).map(r=>({matches:(r.matches||[]).map(m=>m?{id:m.id,court:m.court,teams:m.teams,score:m.score,confirmed:!!m.confirmed}:null)})),
-   ko:state.ko||null
+   ko:state.ko||null,
+   publicKO:(()=>{try{
+     if(!state.ko||state.ko.format==='none'||!state.ko.teams)return [];
+     const graph=P5KO.graph(state.ko),defs=P5KO.definitions(state.ko.format);
+     return defs.map(d=>{const m=graph[d.id];if(!m?.valid||!m.visible||!Array.isArray(m.score))return null;
+       const A=state.ko.teams[m.a.id-1],B=state.ko.teams[m.b.id-1];if(!A||!B)return null;
+       return {id:m.id,group:m.g,round:m.r,teamA:A.ids.slice(),teamB:B.ids.slice(),score:m.score.slice()};
+     }).filter(Boolean);
+   }catch(e){console.warn('Public KO snapshot unavailable',e);return [];}})()
   };
  }
  function check(s){
@@ -7415,6 +7423,17 @@ window.P5PublicResults=(function(){'use strict';
   if(value)node.querySelector('#p5-public-url').value=value;
   node.querySelector('#p5-public-dismiss').addEventListener('click',closeDialog);
   if(value)node.querySelector('#p5-public-copy').addEventListener('click',async e=>{const input=node.querySelector('#p5-public-url');try{await navigator.clipboard.writeText(input.value);e.currentTarget.textContent='Copied';}catch{input.focus();input.select();try{document.execCommand('copy');e.currentTarget.textContent='Copied';}catch{e.currentTarget.textContent='Select & Copy';}}});
+  if(value&&String(value).startsWith(location.origin+'/u/')){
+    const buttons=document.createElement('div');buttons.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:12px 0';
+    const wa=document.createElement('button');wa.type='button';wa.textContent='Share to WhatsApp';wa.style.cssText='flex:1;min-width:130px;background:#285c49;color:#f5fff5;padding:11px;border:1px solid #70a18b;border-radius:8px';
+    wa.addEventListener('click',()=>{window.open('https://wa.me/?text='+encodeURIComponent('PADEL 5IVE · Official Tournament Results\n'+value),'_blank','noopener,noreferrer');});
+    const native=document.createElement('button');native.type='button';native.textContent='Share Link';native.style.cssText='flex:1;min-width:110px;background:#3b4a58;color:#f5ede1;padding:11px;border:1px solid #87939e;border-radius:8px';
+    native.addEventListener('click',async()=>{if(navigator.share)try{await navigator.share({title:'PADEL 5IVE · Official Results',text:'Official Tournament Results',url:value});return;}catch(e){if(e.name==='AbortError')return;}try{await navigator.clipboard.writeText(value);native.textContent='Copied';}catch(e){window.prompt('Copy link',value);}});
+    const view=document.createElement('button');view.type='button';view.textContent='Open Results ↗';view.style.cssText='flex:1;min-width:120px;background:#2b3845;color:#e1c9a7;padding:11px;border:1px solid #8f7961;border-radius:8px';
+    view.addEventListener('click',()=>window.open(value,'_blank','noopener,noreferrer'));
+    buttons.append(wa,native,view);node.querySelector('section').appendChild(buttons);
+  }
+
  }
  async function showShare(state){
   if(!supported())return showDialog('Hosted Link Unavailable','This HTML Viewer is opened as a local file. Share Results (offline) or Export Official HTML still work; a public URL needs this same viewer hosted over HTTPS.');
@@ -7483,6 +7502,7 @@ function showPublish(state){
   box.hidden=true;sub.textContent='Update Published Results';
   root.querySelector('#p5-share-existing').hidden=false;root.querySelector('#p5-link-current').value=officialUrl(current.id);
   const copy=root.querySelector('#p5-publish-copy');copy.hidden=false;
+  const shareExisting=document.createElement('button');shareExisting.type='button';shareExisting.textContent='WhatsApp Share ↗';shareExisting.style.cssText='padding:10px;border:1px solid #527f6d;border-radius:8px;background:#275443;color:#fff;';root.querySelector('#p5-public-dismiss').before(shareExisting);shareExisting.addEventListener('click',()=>window.open('https://wa.me/?text='+encodeURIComponent('PADEL 5IVE · Official Tournament Results\n'+officialUrl(current.id)),'_blank','noopener,noreferrer'));
   copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(officialUrl(current.id));copy.textContent='Copied';}catch{root.querySelector('#p5-link-current').select();copy.textContent='Select & Copy';}});
   const fresh=document.createElement('button');fresh.type='button';fresh.textContent='Use a New Link';fresh.style.cssText='padding:10px;border:1px solid #647380;border-radius:8px;background:transparent;color:#f5e4c9';root.querySelector('#p5-public-dismiss').before(fresh);
   fresh.addEventListener('click',()=>{if(!confirm('Create a new public URL for this session? The old URL will no longer receive updates, but it may remain readable until revoked.'))return;try{localStorage.removeItem(LINK_KEY+state._sessionId)}catch(e){}showPublish(state);});
@@ -7568,4 +7588,4 @@ function closeViewer(){document.querySelector('#p5-public-view')?.remove();}
  return Object.freeze({makeLink,showShare,showPublish,publish,showRevoke,revoke,readPublished,officialUrl,snapshot,pack,unpack,openFromHash});
 })();
 
-</script><!-- v5.4.13.5 Americano court rotation + Share/Export clarity; preserve original engines. --></body></html>
+</script><!-- v5.4.13.7 Interactive Master Results and Native PDF; preserve original engines. --><style id="p5-54137-share-menu">.p5-share-label-copy{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.p5-share-label-copy small{display:block;font-size:10px;letter-spacing:.08em;font-weight:500;color:#b4b7bd}.p5-4852-action[data-act="share-result-link"]{min-height:58px;text-align:left}</style><script src="/assets/p5-direct-pdf.js"></script></body></html>

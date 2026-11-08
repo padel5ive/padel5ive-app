@@ -1,0 +1,7 @@
+{
+  "version": "5.4.13.9",
+  "change": "Unified menu: Advanced \u2192 Advanced Settings, distinct settings icon",
+  "unchanged": "All other application and Netlify source files are identical to v5.4.13.8",
+  "base_sha256": "d1fcc1fa595fee80fddf113e9089512431d6bc308b461029e0cc449eddf0b0bf",
+  "updated_sha256": "c34887e04c899b5efbb686655573df8ab046a9cca115f012a4a8d65910eecda6"
+}

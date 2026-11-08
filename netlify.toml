@@ -22,7 +22,7 @@
 
 [[redirects]]
   from = "/u/*"
-  to = "/modes/unified/index.html"
+  to = "/results/unified/index.html"
   status = 200
   force = true
 

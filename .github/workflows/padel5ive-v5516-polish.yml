@@ -63,7 +63,10 @@ jobs:
           sha256sum --check /tmp/p5-protected.sha256
           node --check public/assets/p5-keyboard-nav-v5516.js
           node --check public/assets/p5-showdown-results-v5514.js
-          node scripts/qa-v5515.cjs
+          # Keep the 5.5.15 baseline test intact and run its version-aware 5.5.16 copy.
+          cp scripts/qa-v5515.cjs scripts/qa-v5516.cjs
+          sed -i 's/v5\.5\.15/v5.5.16/g' scripts/qa-v5516.cjs
+          node scripts/qa-v5516.cjs
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm run build
           test "$(grep -o 'p5-keyboard-nav-v5516.js' public/modes/unified/index.html | wc -l)" = 1

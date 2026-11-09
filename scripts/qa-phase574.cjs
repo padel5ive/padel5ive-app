@@ -6,7 +6,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  const {storeNameForUrl}=await import('../netlify/helpers/unified-store.mjs');
  const {previewImageType}=await import('../netlify/helpers/preview-image.mjs');
  // Minimal JPEG SOF0 with 1200x630 header: validates format without a heavyweight binary fixture.
- const jpeg=Buffer.from([0xff,0xd8,0xff,0xc0,0,17,8,0x02,0x76,0x04,0xb0,...Array(40).fill(0)]);
+ const jpeg=Buffer.from([0xff,0xd8,0xff,0xc0,0,17,8,0x02,0x76,0x04,0xb0,...Array(80).fill(0)]);
  assert.equal(previewImageType(jpeg),'jpg');
  const wrongSize=Buffer.from(jpeg);wrongSize.writeUInt16BE(631,7);
  assert.equal(previewImageType(wrongSize),null,'preview must reject unexpected dimensions');

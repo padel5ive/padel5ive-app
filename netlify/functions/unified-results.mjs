@@ -1,4 +1,5 @@
 import { resultsStore } from '../helpers/unified-store.mjs';
+import { previewImageType } from '../helpers/preview-image.mjs';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /** PADEL 5IVE Phase 5.4.13 – Official Unified read-only public reports.
@@ -88,11 +89,11 @@ async function readBody(request){
   if(body.preview!==undefined&&body.preview!==null){
     if(typeof body.preview!=='string'||body.preview.length>550000||!/^[-a-zA-Z0-9+/=]+$/.test(body.preview))throw Object.assign(new Error('Invalid social preview image'),{status:400});
     const bytes=Buffer.from(body.preview,'base64');
-    if(bytes.byteLength>MAX_PREVIEW_BYTES||bytes.byteLength<60||
-       bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
-       bytes.readUInt32BE(16)!==1200||bytes.readUInt32BE(20)!==630)
-       throw Object.assign(new Error('Social preview must be a 1200x630 PNG'),{status:400});
+    const format=previewImageType(bytes);
+    if(bytes.byteLength>MAX_PREVIEW_BYTES||!format)
+       throw Object.assign(new Error('Social preview must be a compact 1200x630 JPEG or PNG'),{status:400});
     body.previewBytes=bytes;
+    body.previewType=format;
   }
   return body;
 }
@@ -112,7 +113,7 @@ export default async function handler(request){
         if(!pinValid(request.headers.get('X-Padel-Pin')))return json({error:'Invalid publishing PIN'},401);
         const body=await readBody(request),id=randomBytes(12).toString('base64url'),token=randomBytes(32).toString('base64url'),now=new Date().toISOString();
         if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
-        await store.setJSON(id,{version:1,hash:sha(token),data:body.data,revision:1,previewReady:!!body.previewBytes,previewRevision:body.previewBytes?1:0,createdAt:now,updatedAt:now,revoked:false});
+        await store.setJSON(id,{version:1,hash:sha(token),data:body.data,revision:1,previewReady:!!body.previewBytes,previewType:body.previewType||null,previewRevision:body.previewBytes?1:0,createdAt:now,updatedAt:now,revoked:false});
         return json({id,editToken:token,revision:1,updatedAt:now},201);
       }
       case 'PUT':{
@@ -126,7 +127,7 @@ export default async function handler(request){
         const revision=entry.revision+1,now=new Date().toISOString();
         if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
         // Not an atomic database transaction: concurrent organizer updates remain a staging QA risk.
-        await store.setJSON(id,{...entry,data:body.data,revision,previewReady:!!body.previewBytes||!!entry.previewReady,previewRevision:body.previewBytes?revision:(entry.previewRevision||0),updatedAt:now});
+        await store.setJSON(id,{...entry,data:body.data,revision,previewReady:!!body.previewBytes||!!entry.previewReady,previewType:body.previewType||(entry.previewType||'png'),previewRevision:body.previewBytes?revision:(entry.previewRevision||0),updatedAt:now});
         return json({id,revision,updatedAt:now});
       }
       case 'DELETE':{

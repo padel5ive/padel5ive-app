@@ -15,6 +15,7 @@ async function checkUnified(){
  const dom=new JSDOM(html,{url:'https://example.test/modes/unified/',pretendToBeVisual:true,runScripts:'outside-only'});
  const doc=dom.window.document,root=doc.querySelector('.p5-4852-menu');
  const share=doc.querySelector('[data-act="share-result-link"]');let calls=0;share.addEventListener('click',()=>calls++);
+ dom.window.requestAnimationFrame=fn=>{fn(Date.now());return 1;};
  dom.window.eval(script);
  doc.dispatchEvent(new dom.window.Event('DOMContentLoaded',{bubbles:true}));
  await wait();
@@ -35,6 +36,7 @@ async function checkClub(){
  const dom=new JSDOM(html,{url:'https://example.test/modes/club-match/',pretendToBeVisual:true,runScripts:'outside-only'});
  const doc=dom.window.document,root=doc.querySelector('.p5-4852-menu');
  const backup=doc.querySelector('[data-action="backup"]'),pdf=doc.querySelector('#exportPdf');let count=0;backup.addEventListener('click',()=>count++);
+ dom.window.requestAnimationFrame=fn=>{fn(Date.now());return 1;};
  dom.window.eval(script);
  doc.dispatchEvent(new dom.window.Event('DOMContentLoaded',{bubbles:true}));await wait();
  assert.equal(root.children.length,3,'Club must have three categories');

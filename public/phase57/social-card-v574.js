@@ -48,8 +48,8 @@ async function render(data){
   const p=project(data);
   const col={bg:'#101d2b',bg2:'#132332',gold:'#d7b98b',ivory:'#f5eee3',soft:'#bdc8d0',muted:'#97a9b6',line:'#53606c'};
   const rect=(x,y,w,h,fill)=>{g.fillStyle=fill;g.fillRect(x,y,w,h);};
-  const text=(value,x,y,size=20,color=col.ivory,weight=500,spacing=0)=>{
-    g.fillStyle=color;g.font=weight+' '+size+'px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+  const text=(value,x,y,size=20,color=col.ivory,weight=500,spacing=0,style='normal')=>{
+    g.fillStyle=color;g.font=style+' '+weight+' '+size+'px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
     g.textBaseline='alphabetic';const v=String(value||'');
     if(spacing&&typeof g.letterSpacing==='string')g.letterSpacing=spacing+'px';
     g.fillText(v,x,y);
@@ -89,7 +89,6 @@ async function render(data){
     if(p.runner){text('RUNNER-UP',66,483,16,col.gold,680,1);fit(p.runner,66,522,520,26,col.soft,620);}
   }else{
     text(p.complete?'FINAL RESULTS':'PUBLISHED STANDINGS',66,412,18,col.gold,700,1);
-    text('BEYOND 5IVE. BEYOND PLAY.',66,460,18,col.soft,500);
   }
   rect(614,126,1,420,'#445666');
   text(ko?'STAGE 1 TOP 5':p.complete?'FINAL LEADERBOARD':'LIVE STANDINGS',655,154,20,col.gold,700,1);
@@ -103,7 +102,7 @@ async function render(data){
     if(i<4)rect(655,y+20,479,1,'#344654');
   }
   rect(58,573,1084,1,col.line);
-  text('BEYOND 5IVE. BEYOND PLAY.',64,605,14,col.gold,520,1);
+  text('BEYOND 5IVE. BEYOND PLAY.',64,605,14,col.gold,450,1,'italic');
   text('PADEL5IVE.NETLIFY.APP',927,605,13,col.muted,550,1);
   // Safari creates surprisingly large lossless PNGs with gradient/watermark.
   // JPEG is WhatsApp-compatible and preserves the premium card at ~1/4 the size.

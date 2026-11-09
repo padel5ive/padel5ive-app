@@ -1,0 +1,34 @@
+name: PWA Navigation Root-Cause Audit
+on:
+  push:
+    branches: [feature/pwa-preview-v5.6]
+    paths: ['.github/workflows/pwa-nav-root-cause.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: feature/pwa-preview-v5.6}
+      - name: Inspect precise navigation markup, click handlers and CSS selectors
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for p in ['public/index.html','public/modes/unified/index.html','public/modes/club-match/index.html']:
+              s=Path(p).read_text('utf-8')
+              print('\n========',p,'========')
+              for tag in re.findall(r'<nav\b[^>]*>.*?</nav>',s,re.I|re.S)[:3]:
+                  print('NAV HTML:',tag[:1600])
+              for marker in ['id="p54-home-link"','id="p54-back-home"','p54-back-home','p54-home-link','p54-app-nav']:
+                  print('FIND',marker,'COUNT',s.count(marker))
+                  for m in list(re.finditer(re.escape(marker),s))[-4:]:
+                      text=s[max(m.start()-190,0):m.end()+270]
+                      print('CONTEXT',repr(text[:550]))
+              if p.endswith('/index.html') and p!='public/index.html':
+                  for marker in ['position:sticky','position:fixed','window.scrollTo(0,0)','scrollRestoration','popstate','preventDefault()','click', 'p54-back-home']:
+                      print('MARK',marker,'COUNT',s.count(marker))
+              print('BODY',re.search(r'<body[^>]*>',s).group(0))
+          PY

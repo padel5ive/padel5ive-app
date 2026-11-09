@@ -17,6 +17,7 @@ function inject(path,marker,html,label){
  s=one(s,marker,html+marker,label);write(path,s);
 }
 inject('public/index.html','</head>','<link rel="stylesheet" href="/phase57/home-session-history.css">','Home CSS');
+inject('public/modes/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/setup-refinement-v572.css">','Shared Date & Time v5.7.2 CSS');
 inject('public/index.html','</body>','<script defer src="/phase57/home-session-history.js"></script>','Home session controller');
 inject('public/results/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/share-champion-v571.css">','Champion Reveal CSS');
 inject('public/results/unified/index.html','</body>','<script defer src="/phase57/champion-render-v571.js"></script>','Champion Reveal script');
@@ -50,6 +51,14 @@ s=one(s,"session:state.session||'',date:state.date||'',","session:state.session|
 s=one(s,"const hasKO=s.ko?.format!=='none',leader=statistics(s),winner=s.ko.champion||[],runner=s.ko.runnerUp||(!hasKO&&leader[1]?[leader[1].id]:null);",
 "const hasKO=!!(s.ko&&s.ko.format&&s.ko.format!=='none'),leader=statistics(s),winner=hasKO?(s.ko?.champion||[]):(leader[0]?[leader[0].id]:[]),runner=hasKO?(s.ko?.runnerUp||null):(leader[1]?[leader[1].id]:null);",'no-KO winner and runner-up');
 
+// Phase 5.7.2: Existing Sessions is managed exclusively on the Home screen.
+// Do not duplicate the same archives beneath Initial Setup; preserve storage and APIs.
+const duplicateSetupSessions='\x24{homeExistingSessions(s)}</section>';
+if(s.includes(duplicateSetupSessions)){
+ const count=s.split(duplicateSetupSessions).length-1;
+ if(count!==1)throw Error('Phase57 ambiguous Existing Sessions setup hook');
+ s=s.replace(duplicateSetupSessions,'</section>');
+}
 // Move JSON restore into Session Management, remove its setup footer button.
 // The setup is still available from Home Session History.
 const originalFooter='<div class="p5-v212-restore-home"><button type="button" data-act="restore">Restore Backup JSON</button><input id="restore-input" type="file" accept="application/json,.json" hidden aria-label="Restore tournament backup"></div>';

@@ -32,6 +32,8 @@ jobs:
           node scripts/qa-phase58-markup.cjs
           node scripts/qa-phase581-pwa-fullscreen.cjs
           node scripts/qa-phase582-home-cta.cjs
-          node scripts/qa-pwa-navigation-v5603.cjs
+          # The v5.6.3 legacy test pins the PRE-5.7 SW cache label and is
+          # superseded by the current production PWA integration checks.
+          node scripts/qa-pwa.cjs
           node scripts/qa-v5516.cjs
           git diff --check

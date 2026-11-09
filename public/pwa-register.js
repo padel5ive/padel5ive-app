@@ -37,3 +37,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin, { once: true });
   else begin();
 })();
+/* Installable-app only: recover navigation and reset restored setup scroll. */
+(() => {
+  if (!window.matchMedia || !window.matchMedia('(display-mode: standalone)').matches) return;
+  const nav = document.createElement('script');
+  nav.src = '/pwa/navigation-v5603.js';
+  document.head.appendChild(nav);
+})();

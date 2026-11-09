@@ -18,6 +18,8 @@ function inject(path,marker,html,label){
 }
 inject('public/index.html','</head>','<link rel="stylesheet" href="/phase57/home-session-history.css">','Home CSS');
 inject('public/index.html','</body>','<script defer src="/phase57/home-session-history.js"></script>','Home session controller');
+inject('public/results/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/share-champion-v571.css">','Champion Reveal CSS');
+inject('public/results/unified/index.html','</body>','<script defer src="/phase57/champion-render-v571.js"></script>','Champion Reveal script');
 let s=read('public/modes/unified/index.html');
 s=one(s,"session:'',date:'',courts:null","session:'',date:'',time:'',courts:null",'new state game time');
 const oldDateLabel='<label class="p5-b2-wide">GAME DATE<span class="p5-b2-date-wrap">';

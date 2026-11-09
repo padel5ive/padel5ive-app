@@ -160,3 +160,21 @@ body:not(.p54-active) .p541-home-actions > #p54-resume {
     min-height:49px!important;
   }
 }
+
+/* Phase 5.7.5 · iPad Home CTA breathing room.
+ * The two actions must read as distinct choices, not a compressed button group. */
+body:not(.p54-active) .p541-home-actions {
+  gap:24px!important;
+  row-gap:24px!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-start,
+body:not(.p54-active) .p541-home-actions > #p57-history-button {
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
+@media(max-width:600px){
+  body:not(.p54-active) .p541-home-actions{
+    gap:20px!important;
+    row-gap:20px!important;
+  }
+}

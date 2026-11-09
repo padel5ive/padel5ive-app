@@ -29,6 +29,12 @@ function joinSafe(result){
  const key=K[kind],archKey=ARCH[kind],metaKey='p58-cloud-link-'+kind;
  const oldCurrent=localStorage.getItem(key),oldArchive=localStorage.getItem(archKey),oldMeta=localStorage.getItem(metaKey);
  const current=get(key),arch=get(archKey),list=Array.isArray(arch)?arch.slice():[];
+ // Never silently replace a local version of the SAME session; it may contain
+ // offline scores that do not exist in cloud storage yet.
+ if(active(current,kind)&&identity(current,kind)===identity(result.data,kind)){
+  const same=a=>{const v={...a};delete v.ui;return JSON.stringify(v)};
+  if(same(current)!==same(result.data))throw Error('This session already has local changes on this device. Export its JSON backup before loading the cloud version.');
+ }
  // Save the current local session before switching. Even an unexpected error restores it.
  if(active(current,kind)&&identity(current,kind)!==identity(result.data,kind)){
   const id=kind==='unified'?(current._sessionId||'sess-'+Date.now()):'club-'+Date.now();

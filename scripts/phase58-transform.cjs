@@ -25,6 +25,17 @@ for(const page of ['public/modes/unified/index.html','public/modes/club-match/in
  inject(page,'</head>','<link rel="stylesheet" href="/phase58/cloud-session.css">');
  inject(page,'</body>','<script defer src="/phase58/cloud-dashboard.js"></script>','last');
 }
+// Home Resume is ONLY for in-progress sessions. Champions/final results remain
+// accessible through Session History -> Past (never by the Home Resume shortcut).
+// Stored club archives also belong in History, not in this live shortcut.
+patch('public/index.html',
+ "    const a=activeUnified(),b=activeClub();\n    if(a)sessions.push({name:clean(a.session),kind:'unified',url:route('unified'),label:'Americano / Mexicano'});\n    if(b)sessions.push({name:clean(b.setup.sessionName),kind:'club',url:route('club'),label:'Team Showdown'});",
+ "    const a=activeUnified(),b=activeClub();\n    const p58Finished=x=>['champion','finished','completed','complete','final'].includes(String(x?.stage||'').toLowerCase());\n    if(a&&!p58Finished(a))sessions.push({name:clean(a.session),kind:'unified',url:route('unified'),label:'Americano / Mexicano'});\n    if(b&&!p58Finished(b))sessions.push({name:clean(b.setup.sessionName),kind:'club',url:route('club'),label:'Team Showdown'});",
+ 'No Resume for completed tournaments');
+patch('public/index.html',
+ "    const archived=parse(KEY_CLUB_ARCH);\n    if(Array.isArray(archived))archived.slice(0,4).forEach(x=>{\n      if(x?.id&&x.state?.setup)sessions.push({name:clean(x.state.setup.sessionName),kind:'archive',url:route('club','archive',x.id),label:'Saved Club Match'});\n    });",
+ "    // Archived sessions live exclusively in Session History.",
+ 'No archived sessions in Home Resume');
 // Club Match has a static native Advanced Settings panel. Keep the existing panel,
 // and insert a matching Session Management section directly above it.
 patch('public/modes/club-match/index.html',

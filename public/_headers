@@ -8,3 +8,5 @@
   Cache-Control: no-cache
 /offline.html
   Cache-Control: no-cache
+/pwa-standalone-layout-v5601.css
+  Cache-Control: no-cache, must-revalidate

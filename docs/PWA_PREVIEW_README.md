@@ -37,3 +37,12 @@ Use the preview for dummy sessions: a PR Deploy Preview may have separate backen
 ## Standalone Layout Polish — v5.6.1
 
 The iPhone/iPad Home Screen build now loads `/pwa-standalone-layout-v5601.css` on the landing page, Unified Match Control and Team Showdown. It adds safe-area-aware vertical spacing **only in standalone display mode**, keeping Safari and production layout unchanged. Initial Setup/nav and landing headline/CTA receive separate targeted offsets. QA verified the selectors, three stylesheet links, v5.5.16 engine regression, and production build. Reopen the installed preview after the updated Netlify Deploy Preview is published; if old styling remains, fully close and reopen the PWA.
+
+## v5.6.5 — Compact native-feeling navigation (preview only)
+
+- Safari/regular browser layout and production `main` are unchanged.
+- In installed standalone PWA: Landing CTA and tagline move slightly lower; the approved mode chooser stays visually unchanged.
+- Americano/Mexicano and Team Showdown: existing Home link moves into an elegant footer **inside** the existing tournament header card, and the separate platform navbar is hidden only after successful insertion. The Home destination and click behavior are retained.
+- iOS safe-area padding keeps the header below the status bar, and the Team Showdown stage/status badge is kept above the header footer.
+- No sticky header or fixed overlay. PDF, scoring, engines, Share Results and session state are untouched.
+- Service worker cache revved to `p5-pwa-lab-v565-1` with both navigation scripts pre-cached. Use a dummy tournament for real-device acceptance testing.

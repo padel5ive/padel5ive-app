@@ -48,8 +48,24 @@ assert.ok(css.includes('overscroll-behavior-y: contain'),'Mode chooser scroll mu
 assert.ok(css.includes('padding-top: calc(var(--p5-standalone-safe-top) + 5px)'),'iPhone mode chooser safe-area guard');
 assert.ok(!css.includes('position: fixed !important'),'PWA nav must never overlay match header');
 assert.ok(!css.includes('translateY('),'PWA visual parity must not translate whole pages');
-assert.ok(sw.includes('p5-pwa-lab-v564-1'),'Service worker cache version must match update');
+assert.ok(sw.includes('p5-pwa-lab-v565-1'),'Service worker cache version must match update');
 assert.ok(sw.includes("'/pwa-standalone-layout-v5601.css'"),'Offline PWA must precache standalone layout');
 assert.ok(headers.includes('/pwa-standalone-layout-v5601.css'),'PWA stylesheet must revalidate');
+
+
+/* PWA 5.6.5 — header integration guardrails */
+const compactSrc=fs.readFileSync('public/pwa/header-compact-v5605.js','utf8');
+assert.ok(boot.includes('/pwa/header-compact-v5605.js'),'new app header script must load');
+assert.ok(sw.includes("'/pwa/header-compact-v5605.js'"),'new header script must precache');
+assert.ok(css.includes('body.p5-pwa-compact-nav > nav.p54-app-nav { display: none !important; }'));
+assert.ok(css.includes('body.p5-pwa-compact-nav .p5-pwa-header-footer'));
+assert.ok(css.includes('header.brand-banner.master-brand .hero-right'),'Team Showdown badge must clear footer');
+assert.ok(css.includes('calc(var(--p5-standalone-safe-top) + 30px)'),'Header safe area must be retained');
+assert.ok(!css.includes('position: sticky'),'No sticky navbar in PWA');
+assert.ok(compactSrc.includes("link.textContent = '← HOME'"),'Must reuse existing Home link');
+assert.ok(compactSrc.includes('footer.append(link, caption)'),'Home link moves inside header');
+assert.ok(compactSrc.includes("if (!nav || !link || !header) return;"),'Do not hide nav if layout missing');
+assert.ok(compactSrc.includes('body > div.wrap > header.brand-banner.master-brand'),'Team Showdown must share integration');
+assert.ok(compactSrc.includes("document.body.classList.add('p5-pwa-compact-nav')"),'Hide old nav only after insertion');
 
 console.log('PWA navigation and standalone visual parity: in-flow navbar, 44px target, scroll reset and Home destination PASS');

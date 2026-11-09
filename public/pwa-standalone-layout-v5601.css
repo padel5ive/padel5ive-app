@@ -1,16 +1,16 @@
-/* PADEL 5IVE PWA Lab v5.6.4 — Safari-matched standalone visual rhythm.
- * Scope: standalone only. Three independently scrolling layouts:
- * Landing, Game Mode chooser overlay and Match Control. No sticky overlay.
+/* PADEL 5IVE PWA Lab v5.6.5 — compact editorial app navigation.
+ * Safari/browser layout remains untouched. No sticky/fixed header overlay.
+ * Layout is deliberately split: landing / mode chooser / tournament header.
  */
 @media screen and (display-mode: standalone) {
   :root { --p5-standalone-safe-top: env(safe-area-inset-top, 0px); }
 
-  /* Landing — distribute the extra fullscreen height like Safari. */
+  /* Landing: preserve venue/wordmark, lower CTA 35px and tagline 27px. */
   #portal .masthead { padding-top: clamp(50px, 6svh, 78px) !important; }
-  #portal .p541-home-actions { bottom: clamp(120px, 18svh, 188px) !important; }
-  #portal .signature { bottom: clamp(64px, 9svh, 105px) !important; }
+  #portal .p541-home-actions { bottom: clamp(85px, calc(18svh - 35px), 153px) !important; }
+  #portal .signature { bottom: clamp(40px, calc(9svh - 27px), 78px) !important; }
 
-  /* Game Mode Selection is a fixed, independently scrollable overlay. */
+  /* Approved Game Mode Selection remains identical to v5.6.4. */
   #p54-workspace.p54-workspace {
     box-sizing: border-box;
     padding-top: calc(var(--p5-standalone-safe-top) + 8px) !important;
@@ -22,50 +22,115 @@
   #p54-workspace .p542-topline { position: relative; z-index: 2; }
   #p54-workspace .p542-topline .p54-back { min-height: 44px !important; }
 
-  /* Game pages: Home bar remains in normal document flow; never sticky. */
+  /* Fallback: if the enhancement is not ready, retain original Home nav. */
   body > nav.p54-app-nav {
     position: relative !important;
     top: auto !important;
     transform: none !important;
-    filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    opacity: 1 !important;
     z-index: 35 !important;
     padding-top: calc(var(--p5-standalone-safe-top) + 10px) !important;
     padding-bottom: 13px !important;
     background: #0a1621 !important;
-    box-shadow: none !important;
-    pointer-events: auto !important;
   }
   body > nav.p54-app-nav > a#p54-home-link {
     display: inline-flex !important;
-    min-height: 44px !important;
     align-items: center;
-    margin: 0 !important;
+    min-height: 44px !important;
     padding: 8px 10px !important;
+    touch-action: manipulation;
+  }
+
+  /* The old nav disappears ONLY after its genuine link was moved. */
+  body.p5-pwa-compact-nav > nav.p54-app-nav { display: none !important; }
+  body.p5-pwa-compact-nav > main.wrap,
+  body.p5-pwa-compact-nav > div.wrap {
+    margin-top: 0 !important;
+    padding-top: calc(var(--p5-standalone-safe-top) + 30px) !important;
+  }
+  body.p5-pwa-compact-nav > main.wrap > header.header,
+  body.p5-pwa-compact-nav > div.wrap > header.brand-banner.master-brand {
+    position: relative !important;
+    box-sizing: border-box !important;
+    padding-bottom: 57px !important;
+    overflow: hidden !important;
+  }
+  /* Team Showdown's status badge was anchored to the original card bottom. */
+  body.p5-pwa-compact-nav > div.wrap > header.brand-banner.master-brand .hero-right {
+    bottom: 56px !important;
+  }
+  body.p5-pwa-compact-nav .p5-pwa-header-footer {
+    position: absolute;
+    z-index: 5;
+    left: 15px;
+    right: 15px;
+    bottom: 8px;
+    height: 36px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(212, 183, 138, .26);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    color: #b8a185;
+  }
+  body.p5-pwa-compact-nav .p5-pwa-header-footer > a#p54-home-link {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    height: 44px;
+    min-width: 70px;
+    padding: 8px 9px !important;
+    margin: 0 0 0 -9px !important;
+    border-radius: 7px;
+    color: #e2c59b !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: .12em !important;
+    text-decoration: none !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
     touch-action: manipulation;
-    border-radius: 8px;
+    -webkit-tap-highlight-color: rgba(221, 184, 135, .15);
   }
-  body > nav.p54-app-nav .p54-app-context,
-  body > nav.p54-app-nav > a { opacity: 1 !important; filter: none !important; }
-  body > main.wrap, body > div.wrap { margin-top: 0 !important; }
+  body.p5-pwa-compact-nav .p5-pwa-header-footer > a#p54-home-link:focus-visible {
+    outline: 2px solid #e2c59b;
+    outline-offset: 2px;
+  }
+  body.p5-pwa-compact-nav .p5-pwa-header-caption {
+    min-width: 0;
+    text-align: right;
+    font-size: 9px;
+    color: #a9a9ab;
+    letter-spacing: .075em;
+    font-weight: 550;
+    line-height: 1.25;
+  }
 
   @media (max-width: 760px) {
-    /* Fallback for notched iPhones reporting a zero safe-area inset. */
     :root { --p5-standalone-safe-top: max(env(safe-area-inset-top, 0px), 47px); }
     #portal .masthead { padding-top: clamp(93px, 11svh, 116px) !important; }
-    #portal .p541-home-actions { bottom: clamp(120px, 18svh, 180px) !important; }
-    #portal .signature { bottom: clamp(64px, 9svh, 95px) !important; }
+    #portal .p541-home-actions { bottom: clamp(85px, calc(18svh - 35px), 145px) !important; }
+    #portal .signature { bottom: clamp(40px, calc(9svh - 27px), 70px) !important; }
     #p54-workspace.p54-workspace {
       padding-top: calc(var(--p5-standalone-safe-top) + 5px) !important;
     }
     body > main.wrap, body > div.wrap { padding-top: 12px !important; }
+    body.p5-pwa-compact-nav > main.wrap,
+    body.p5-pwa-compact-nav > div.wrap {
+      padding-top: calc(var(--p5-standalone-safe-top) + 30px) !important;
+    }
+    body.p5-pwa-compact-nav .p5-pwa-header-caption {
+      font-size: 8px; letter-spacing: .025em;
+    }
   }
   @media (max-height: 670px) and (max-width: 760px) {
     #portal .masthead { padding-top: 82px !important; }
-    #portal .p541-home-actions { bottom: 68px !important; }
-    #portal .signature { bottom: 13px !important; }
+    #portal .p541-home-actions { bottom: 43px !important; }
+    #portal .signature {
+      bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+    }
   }
 }

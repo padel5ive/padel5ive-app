@@ -29,7 +29,7 @@
     offlineIndicator();
     navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then(reg => {
-        window.PADEL5IVE_PWA = Object.freeze({ version: '5.6.0-lab', update: () => reg.update() });
+        window.PADEL5IVE_PWA = Object.freeze({ version: '5.6.5-lab', update: () => reg.update() });
         if (navigator.onLine) reg.update().catch(() => {});
       })
       .catch(err => console.warn('PADEL 5IVE PWA registration unavailable:', err));
@@ -43,4 +43,7 @@
   const nav = document.createElement('script');
   nav.src = '/pwa/navigation-v5603.js';
   document.head.appendChild(nav);
+  const compact = document.createElement('script');
+  compact.src = '/pwa/header-compact-v5605.js';
+  document.head.appendChild(compact);
 })();

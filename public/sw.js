@@ -4,7 +4,7 @@
  * Never intercept or cache APIs, published results, mutations, or cross-origin requests.
  */
 'use strict';
-const VERSION = 'p5-pwa-lab-v564-1';
+const VERSION = 'p5-pwa-lab-v565-1';
 const PREFIX = 'padel5ive-pwa-';
 const CACHE_SHELL = PREFIX + 'shell-' + VERSION;
 const CACHE_PAGES = PREFIX + 'pages-' + VERSION;
@@ -12,6 +12,7 @@ const CACHE_ASSETS = PREFIX + 'assets-' + VERSION;
 const PRECACHE = [
   '/', '/offline.html', '/manifest.webmanifest', '/pwa-register.js',
   '/pwa-standalone-layout-v5601.css',
+  '/pwa/navigation-v5603.js', '/pwa/header-compact-v5605.js',
   '/pwa/icons/apple-touch-icon.png', '/pwa/icons/icon-192.png',
   '/pwa/icons/icon-512.png', '/pwa/icons/icon-maskable-512.png'
 ];

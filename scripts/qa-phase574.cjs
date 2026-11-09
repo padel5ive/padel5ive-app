@@ -3,6 +3,13 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 (async()=>{
  const {projectResults}=await import('../netlify/helpers/unified-ranking.mjs');
+ const {storeNameForUrl}=await import('../netlify/helpers/unified-store.mjs');
+ const prod=storeNameForUrl('https://padel5ive.netlify.app/u/abcdefghijkl');
+ const preview=storeNameForUrl('https://deploy-preview-3--padel5ive.netlify.app/u/abcdefghijkl');
+ assert.notEqual(preview,prod,'Preview must never read/write production Blobs');
+ assert.equal(preview,storeNameForUrl('https://deploy-preview-3--padel5ive.netlify.app/u/otherid'),'preview storage must survive the next commit');
+ assert.equal(prod,storeNameForUrl('https://myfutureproductiondomain.com/u/abcdefghijkl'),'production and custom domain should preserve original namespace');
+
  const n=6;
  const roster=Array.from({length:n},(_,i)=>({id:i+1,names:['Player '+(i+1),'Partner '+(i+1)]}));
  const match=(id,a,b,x,y,confirmed=true)=>({id,court:1,teams:[[a],[b]],score:[x,y],confirmed});

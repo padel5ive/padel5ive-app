@@ -48,7 +48,7 @@ assert.ok(css.includes('overscroll-behavior-y: contain'),'Mode chooser scroll mu
 assert.ok(css.includes('padding-top: calc(var(--p5-standalone-safe-top) + 5px)'),'iPhone mode chooser safe-area guard');
 assert.ok(!css.includes('position: fixed !important'),'PWA nav must never overlay match header');
 assert.ok(!css.includes('translateY('),'PWA visual parity must not translate whole pages');
-assert.ok(sw.includes('p5-pwa-lab-v565-1'),'Service worker cache version must match update');
+assert.ok(sw.includes('p5-pwa-lab-v566-1'),'Service worker cache version must match update');
 assert.ok(sw.includes("'/pwa-standalone-layout-v5601.css'"),'Offline PWA must precache standalone layout');
 assert.ok(headers.includes('/pwa-standalone-layout-v5601.css'),'PWA stylesheet must revalidate');
 
@@ -63,7 +63,13 @@ assert.ok(css.includes('header.brand-banner.master-brand .hero-right'),'Team Sho
 assert.ok(css.includes('calc(var(--p5-standalone-safe-top) + 30px)'),'Header safe area must be retained');
 assert.ok(!css.includes('position: sticky'),'No sticky navbar in PWA');
 assert.ok(compactSrc.includes("link.textContent = '← HOME'"),'Must reuse existing Home link');
-assert.ok(compactSrc.includes('footer.append(link, caption)'),'Home link moves inside header');
+assert.ok(compactSrc.includes('footer.append(link);'),'Home link moves inside header');
+assert.ok(!compactSrc.includes('p5-pwa-header-caption'),'Mode title must not be duplicated under green badge');
+assert.ok(css.includes('header.header .header-meta'),'Americano status badge must clear divider');
+assert.ok(css.includes('bottom: 30px !important'),'Americano mobile status badge clearance');
+assert.ok(css.includes('height: 29px;'),'Footer divider must sit lower than status pill without reducing tap size');
+assert.ok(css.includes('bottom: 64px !important'),'Team Showdown status badge clearance');
+assert.ok(!css.includes('.p5-pwa-header-caption'),'Redundant mode label CSS must be removed');
 assert.ok(compactSrc.includes("if (!nav || !link || !header) return;"),'Do not hide nav if layout missing');
 assert.ok(compactSrc.includes('body > div.wrap > header.brand-banner.master-brand'),'Team Showdown must share integration');
 assert.ok(compactSrc.includes("document.body.classList.add('p5-pwa-compact-nav')"),'Hide old nav only after insertion');

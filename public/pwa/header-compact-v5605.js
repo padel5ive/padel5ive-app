@@ -1,4 +1,4 @@
-/* PADEL 5IVE PWA Lab v5.6.5 — in-card Home navigation.
+/* PADEL 5IVE PWA Lab v5.6.6 — in-card Home navigation.
  * Move the existing Home link, preserving href and click handling.
  * Runs only in installed standalone mode, never ordinary Safari.
  */
@@ -15,13 +15,9 @@
     if (header.querySelector('.p5-pwa-header-footer')) return;
     const footer = document.createElement('div');
     footer.className = 'p5-pwa-header-footer';
-    const caption = document.createElement('span');
-    caption.className = 'p5-pwa-header-caption';
-    const oldCaption = nav.querySelector('.p54-app-context')?.textContent || '';
-    caption.textContent = oldCaption.split('·')[0].trim();
     link.textContent = '← HOME';
     link.setAttribute('aria-label', 'Back to PADEL 5IVE Home');
-    footer.append(link, caption);
+    footer.append(link);
     header.appendChild(footer);
     document.body.classList.add('p5-pwa-compact-nav');
     nav.setAttribute('aria-hidden', 'true');

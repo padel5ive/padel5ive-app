@@ -1,14 +1,15 @@
-/* PADEL 5IVE PWA Lab v5.6.5 — compact editorial app navigation.
+/* PADEL 5IVE PWA Lab v5.6.6 — compact editorial app navigation.
  * Safari/browser layout remains untouched. No sticky/fixed header overlay.
  * Layout is deliberately split: landing / mode chooser / tournament header.
  */
 @media screen and (display-mode: standalone) {
   :root { --p5-standalone-safe-top: env(safe-area-inset-top, 0px); }
 
-  /* Landing: preserve venue/wordmark, lower CTA 35px and tagline 27px. */
-  #portal .masthead { padding-top: clamp(50px, 6svh, 78px) !important; }
-  #portal .p541-home-actions { bottom: clamp(85px, calc(18svh - 35px), 153px) !important; }
-  #portal .signature { bottom: clamp(40px, calc(9svh - 27px), 78px) !important; }
+  /* Landing: lower wordmark +14px, CTA +23px and tagline +17px on tall iPhones.
+   Preserve original venue crop, safe-area clearance and short-screen fallbacks. */
+  #portal .masthead { padding-top: clamp(64px, calc(6svh + 14px), 92px) !important; }
+  #portal .p541-home-actions { bottom: clamp(62px, calc(18svh - 58px), 130px) !important; }
+  #portal .signature { bottom: clamp(23px, calc(9svh - 44px), 61px) !important; }
 
   /* Approved Game Mode Selection remains identical to v5.6.4. */
   #p54-workspace.p54-workspace {
@@ -64,12 +65,12 @@
     left: 15px;
     right: 15px;
     bottom: 8px;
-    height: 36px;
+    height: 29px;
     padding-top: 5px;
     border-top: 1px solid rgba(212, 183, 138, .26);
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 12px;
     min-width: 0;
     color: #b8a185;
@@ -99,21 +100,23 @@
     outline: 2px solid #e2c59b;
     outline-offset: 2px;
   }
-  body.p5-pwa-compact-nav .p5-pwa-header-caption {
-    min-width: 0;
-    text-align: right;
-    font-size: 9px;
-    color: #a9a9ab;
-    letter-spacing: .075em;
-    font-weight: 550;
-    line-height: 1.25;
+
+  /* On mobile, the original header badge was anchored to the pre-footer
+     card bottom. Raise it just enough to clear the new divider. */
+  @media (max-width: 700px) {
+    body.p5-pwa-compact-nav main.wrap > header.header .header-meta {
+      bottom: 30px !important;
+    }
+    body.p5-pwa-compact-nav > div.wrap > header.brand-banner.master-brand .hero-right {
+      bottom: 64px !important;
+    }
   }
 
   @media (max-width: 760px) {
     :root { --p5-standalone-safe-top: max(env(safe-area-inset-top, 0px), 47px); }
-    #portal .masthead { padding-top: clamp(93px, 11svh, 116px) !important; }
-    #portal .p541-home-actions { bottom: clamp(85px, calc(18svh - 35px), 145px) !important; }
-    #portal .signature { bottom: clamp(40px, calc(9svh - 27px), 70px) !important; }
+    #portal .masthead { padding-top: clamp(107px, calc(11svh + 14px), 130px) !important; }
+    #portal .p541-home-actions { bottom: clamp(62px, calc(18svh - 58px), 122px) !important; }
+    #portal .signature { bottom: clamp(23px, calc(9svh - 44px), 53px) !important; }
     #p54-workspace.p54-workspace {
       padding-top: calc(var(--p5-standalone-safe-top) + 5px) !important;
     }
@@ -121,9 +124,6 @@
     body.p5-pwa-compact-nav > main.wrap,
     body.p5-pwa-compact-nav > div.wrap {
       padding-top: calc(var(--p5-standalone-safe-top) + 30px) !important;
-    }
-    body.p5-pwa-compact-nav .p5-pwa-header-caption {
-      font-size: 8px; letter-spacing: .025em;
     }
   }
   @media (max-height: 670px) and (max-width: 760px) {

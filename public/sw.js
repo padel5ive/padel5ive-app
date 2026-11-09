@@ -4,7 +4,7 @@
  * Never intercept or cache APIs, published results, mutations, or cross-origin requests.
  */
 'use strict';
-const VERSION = 'p5-pwa-lab-v565-1';
+const VERSION = 'p5-pwa-lab-v566-1';
 const PREFIX = 'padel5ive-pwa-';
 const CACHE_SHELL = PREFIX + 'shell-' + VERSION;
 const CACHE_PAGES = PREFIX + 'pages-' + VERSION;

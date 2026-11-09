@@ -22,6 +22,7 @@ function inject(path,token,markup,position='first'){
 inject('public/index.html','</head>','<link rel="stylesheet" href="/phase58/cloud-session.css">');
 inject('public/index.html','</body>','<script defer src="/phase58/cloud-home.js"></script>','last');
 inject('public/index.html','</head>','<link rel="stylesheet" href="/phase58/pwa-fullscreen-v581.css">');
+inject('public/index.html','</head>','<link rel="stylesheet" href="/phase58/home-cta-compact-v582.css">');
 for(const page of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
  inject(page,'</head>','<link rel="stylesheet" href="/phase58/cloud-session.css">');
  inject(page,'</body>','<script defer src="/phase58/cloud-dashboard.js"></script>','last');
@@ -52,7 +53,7 @@ patch('public/modes/unified/index.html',
 patch('public/sw.js',"const VERSION = 'p5-pwa-phase57-v577';","const VERSION = 'p5-pwa-phase58-lab-01';",'PWA version');
 patch('public/sw.js',
  "'/phase57/social-card-v574.js',",
- "'/phase57/social-card-v574.js', '/phase58/cloud-session.css', '/phase58/cloud-home.js', '/phase58/cloud-dashboard.js', '/phase58/pwa-fullscreen-v581.css',",
+ "'/phase57/social-card-v574.js', '/phase58/cloud-session.css', '/phase58/cloud-home.js', '/phase58/cloud-dashboard.js', '/phase58/pwa-fullscreen-v581.css', '/phase58/home-cta-compact-v582.css',",
  'PWA cloud client precache');
 patch('public/sw.js',
  "asset.startsWith('/phase57/') ||",

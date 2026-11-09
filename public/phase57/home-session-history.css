@@ -161,20 +161,26 @@ body:not(.p54-active) .p541-home-actions > #p54-resume {
   }
 }
 
-/* Phase 5.7.5 · iPad Home CTA breathing room.
- * The two actions must read as distinct choices, not a compressed button group. */
-body:not(.p54-active) .p541-home-actions {
-  gap:24px!important;
-  row-gap:24px!important;
+/* Phase 5.7.6 — independent Home actions with balanced editorial whitespace.
+   Match iPad landscape (22px) and iPhone (16px) without changing button widths.
+   Existing Sessions remains below and does not collapse the primary pair. */
+body:not(.p54-active) .p541-home-actions{
+  gap:22px!important;
+  row-gap:22px!important;
+  margin-top:25px!important;
 }
 body:not(.p54-active) .p541-home-actions > #p54-start,
 body:not(.p54-active) .p541-home-actions > #p57-history-button {
   margin-top:0!important;
   margin-bottom:0!important;
 }
+body:not(.p54-active) .p541-home-actions > #p54-resume {
+  margin-top:4px!important;
+}
 @media(max-width:600px){
   body:not(.p54-active) .p541-home-actions{
-    gap:20px!important;
-    row-gap:20px!important;
+    gap:16px!important;
+    row-gap:16px!important;
+    margin-top:20px!important;
   }
 }

@@ -48,8 +48,9 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  assert(records.includes('TOURNAMENT CHAMPIONS'));
  assert(records.includes('STAGE 1 TOP 5'));
  const route=fs.readFileSync('netlify.toml','utf8');
- assert(route.includes('to = "/.netlify/functions/unified-share-page?id=:splat"'));
- assert(route.includes('to = "/.netlify/functions/unified-social-image?id=:splat"'));
+ assert(!route.includes('id=:splat'),'Unsupported Netlify splat-to-query redirect must not return');
+ assert(fs.readFileSync('netlify/functions/unified-share-page.mjs','utf8').includes("path: '/u/:id'"));
+ assert(fs.readFileSync('netlify/functions/unified-social-image.mjs','utf8').includes("path: '/social/u/*'"));
  const page=fs.readFileSync('netlify/functions/unified-share-page.mjs','utf8');
  for(const k of ['og:title','og:image','og:image:secure_url','og:image:width','og:image:height','twitter:image','projectResults','entry.previewReady','esc(title)'])assert(page.includes(k),'Social document missing '+k);
  const image=fs.readFileSync('netlify/functions/unified-social-image.mjs','utf8');

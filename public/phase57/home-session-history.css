@@ -111,3 +111,52 @@ body:not(.p54-active) .p541-home-actions > #p54-resume[hidden] {display:none!imp
  }
  body:not(.p54-active) .p541-home-actions > #p54-resume{grid-column:1!important;}
 }
+
+/* Phase 5.7.3 — Restore premium vertical CTA rhythm on every device size.
+   Keep the primary/secondary widths equal and center the full stack. */
+body:not(.p54-active) .p541-home-actions {
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:center!important;
+  gap:11px!important;
+  width:min(100%,410px)!important;
+  max-width:410px!important;
+  margin:20px auto 0!important;
+  padding:0!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-start,
+body:not(.p54-active) .p541-home-actions > #p57-history-button {
+  flex:0 0 auto!important;
+  align-self:stretch!important;
+  width:100%!important;
+  min-height:51px!important;
+  height:51px!important;
+  box-sizing:border-box!important;
+  margin:0!important;
+  padding:11px 17px!important;
+  border-radius:8px!important;
+  justify-content:center!important;
+  text-align:center!important;
+  font-size:11px!important;
+  letter-spacing:.12em!important;
+  box-shadow:none!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-resume {
+  align-self:stretch!important;
+  width:100%!important;
+  margin:3px 0 0!important;
+  padding:0!important;
+}
+@media(max-width:600px) {
+  body:not(.p54-active) .p541-home-actions {
+    width:min(100%,380px)!important;
+    gap:10px!important;
+    margin-top:16px!important;
+  }
+  body:not(.p54-active) .p541-home-actions > #p54-start,
+  body:not(.p54-active) .p541-home-actions > #p57-history-button {
+    height:49px!important;
+    min-height:49px!important;
+  }
+}

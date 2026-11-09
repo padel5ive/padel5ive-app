@@ -106,8 +106,8 @@ api=one(api,"if(!Number.isInteger(s.courts)||s.courts<1||s.courts>5)return false
 write('netlify/functions/unified-results.mjs',api);
 // PWA caches the versioned Session History shell for offline PWA use.
 let serviceWorker=read('public/sw.js');
-serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v5701';",'PWA cache version');
-serviceWorker=one(serviceWorker,"'/pwa-standalone-layout-v5601.css',","'/pwa-standalone-layout-v5601.css', '/phase57/home-session-history.js', '/phase57/home-session-history.css',",'PWA precache');
+serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v572';",'PWA cache version');
+serviceWorker=one(serviceWorker,"'/pwa-standalone-layout-v5601.css',","'/pwa-standalone-layout-v5601.css', '/phase57/home-session-history.js', '/phase57/home-session-history.css', '/phase57/setup-refinement-v572.css',",'PWA precache');
 serviceWorker=one(serviceWorker,"asset.startsWith('/assets/') || asset.startsWith('/pwa/') ||","asset.startsWith('/assets/') || asset.startsWith('/pwa/') || asset.startsWith('/phase57/') ||",'PWA asset cache');
 write('public/sw.js',serviceWorker);
 // Keep WhatsApp preview discreet: one canonical title/description, not a giant data card.

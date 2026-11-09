@@ -86,15 +86,35 @@ function club(root){
  const session=panel?.querySelector(':scope > .ops-actions > details.mc32-advanced')||panel?.querySelector('.ops-actions > details.mc32-advanced');
  const advanced=Array.from(panel?.querySelectorAll('.ops-actions > details.mc32-advanced')||[]).find(x=>x!==session&&x.querySelector('summary')?.textContent.trim()==='Advanced Settings');
  const sessionGroup=block('SESSION DATA');
- if(session){const el=session.querySelector('.mc32-advanced-body');if(el)nodes(el,sessionGroup);session.remove()}
- if(advanced){const el=advanced.querySelector('.mc32-advanced-body');if(el)nodes(el,sessionGroup);advanced.remove()}
- const cloudButton=sessionGroup.querySelector('[data-p58-cloud]');
- if(cloudButton){
-   cloudButton.textContent='Cloud Session';
-   cloudButton.classList.add('p585-cloud-row');
-   sessionGroup.insertBefore(cloudButton,sessionGroup.querySelector('.p585-heading')?.nextSibling||sessionGroup.firstChild);
+ const tools=create('details','p585-tools');
+ const toolsTitle=create('summary','','Advanced Tools');
+ const toolsBody=create('div','p585-tools-body');
+ tools.append(toolsTitle,toolsBody);
+ if(session){
+   const source=session.querySelector('.mc32-advanced-body');
+   const cloudButton=source?.querySelector('[data-p58-cloud]');
+   if(cloudButton){
+     cloudButton.textContent='Cloud Session';
+     cloudButton.classList.add('p585-cloud-row');
+     sessionGroup.append(cloudButton);
+   }
+   if(source)nodes(source,toolsBody);
+   session.remove();
  }
- content.append(sessionGroup);mark(root);
+ if(advanced){
+   const source=advanced.querySelector('.mc32-advanced-body');
+   if(source){
+     for(const action of ['backup','restore']){
+       const button=source.querySelector('[data-action="'+action+'"]');
+       if(button)sessionGroup.append(button);
+     }
+     nodes(source,toolsBody);
+   }
+   advanced.remove();
+ }
+ content.append(sessionGroup);
+ if(toolsBody.children.length||toolsBody.textContent.trim())content.append(tools);
+ mark(root);
 }
 function removeLiveBadge(){
  document.querySelectorAll('.p5-b41-leaderboard > .row.between .pill, .p5-b41-leaderboard > header .pill').forEach(x=>{

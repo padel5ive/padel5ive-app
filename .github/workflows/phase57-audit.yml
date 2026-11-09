@@ -1,0 +1,16 @@
+name: PADEL 5IVE Phase 5.7 Source Audit
+on:
+  push:
+    branches: [feature/phase-5.7-integrated]
+    paths:
+      - '.github/workflows/phase57-audit.yml'
+      - 'scripts/phase57-inspect.cjs'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate session, reveal and reporting integration points
+        run: node scripts/phase57-inspect.cjs

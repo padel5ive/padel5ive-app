@@ -1,0 +1,64 @@
+/* PADEL 5IVE v5.7.7 — definitive Home CTA spacing fix.
+ * Previous .p541-home-actions overrides were ignored because the legacy
+ * #portal selector won CSS specificity. This targets that exact root.
+ */
+html body:not(.p54-active) #portal .p541-home-actions {
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:center!important;
+  gap:26px!important;
+  row-gap:26px!important;
+  width:min(410px,calc(100% - 44px))!important;
+  max-width:410px!important;
+  padding:0!important;
+  margin:0 auto!important;
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+html body:not(.p54-active) #portal .p541-home-actions > #p54-start,
+html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button {
+  position:relative!important;
+  flex:0 0 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  align-self:stretch!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:54px!important;
+  height:54px!important;
+  margin:0!important;
+  padding:13px 16px!important;
+  border-radius:9px!important;
+  transform:none!important;
+  text-align:center!important;
+  box-shadow:0 7px 20px rgba(1,9,17,.13)!important;
+}
+html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button {
+  background:rgba(12,27,40,.93)!important;
+  border:1px solid rgba(222,191,149,.7)!important;
+  color:#e7d0b0!important;
+}
+html body:not(.p54-active) #portal .p541-home-actions > #p54-resume {
+  width:100%!important;
+  margin:6px 0 0!important;
+}
+@media(max-width:600px) {
+  html body:not(.p54-active) #portal .p541-home-actions {
+    gap:19px!important;
+    row-gap:19px!important;
+    width:min(380px,calc(100% - 34px))!important;
+  }
+  html body:not(.p54-active) #portal .p541-home-actions > #p54-start,
+  html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button {
+    min-height:51px!important;
+    height:51px!important;
+  }
+}

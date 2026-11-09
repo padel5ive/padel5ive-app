@@ -20,11 +20,8 @@
   status = 200
   force = true
 
-[[redirects]]
-  from = "/u/*"
-  to = "/results/unified/index.html"
-  status = 200
-  force = true
+# Dynamic public results /u/:id and /social/u/* are handled by
+# Netlify Functions config.path (avoids unsupported splat-to-query rewrites).
 
 [[redirects]]
   from = "/r/*"

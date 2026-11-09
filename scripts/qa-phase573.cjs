@@ -1,0 +1,40 @@
+/* PADEL 5IVE Phase 5.7.3 — DOM-shape and social preview regression.
+ * Run AFTER npm run build. No hidden fixture data and no engine mutations.
+ */
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const read=p=>fs.readFileSync(p,'utf8');
+const app=read('public/modes/unified/index.html');
+const css=read('public/phase57/setup-refinement-v572.css');
+const home=read('public/phase57/home-session-history.css');
+const pub=read('public/results/unified/index.html');
+const sw=read('public/sw.js');
+const begin=app.indexOf('<div class="p57-date-time p57-date-fields">');
+assert(begin>0,'date/time fields must exist in the generated Initial Setup');
+const finish=app.indexOf('</div>',begin);
+assert(finish>begin,'date/time container closing div is missing');
+const field=app.slice(begin,finish+6);
+const matches=(s,re)=>(s.match(re)||[]).length;
+assert.equal(matches(field,/<label\b/g),2,'two independent, sibling labels required');
+assert.equal(matches(field,/<\/label>/g),2,'both label tags must close');
+assert.equal(matches(field,/<span\b/g),matches(field,/<\/span>/g),'span tags must balance');
+assert(field.indexOf('id="setup-date"')>0,'date picker missing');
+assert(field.indexOf('id="setup-time"')>0,'hour picker missing');
+assert(field.indexOf('id="setup-time"')>field.indexOf('</label>'),'hour picker must NOT be nested inside date label');
+assert(field.indexOf('id="setup-date"')<field.indexOf('</label>'),'date picker must be contained by date label');
+assert(field.includes('class="p57-field-label">GAME DATE'),'separate date caption missing');
+assert(field.includes('class="p57-field-label">GAME TIME'),'separate time caption missing');
+assert(field.includes('<select id="setup-time"')&&field.includes('required'),'game time must be a visible required select');
+assert.equal(matches(field,/<option value="\d\d:00"/g),24,'all 24 hourly options must render');
+assert(!field.includes('p57-date-time-row'),'old merged two-column row must not render');
+assert(css.includes('flex-direction:column!important')&&css.includes('visibility:visible!important'),'date/time must be stacked and hour visible');
+assert(home.includes('Phase 5.7.3')&&home.includes('flex-direction:column!important'),'Home actions must stack at all sizes');
+assert(!app.includes('${homeExistingSessions(s)}</section>'),'Initial Setup must not show Existing Sessions');
+assert(pub.includes('og:site_name')&&pub.includes('og:image:type')&&pub.includes('og:image:secure_url'),'social crawler image metadata missing');
+assert(pub.includes('og:image:width" content="1200"')&&pub.includes('og:image:height" content="630"'),'WhatsApp 1200x630 dimensions missing');
+assert(pub.includes('og-cover.jpg?v=573'),'WhatsApp OG image version missing');
+assert(pub.includes('noindex,follow,noarchive'),'public report should remain unindexed but allow sharing');
+assert(sw.includes('p5-pwa-phase57-v577'),'old PWA asset cache must be invalidated');
+assert(app.includes("if(!/^(?:[01]\\d|2[0-3]):00$/.test(time||''))"),'game time validation must be enforced');
+assert(app.includes("['setup-pairing','setup-courts','setup-format','setup-date','setup-time']"),'hour selection must trigger setup validation');
+console.log('PASS Phase 5.7.3 — 2 sibling Date/Time labels, 24 hours, visible iOS picker, Home vertical, public OG metadata.');

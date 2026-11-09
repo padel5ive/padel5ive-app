@@ -1,0 +1,36 @@
+name: PADEL 5IVE PWA 5.6.3 — Navigation Regression
+on:
+  push:
+    branches: [feature/pwa-preview-v5.6]
+    paths:
+      - '.github/workflows/qa-pwa-navigation.yml'
+      - 'public/pwa-standalone-layout-v5601.css'
+      - 'public/pwa-register.js'
+      - 'public/pwa/navigation-v5603.js'
+      - 'scripts/qa-pwa-navigation-v5603.cjs'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated preview
+        uses: actions/checkout@v4
+        with:
+          ref: feature/pwa-preview-v5.6
+      - name: Validate navigation, PWA, engine regression and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check public/pwa-register.js
+          node --check public/pwa/navigation-v5603.js
+          node scripts/qa-pwa-navigation-v5603.cjs
+          node scripts/qa-pwa.cjs
+          node scripts/qa-v5516.cjs
+          npm run build
+          # Master engine, scoreboard and Netlify API files remain unmodified.
+          test "$(git hash-object public/modes/unified/index.html)" = "13985b66f07eb50569daf86a7cbcb6571a312f5c"
+          test "$(git hash-object public/modes/club-match/index.html)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
+          git diff --check

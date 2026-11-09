@@ -1,0 +1,103 @@
+/* Phase 5.7.4 — dynamic OG Top 5, final/KO, safety & route regression. */
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+(async()=>{
+ const {projectResults}=await import('../netlify/helpers/unified-ranking.mjs');
+ const {storeNameForUrl}=await import('../netlify/helpers/unified-store.mjs');
+ const {previewImageType}=await import('../netlify/helpers/preview-image.mjs');
+ // Minimal JPEG SOF0 with 1200x630 header: validates format without a heavyweight binary fixture.
+ const jpeg=Buffer.from([0xff,0xd8,0xff,0xc0,0,17,8,0x02,0x76,0x04,0xb0,...Array(80).fill(0)]);
+ assert.equal(previewImageType(jpeg),'jpg');
+ const wrongSize=Buffer.from(jpeg);wrongSize.writeUInt16BE(631,7);
+ assert.equal(previewImageType(wrongSize),null,'preview must reject unexpected dimensions');
+ const png=Buffer.alloc(70);Buffer.from('89504e470d0a1a0a','hex').copy(png);png.writeUInt32BE(1200,16);png.writeUInt32BE(630,20);
+ assert.equal(previewImageType(png),'png','old PNG preview format must remain readable');
+ const prod=storeNameForUrl('https://padel5ive.netlify.app/u/abcdefghijkl');
+ const preview=storeNameForUrl('https://deploy-preview-3--padel5ive.netlify.app/u/abcdefghijkl');
+ assert.notEqual(preview,prod,'Preview must never read/write production Blobs');
+ assert.equal(preview,storeNameForUrl('https://deploy-preview-3--padel5ive.netlify.app/u/otherid'),'preview storage must survive the next commit');
+ assert.equal(prod,storeNameForUrl('https://myfutureproductiondomain.com/u/abcdefghijkl'),'production and custom domain should preserve original namespace');
+
+ const n=6;
+ const roster=Array.from({length:n},(_,i)=>({id:i+1,names:['Player '+(i+1),'Partner '+(i+1)]}));
+ const match=(id,a,b,x,y,confirmed=true)=>({id,court:1,teams:[[a],[b]],score:[x,y],confirmed});
+ const src={p5report:1,mode:'fp-americano',stage:'stage1',session:'Test Friday Match',date:'2026-11-09',time:'19:00',courts:2,matchFormat:'total5',roster,ko:{format:'none'},rounds:[
+   {matches:[match('1',1,2,4,1),match('2',3,4,2,2),match('3',5,6,0,4)]},
+   {matches:[match('4',1,6,3,4),match('5',2,4,4,0),match('6',3,5,5,0,false)]}
+ ]};
+ const standings=projectResults(src);
+ assert.deepEqual(standings.leaders.map(x=>x.id),[6,1,2,3,4],'Top 5 must follow Wins, Diff, Points and exclude unconfirmed scores');
+ assert.equal(standings.heading,'LIVE STANDINGS');
+ assert.equal(standings.leaders.length,5,'exactly 5 from 6 registered pairs');
+ assert.equal(standings.mode,'AMERICANO');
+ assert.equal(standings.time,'19:00');
+ const finished=projectResults({...src,stage:'champion'});
+ assert.equal(finished.heading,'FINAL LEADERBOARD');
+ const knockout=projectResults({...src,stage:'champion',ko:{format:'double',champion:[2],runnerUp:[1]}});
+ assert.equal(knockout.heading,'STAGE 1 TOP 5');
+ assert.equal(knockout.champion,'Player 2 & Partner 2');
+ assert.equal(knockout.runnerUp,'Player 1 & Partner 1');
+ assert.equal(knockout.leaders[0].id,6,'KO winner must not rewrite Stage 1 leaderboard');
+ const mx=projectResults({...src,mode:'fp-mexicano'});
+ assert.equal(mx.mode,'MEXICANO');
+ const ind=projectResults({...src,mode:'individual-mexicano',roster:roster.map(p=>({...p,names:[p.names[0]]})),rounds:[{matches:[{id:'m1',court:1,teams:[[1,2],[3,4]],score:[4,1],confirmed:true}]}]});
+ assert.equal(ind.pairing,'FLEXIBLE PAIRING');
+ const canvas=fs.readFileSync('public/phase57/social-card-v574.js','utf8');
+ const records=[];
+ const drawn=[];
+ const imageRequests=[];
+ const jpegQualities=[];
+ const g={fillRect(){},fillText(v){records.push(String(v))},drawImage(...args){drawn.push(args)},save(){},restore(){},measureText(v){return {width:String(v).length*11}},createLinearGradient(){return {addColorStop(){}}},globalAlpha:1,fillStyle:'',font:'',textAlign:'',textBaseline:''};
+ const window={};
+ class ImageMock{
+  naturalWidth=260;naturalHeight=338;
+  set src(url){imageRequests.push(url);if(this.onload)this.onload();}
+ }
+ vm.runInNewContext(canvas,{window,Image:ImageMock,document:{createElement:tag=>{assert.equal(tag,'canvas');return {width:0,height:0,getContext:()=>g,toDataURL:(mime,quality)=>{jpegQualities.push({mime,quality});return 'data:image/jpeg;base64,QUJDRA==';}};}}});
+ const img=await window.P5SocialCard.render(src);
+ assert.equal(img,'QUJDRA==');
+ assert(imageRequests.every(url=>url==='/assets/p5-master-logo-original.png')&&imageRequests.length>0,'Must load the original approved PADEL 5IVE logo');
+ assert(drawn.length>=3,'Must draw the original logo crop with embossed layers');
+ assert(drawn.every(x=>x.length===9&&x[1]===39&&x[2]===27&&x[3]===180&&x[4]===245),'Crop must exclude the PADEL5IVE wordmark');
+ assert.equal(jpegQualities[0].mime,'image/jpeg');
+ assert.equal(jpegQualities[0].quality,.86);
+ assert(records.includes('LIVE STANDINGS'));
+ assert(records.includes('Player 6 & Partner 6'));
+ assert(records.some(x=>x.includes('OFFICIAL RESULTS')));
+ records.length=0;await window.P5SocialCard.render({...src,stage:'champion',ko:{format:'double',champion:[2],runnerUp:[1]}});
+ assert(records.includes('TOURNAMENT CHAMPIONS'));
+ assert(records.includes('STAGE 1 TOP 5'));
+ const route=fs.readFileSync('netlify.toml','utf8');
+ assert(!route.includes('id=:splat'),'Unsupported Netlify splat-to-query redirect must not return');
+ assert(fs.readFileSync('netlify/functions/unified-share-page.mjs','utf8').includes("path: '/u/:id'"));
+ assert(fs.readFileSync('netlify/functions/unified-social-image.mjs','utf8').includes("path: '/social/u/*'"));
+ const page=fs.readFileSync('netlify/functions/unified-share-page.mjs','utf8');
+ for(const k of ['og:title','og:image','og:image:secure_url','og:image:width','og:image:height','twitter:image','projectResults','entry.previewReady','esc(title)'])assert(page.includes(k),'Social document missing '+k);
+ const image=fs.readFileSync('netlify/functions/unified-social-image.mjs','utf8');
+ assert(image.includes("entry.revoked")&&image.includes("image/png")&&image.includes("image/jpeg")&&image.includes("social.png"));
+ const api=fs.readFileSync('netlify/functions/unified-results.mjs','utf8');
+ for(const k of ['MAX_PREVIEW_BYTES','previewBytes','previewImageType(bytes)','previewType','previewRevision'])assert(api.includes(k),'Publish pipeline missing '+k);
+ assert(api.includes('previewReady:!!body.previewBytes,previewType:body.previewType||null,previewRevision:body.previewBytes?revision:0'),'Updated report without image must not keep a stale leaderboard preview');
+ const homeCss=fs.readFileSync('public/phase57/home-session-history.css','utf8');
+ assert(homeCss.includes('gap:22px!important')&&homeCss.includes('gap:16px!important'),'Home CTA gap must be 22px on iPad and 16px on iPhone');
+ const championCss=fs.readFileSync('public/phase57/share-champion-v571.css','utf8');
+ assert(!championCss.includes("url('/assets/p5-master-share-court.webp')"),'Champion Reveal must not retain the old venue-photo collage');
+ assert(championCss.includes('tonal navy')||championCss.includes('tonal'), 'Champion Reveal should use the neutral matte editorial treatment');
+ assert(canvas.includes('TRUE original embossed numeral')&&canvas.includes("g.drawImage(five,39,27,180,245,396,103,320,436)"),'Social preview must use the actual cropped numeral 5');
+ const visualHome=fs.readFileSync('public/phase57/home-visual-v577.css','utf8');
+ assert(visualHome.includes('html body:not(.p54-active) #portal .p541-home-actions')&&visualHome.includes('gap:26px!important')&&visualHome.includes('gap:19px!important'),'Home gap must override the original #portal specificity');
+ const visualChampion=fs.readFileSync('public/phase57/share-champion-v577.css','utf8');
+ assert(visualChampion.includes('#app #champion.champion::before')&&visualChampion.includes('background-image:linear-gradient('),'Final champion style must override old inline photo');
+ assert(page.includes('/phase57/share-champion-v577.css'),'Dynamic OG page must load new champion CSS');
+ const compiled=fs.readFileSync('public/modes/unified/index.html','utf8');
+ assert(compiled.includes('await window.P5SocialCard.render(data)'),'Unified publishing must generate a compact preview');
+ assert(compiled.includes('let preview=null'),'Unsupported Canvas or oversized image must not block results publication');
+ assert(compiled.includes('console.warn(\'Social card unavailable; results link remains publishable\''),'Missing non-blocking preview fallback');
+ assert(compiled.includes('body:JSON.stringify({data,preview,revision:stored.revision||1})'),'UPDATE must carry PNG');
+ assert(compiled.includes('body:JSON.stringify({data,preview})'),'POST must carry PNG');
+ assert(compiled.includes('/phase57/social-card-v574.js'),'Renderer must load with app');
+ const worker=fs.readFileSync('public/sw.js','utf8');
+ assert(worker.includes('p5-pwa-phase57-v577')&&worker.includes('/phase57/social-card-v574.js'),'PWA offline social renderer missing');
+ assert(worker.includes("'/social/'"),'Social images must bypass the PWA cache');
+ console.log('PASS Phase 5.7.4 — Top 5, live/final/KO, Mexicano/Individual, Canvas, OG, server/image routes, PWA.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

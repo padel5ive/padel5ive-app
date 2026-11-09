@@ -1,0 +1,20 @@
+const fs=require('fs');
+const s=fs.readFileSync('public/modes/unified/index.html','utf8');
+function show(tag,needle,n=3000,min=0){const i=s.indexOf(needle,min);console.log('==== '+tag+' '+needle+' @'+i);if(i>=0)console.log(s.slice(Math.max(i-100,0),i+n));}
+show('FORM','function formSetup(s)',4400);
+show('SYNC','function syncSetup()',2500,2970000);
+show('INPUT','case \'setup-date\'',2300,2970000);
+show('INPUT','setup-date',2300,2970000);
+show('MENU','const advanced=',2600,2470000);
+show('MENU','const management=',2500,2470000);
+show('MENU','const share=',1600,2470000);
+show('MENU','const resourceAction=',400,2470000);
+show('RESTORE','function onFile',2000,2970000);
+show('RESTORE','restore-input',1400,2970000);
+show('STATE','const stateNew=',2200,2970000);
+show('PUBLISH','async function publish(',2200,3040000);
+show('PUBLISH','function publish(',2200,3040000);
+show('EVENT','function onInput',1600,2970000);
+show('EVENT','addEventListener(\'change\'',800,2970000);
+show('EVENT','addEventListener(\'input\'',800,2970000);
+show('PDF','const date=',1000,3040000);

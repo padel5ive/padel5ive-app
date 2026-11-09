@@ -43,7 +43,7 @@ Automated checks validate source structure, no-KO results and metadata, **not** 
 2. Verify a **live session** says `LIVE STANDINGS`, not Final. After finishing without KO, its Top 5 heading becomes `FINAL LEADERBOARD`.
 3. Publish a **completed KO session**. The graphic must headline the actual KO **Champion and Runner-Up**, and label ranking below `STAGE 1 TOP 5` (KO winner is not necessarily Stage 1 rank #1).
 4. Recheck **Mexicano** and **Individual/Flexible** results: same Top 5 ranking semantics, with one name per player rather than two-name fixed pairs.
-5. Inspect the image URL from public HTML metadata. `og:image` must be a per-session absolute HTTPS URL such as `/social/u/{id}.png?v=1`. The response must be `image/png` and contain a **1200 × 630** PNG. The card shows session name, game mode, pairing, date/time, quiet dark-navy style, and subtle 5 watermark.
+5. Inspect the image URL from public HTML metadata. `og:image` must be a per-session absolute HTTPS URL such as `/social/u/{id}.jpg?v=1`. The response must be `image/jpeg` and contain a **1200 × 630** compact JPEG. Prior published PNG previews remain supported. The card shows session name, game mode, pairing, date/time, quiet dark-navy style, and subtle 5 watermark.
 6. Update scores and **publish again** on the same link. The image URL's `v` parameter must increase, and the image must show the new leaderboard. Be aware that WhatsApp may keep its own cached preview for an already shared URL; **test a newly published link** if the WhatsApp client has stale metadata.
 7. Open the actual shared link in Safari to ensure page scroll and interactive bracket still work; the fixed wallpaper must not move with the page. The dynamic server-rendered metadata must not replace the working browser viewer.
 8. Test **legacy public links** after production deployment. Links that predate Phase 5.7.4 and have no stored preview must continue to show published results with the previous static branded OG cover.
@@ -51,5 +51,14 @@ Automated checks validate source structure, no-KO results and metadata, **not** 
 10. **PWA:** the renderer is precached for offline app UI, but dynamic social image URLs and published public result pages must never be served from the PWA's cached assets.
 
 ### Acceptance boundary
-GitHub Actions validates the full source transform, standings, format permutations, PNG Canvas rendering contract, dynamic route wiring, storage isolation, and PWA cache rules. **Device Safari + real Netlify Functions + actual WhatsApp crawler tests are still mandatory** before the production merge.
+GitHub Actions validates the full source transform, standings, format permutations, adaptive Safari JPEG rendering and best-effort publishing contract, dynamic route wiring, storage isolation, and PWA cache rules. **Device Safari + real Netlify Functions + actual WhatsApp crawler tests are still mandatory** before the production merge.
 
+
+## Phase 5.7.5 — Safari feedback fixes
+
+- Home: iPad Start New Session and Session History have 24px vertical gap; iPhone has 20px. Both buttons remain centered and equal width.
+- Publish Results: 1200×630 WhatsApp card is compressed adaptively to JPEG. Large gradient/watermark PNGs are no longer sent.
+- No session may fail to publish solely because the optional image exceeds a size limit or the device cannot create a Canvas preview: publishing proceeds with the static branded OG fallback.
+- After publishing, open the generated /u/{id} URL and check the social JPEG `/social/u/{id}.jpg` returns HTTP 200, correct Content-Type, correct image dimensions and Top 5.
+- After re-publishing, the image version must change; previously published PNG cards remain readable.
+- Test again on the *latest deployed commit* of PR #3; PWA cache revision changes to v575. Do not merge until real Safari + WhatsApp behavior is verified.

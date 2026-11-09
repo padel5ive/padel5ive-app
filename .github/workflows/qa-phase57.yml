@@ -57,7 +57,7 @@ jobs:
             'OG preview':res.includes('PADEL 5IVE · Signature Game')&&res.includes('og:image:secure_url')&&res.includes('og:image:width'),
             'fixed public backdrop':res.includes('p5-unified-fixed-backdrop'),
             'public champion reveal assets':res.includes('/phase57/share-champion-v571.css')&&res.includes('/phase57/champion-render-v571.js'),
-            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&sw.includes('p5-pwa-phase57-v577'),
+            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&(sw.includes('p5-pwa-phase57-v577')||sw.includes('p5-pwa-phase58-lab-01')),
             'server optional time':api.includes('if(s.time!==undefined'),
             'master engine present':u.includes('P5EngineRegistry')&&u.includes('P5KO')&&u.includes('P5PublicResults')
           };
@@ -73,4 +73,5 @@ jobs:
         run: |
           test "$(git hash-object public/modes/unified/index.html)" != "13985b66f07eb50569daf86a7cbcb6571a312f5c"
           test "$(git show HEAD:public/modes/unified/index.html | git hash-object --stdin)" = "13985b66f07eb50569daf86a7cbcb6571a312f5c"
-          test "$(git hash-object public/modes/club-match/index.html)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
+          test "$(git show HEAD:public/modes/club-match/index.html | git hash-object --stdin)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
+          test "$(grep -Fc 'data-p58-cloud' public/modes/club-match/index.html)" -eq 1

@@ -50,6 +50,7 @@ export default async function handler(request,context){
  '<link rel="stylesheet" href="/assets/p5-results-visual-v5514.css">'+
  '<link rel="stylesheet" href="/assets/p5-unified-fixed-backdrop-v5701.css">'+
  '<link rel="stylesheet" href="/phase57/share-champion-v571.css">'+
+ '<link rel="stylesheet" href="/phase57/share-champion-v577.css">'+
  '</head><body class="share-photo-results">'+
  '<div class="p5-unified-fixed-backdrop" aria-hidden="true"></div>'+
  '<main class="wrap" id="app"><div class="load-panel"><div class="eyebrow">PADEL 5IVE · MATCH CONTROL</div><h1>Official Results</h1><p>Loading published results…</p></div></main>'+

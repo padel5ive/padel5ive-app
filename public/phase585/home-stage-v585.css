@@ -1,0 +1,53 @@
+/* PADEL 5IVE 5.8.5 — One authentic user-provided photograph, one Home viewport. 
+ * The source is the user's approved portrait photo with tonal adjustments,
+ * retaining its original, continuous court line and natural floor texture. No layered masks, repeated photo or painted bottom seam.
+ */
+@media(max-width:760px){
+ #portal .p541-venue{
+   background-image:url('/phase585/home-venue-user-refined-hd.webp')!important;
+   background-position:50% 50%!important;
+   background-size:cover!important;
+   background-repeat:no-repeat!important;
+   background-color:#061422!important;
+ }
+ /* Override old Phase 5.4.4 display:block!important on BOTH venue layers.
+    The previous general >img selector was less specific and let the two
+    legacy image layers leak above the new source photograph. */
+ html body #portal .p541-venue > img,
+ html body #portal .p541-venue > img.p544-ambient,
+ html body #portal .p541-venue > img.p544-foreground {
+   display:none!important;
+   visibility:hidden!important;
+   opacity:0!important;
+   pointer-events:none!important;
+ }
+ #portal .p541-venue::after{
+   content:""!important;
+   position:absolute!important;
+   inset:0!important;
+   z-index:0!important;
+   pointer-events:none!important;
+   background:linear-gradient(180deg,
+     rgba(3,12,25,.21) 0%,rgba(3,12,25,.08) 22%,
+     rgba(3,12,25,0) 35%,rgba(3,12,25,0) 69%,
+     rgba(3,12,25,.08) 84%,rgba(3,12,25,.22) 100%)!important;
+ }
+}
+/* Prevent Home from returning to a scrolled viewport in the installed PWA.
+   Initial Setup is a different screen with its own scroll container. */
+@media screen and (display-mode:standalone){
+ html,body{overscroll-behavior-y:none;}
+ body:not(.p54-active){overflow-x:hidden!important;overflow-y:hidden!important;}
+ body:not(.p54-active) #portal.portal{
+   position:fixed!important;inset:0!important;
+   box-sizing:border-box!important;width:100%!important;
+   height:100vh!important;min-height:100vh!important;max-height:100vh!important;
+   margin:0!important;padding:0!important;overflow:hidden!important;
+ }
+ @supports (height:100dvh){
+  body:not(.p54-active) #portal.portal{
+    height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;
+  }
+ }
+ body:not(.p54-active) #portal .p541-venue{height:100%!important;min-height:100%!important;inset:0!important;}
+}

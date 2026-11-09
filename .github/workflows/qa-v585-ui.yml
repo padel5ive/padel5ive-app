@@ -1,0 +1,38 @@
+name: PADEL 5IVE v5.8.5 UI Review QA
+on:
+  push:
+    branches: [feature/v5.8.5-visual-navigation-review]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build single-asset Home and shared menu UI
+        run: npm run build
+      - name: Check JS and HTML render source
+        run: |
+          node --check public/phase585/menu-unified-v585.js
+          node --check public/phase585/home-scroll-v585.js
+          node scripts/qa-v585-ui.cjs
+      - name: Simulate rendered Unified and Club menus and frozen iPad background
+        run: |
+          npm install --no-save jsdom@26
+          node scripts/qa-v585-dom.cjs
+          node scripts/qa-v586-background.cjs
+      - name: Core match and cloud feature regressions
+        run: |
+          node scripts/qa-v583-ui.cjs
+          node scripts/qa-phase574.cjs
+          node scripts/qa-phase58-markup.cjs
+          node scripts/qa-v5516.cjs
+          node scripts/qa-pwa.cjs
+          git diff --check

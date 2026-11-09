@@ -8,7 +8,12 @@ const heading=txt=>create('div','p585-heading',txt);
 const block=(title)=>{const s=create('section','p585-group');s.append(heading(title));return s};
 const nodes=(from,to)=>{if(!from||!to)return;while(from.firstChild)to.append(from.firstChild)};
 const mark=(root)=>root.setAttribute('data-p585-done','yes');
-const was=(root)=>root.getAttribute('data-p585-done')==='yes';
+const was=(root)=>{
+ if(root.getAttribute('data-p585-done')!=='yes')return false;
+ const children=Array.from(root.children).filter(x=>x.tagName==='DETAILS');
+ if(children.length!==3)return false;
+ return children.some(x=>x.querySelector(':scope > summary .p5-4852-label')?.textContent?.trim()==='Session & Results');
+};
 function moveInto(content,root){
  const s=root.querySelector(':scope > .p5-4852-content');
  if(s)nodes(s,content);

@@ -38,7 +38,7 @@ let meta=get(META), last='',lastPoll=0,lastHeartbeat=0,busy=false,offline=false,
 let host,openButton,dialog,body,status,stamp;
 if(meta?.kind!==kind)meta=null;
 if(meta&&(!isSession(get(KEY))||identity(get(KEY))!==meta.localId))meta=null;
-function persist(){if(meta)set(META,meta);else localStorage.removeItem(META)}
+function persist(){if(meta){if(last)meta.lastHash=stringHash(last);set(META,meta)}else localStorage.removeItem(META)}
 function role(){return meta?.role||'none'}
 function view(){return role()==='viewer'}
 function dirty(){const s=get(KEY);return isSession(s)&&JSON.stringify(s)!==last}
@@ -96,7 +96,10 @@ function render(){
    const r=await api('take-control',{code:meta.code,token:meta.token});
    Object.assign(meta,{role:r.role,waiting:!!r.waiting,revision:r.revision,summary:r.summary});persist();
    if(r.waiting)alert('Approval requested from the active device. If it is offline, control becomes available after its lease expires.');
-   else if(r.role==='controller')last=JSON.stringify(get(KEY));
+   else if(r.role==='controller'){
+    if(r.revision!==meta.revision)conflict=true;
+    else conflict=false;
+   }
   },true));
  }else{
   if(meta.takeoverRequested)controls.append(btn('APPROVE CONTROL TRANSFER',async()=>{
@@ -119,17 +122,17 @@ function render(){
    if(!confirm('Replace this device’s local version with the latest cloud version? Export a JSON backup first.'))return;
    const r=await api('sync',{code:meta.code,token:meta.token,force:true});
    if(!r.data)throw Error('Cloud session data not available.');
-   backup(get(KEY));applyRemote(r);
+   backup(get(KEY));applyRemote(r,true);
   },true));
  }
  if(offline)body.append(info('Cloud unavailable. Changes remain on this device until a safe sync is possible.'));
  body.append(e('p','p58-footnote','Only the active controller can edit. Session Code and PIN grant access—share them privately.'));
 }
-function applyRemote(r){
+function applyRemote(r,force=false){
  if(!r?.data||!isSession(r.data)||identity(r.data)!==meta.localId){
   conflict=true;throw Error('Cloud session identity differs from the local session. Local data preserved.');
  }
- if(dirty()&&role()==='controller'){
+ if(dirty()&&!force){
   conflict=true;throw Error('Local changes have not been uploaded. Cloud data was not applied.');
  }
  set(KEY,r.data);last=JSON.stringify(r.data);
@@ -216,7 +219,7 @@ function mount(){
  render();
  if(meta){last=meta.lastHash===stringHash(JSON.stringify(get(KEY)))?JSON.stringify(get(KEY)):'';
   // Device was edited offline while this app was closed: retain dirty session instead of treating it as cloud baseline.
-  if(!last){conflict=true;offline=true;}
+  if(!last){offline=true;conflict=false;}
   void refresh();
  }
  setInterval(()=>{

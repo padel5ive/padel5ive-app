@@ -15,6 +15,8 @@ const isSession=s=>kind==='unified'
  ? s?.version===24&&Array.isArray(s.roster)&&Array.isArray(s.rounds)&&s.stage!=='setup'&&!!s.session
  : !!s?.setup?.sessionName&&!!s?.stage&&s.stage!=='setup';
 const e=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x};
+// UI presentation state is not a score edit. Exclude it from dirty/conflict detection.
+const stable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;return JSON.stringify(copy)};
 const formatDate=s=>{if(!/^\d{4}-\d\d-\d\d$/.test(s||''))return s||'';const d=new Date(s+'T12:00:00Z');return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(d)};
 function message(m){const s=m.summary||{},date=[formatDate(s.date),s.time].filter(Boolean).join(' · ');
  return '**PADEL 5IVE · CLOUD SESSION**\n*BEYOND 5IVE. BEYOND PLAY.*\n\n'+
@@ -41,7 +43,7 @@ if(meta&&(!isSession(get(KEY))||identity(get(KEY))!==meta.localId))meta=null;
 function persist(){if(meta){if(last)meta.lastHash=stringHash(last);set(META,meta)}else localStorage.removeItem(META)}
 function role(){return meta?.role||'none'}
 function view(){return role()==='viewer'}
-function dirty(){const s=get(KEY);return isSession(s)&&JSON.stringify(s)!==last}
+function dirty(){const s=get(KEY);return isSession(s)&&stable(s)!==last}
 function mark(){
  if(!status)return;
  const label=!meta?'LOCAL ONLY':conflict?'CONFLICT · LOCAL PRESERVED':offline?'OFFLINE · NOT SYNCED':busy?'SYNCING':view()?'VIEW ONLY':meta.waiting?'TRANSFER PENDING':'SYNCED';
@@ -71,7 +73,7 @@ function render(){
    const result=await api('create',{kind,data,label:'Primary device'});
    meta={kind,code:result.code,token:result.token,pin:result.pin,summary:result.summary,
     localId,revision:result.revision,role:result.role,waiting:false};
-   last=JSON.stringify(data);persist();offline=false;conflict=false;dialog.hidden=false;
+   last=stable(data);persist();offline=false;conflict=false;dialog.hidden=false;
   });b.disabled=!isSession(state);body.append(b);return;
  }
  const cr=e('div','p58-credentials');
@@ -136,7 +138,7 @@ function applyRemote(r,force=false){
  if(dirty()&&!force){
   conflict=true;throw Error('Local changes have not been uploaded. Cloud data was not applied.');
  }
- set(KEY,r.data);last=JSON.stringify(r.data);
+ set(KEY,r.data);last=stable(r.data);
  meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;
  meta.waiting=!!r.pendingControl;meta.takeoverRequested=!!r.takeoverRequested;
  persist();offline=false;conflict=false;
@@ -149,6 +151,15 @@ async function refresh(){
  try{
   const r=await api('sync',{code:meta.code,token:meta.token,afterRevision:before});
   offline=false;
+  // An offline controller can safely reclaim an expired, unowned lease when the
+  // cloud revision is unchanged. Never auto-reclaim over another active device.
+  if(meta.role==='controller'&&r.role!=='controller'&&!r.controllerOnline&&r.revision===before){
+   const resumed=await api('take-control',{code:meta.code,token:meta.token});
+   if(resumed.role==='controller'){
+    meta.role='controller';meta.revision=resumed.revision;meta.waiting=false;
+    persist();mark();if(dirty())void push();return;
+   }
+  }
   if(r.role!==meta.role||r.revision!==before||!!r.pendingControl!==!!meta.waiting){
    const localDirty=dirty();
    if(r.revision!==before&&r.data){
@@ -168,12 +179,12 @@ async function refresh(){
 async function push(){
  if(!meta||role()!=='controller'||busy||conflict)return;
  const s=get(KEY);if(!isSession(s)||identity(s)!==meta.localId){conflict=true;mark();return}
- const bodyText=JSON.stringify(s);
- if(bodyText===last)return;
+ const bodyText=JSON.stringify(s),currentStable=stable(s);
+ if(currentStable===last)return;
  busy=true;mark();
  try{
   const r=await api('save',{code:meta.code,token:meta.token,revision:meta.revision,data:s});
-  last=bodyText;meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;meta.waiting=false;
+  last=currentStable;meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;meta.waiting=false;
   offline=false;persist();
  }catch(e){offline=!e.status||e.status>=500;if(e.status===409||e.status===423||e.status===401)conflict=true;}
  finally{busy=false;mark()}
@@ -218,7 +229,7 @@ function mount(){
  for(const type of ['click','change','input','submit','keydown'])document.addEventListener(type,guard,true);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden){dialog.hidden=true;}});
  render();
- if(meta){last=meta.lastHash===stringHash(JSON.stringify(get(KEY)))?JSON.stringify(get(KEY)):'';
+ if(meta){last=meta.lastHash===stringHash(stable(get(KEY)))?stable(get(KEY)):'';
   // Device was edited offline while this app was closed: retain dirty session instead of treating it as cloud baseline.
   if(!last){offline=true;conflict=false;}
   void refresh();
@@ -230,7 +241,7 @@ function mount(){
   if(ts-lastPoll>5500){lastPoll=ts;void refresh();}
   if(ts-lastHeartbeat>35000){lastHeartbeat=ts;void heartbeat();}
  },1800);
- window.addEventListener('online',()=>{offline=false;void refresh();if(role()==='controller')void push()});
+ window.addEventListener('online',async()=>{offline=false;await refresh();if(role()==='controller')await push()});
  window.addEventListener('pagehide',()=>{if(meta&&role()==='controller')localPersistHash()});
 }
 function stringHash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0).toString(36);}

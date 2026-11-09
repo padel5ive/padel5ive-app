@@ -36,11 +36,12 @@ body.share-photo-results #champion.champion.p57-award::before {
   opacity:1!important;
   font-size:0!important;
   pointer-events:none!important;
+  /* Intentionally remove the old venue-photo collage. This is one matte
+     editorial surface: tonal navy, restrained court geometry, no glow. */
   background:
-    radial-gradient(ellipse 54% 76% at 50% 52%,rgba(177,133,77,.13),transparent 78%),
-    linear-gradient(90deg,rgba(8,18,28,.95),rgba(8,18,28,.78) 54%,rgba(8,18,28,.95)),
-    linear-gradient(0deg,rgba(6,16,26,.73),transparent 60%),
-    url('/assets/p5-master-share-court.webp') center 48% / cover no-repeat!important;
+    linear-gradient(90deg,rgba(203,178,142,.035) 0 1px,transparent 1px calc(100% - 1px),rgba(203,178,142,.035) calc(100% - 1px)),
+    linear-gradient(165deg,rgba(36,59,75,.34) 0%,rgba(15,31,44,.20) 45%,rgba(7,19,31,.42) 100%),
+    linear-gradient(90deg,#101f2c 0%,#142737 48%,#0b1927 100%)!important;
 }
 body.share-photo-results #champion.champion.p57-award::after {
   content:""!important;
@@ -107,7 +108,7 @@ body.share-photo-results #champion .p57-award-trophy svg {
   display:block!important;
   width:100%!important;
   height:auto!important;
-  opacity:.96!important;
+  opacity:.90!important;
   filter:none!important;
 }
 body.share-photo-results #champion .p57-award-kicker {
@@ -129,7 +130,7 @@ body.share-photo-results #champion .p57-award-name {
   text-align:center!important;
   text-wrap:balance!important;
   overflow-wrap:anywhere!important;
-  text-shadow:0 2px 12px rgba(0,0,0,.28)!important;
+  text-shadow:none!important;
 }
 body.share-photo-results #champion .p57-award-description {
   color:#bcc7cc!important;

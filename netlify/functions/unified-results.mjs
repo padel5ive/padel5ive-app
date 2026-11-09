@@ -1,4 +1,4 @@
-import { getStore } from '@netlify/blobs';
+import { resultsStore } from '../helpers/unified-store.mjs';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /** PADEL 5IVE Phase 5.4.13 – Official Unified read-only public reports.
@@ -99,7 +99,7 @@ async function readBody(request){
 export default async function handler(request){
   try{
     const url=new URL(request.url),id=url.searchParams.get('id')||'';
-    const store=getStore(STORE_NAME,{consistency:'strong'});
+    const store=resultsStore(request);
     switch(request.method){
       case 'GET':{
         if(!ID_RE.test(id))return json({error:'Invalid results ID'},400);

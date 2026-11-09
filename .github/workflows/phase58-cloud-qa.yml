@@ -30,8 +30,8 @@ jobs:
         run: node scripts/qa-phase58-resume.cjs
       - name: Validate compiled app scripts and audit native Club menu
         run: node scripts/qa-phase58-markup.cjs
-      - name: Audit PWA bottom boundary and shell background
-        run: node scripts/qa-v58-pwa-bottom-audit.cjs
+      - name: Validate full-height iOS PWA background without changing CTA layout
+        run: node scripts/qa-phase581-pwa-fullscreen.cjs
       - name: Ensure baseline match control survives
         run: |
           node scripts/qa-v5516.cjs

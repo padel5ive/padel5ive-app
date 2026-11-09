@@ -1,11 +1,11 @@
-/* PADEL 5IVE 5.8.5 — One photograph, one Home viewport. 
- * The pre-composed source contains the venue, perspective floor and soft
- * darkness. No layered masks, repeated photo or painted bottom seam.
+/* PADEL 5IVE 5.8.5 — One authentic user-provided photograph, one Home viewport. 
+ * The source is the user's approved portrait photo with tonal adjustments,
+ * retaining its original, continuous court line and natural floor texture. No layered masks, repeated photo or painted bottom seam.
  */
 @media(max-width:760px){
  #portal .p541-venue{
-   background-image:url('/phase585/home-venue-portrait.webp')!important;
-   background-position:center center!important;
+   background-image:url('/phase585/home-venue-user-refined-hd.webp')!important;
+   background-position:50% 50%!important;
    background-size:cover!important;
    background-repeat:no-repeat!important;
    background-color:#061422!important;
@@ -21,10 +21,9 @@
    z-index:0!important;
    pointer-events:none!important;
    background:linear-gradient(180deg,
-     rgba(2,10,22,.26) 0%,rgba(2,10,22,.1) 20%,
-     transparent 32%,transparent 52%,
-     rgba(2,10,22,.04) 64%,rgba(2,10,22,.21) 79%,
-     rgba(2,10,22,.48) 100%)!important;
+     rgba(3,12,25,.21) 0%,rgba(3,12,25,.08) 22%,
+     rgba(3,12,25,0) 35%,rgba(3,12,25,0) 69%,
+     rgba(3,12,25,.08) 84%,rgba(3,12,25,.22) 100%)!important;
  }
 }
 /* Prevent Home from returning to a scrolled viewport in the installed PWA.

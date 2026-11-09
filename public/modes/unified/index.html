@@ -7557,7 +7557,7 @@ async function readPublished(id){if(!SHORT_ID.test(id))throw Error('Invalid resu
  .p5r-champion{max-width:100%!important}
 }
 `;
-function responsiveReport(html){return html.replace('</head>',`<style>${MOBILE_REPORT_CSS}</style></head>`);}
+function responsiveReport(html){return html.replace('</head>',`<style>${MOBILE_REPORT_CSS}</style><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="PADEL 5IVE"></head>`);}
 function closeViewer(){document.querySelector('#p5-public-view')?.remove();}
  async function openFromHash(){
   closeViewer();const match=location.pathname.match(/^\/u\/([A-Za-z0-9_-]{6,32})\/?$/);if(!location.hash.startsWith('#p5r=')&&!match)return;
@@ -7574,4 +7574,4 @@ function closeViewer(){document.querySelector('#p5-public-view')?.remove();}
  return Object.freeze({makeLink,showShare,showPublish,publish,showRevoke,revoke,readPublished,officialUrl,snapshot,pack,unpack,openFromHash});
 })();
 
-</script><!-- v5.4.13.7 Interactive Master Results and Native PDF; preserve original engines. --><style id="p5-54137-share-menu">.p5-share-label-copy{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.p5-share-label-copy small{display:block;font-size:10px;letter-spacing:.08em;font-weight:500;color:#b4b7bd}.p5-4852-action[data-act="share-result-link"]{min-height:58px;text-align:left}</style><script src="/assets/p5-direct-pdf.js"></script><script src="/assets/p5-keyboard-nav-v5516.js" defer></script></body></html>
+</script><!-- v5.4.13.7 Interactive Master Results and Native PDF; preserve original engines. --><style id="p5-54137-share-menu">.p5-share-label-copy{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.p5-share-label-copy small{display:block;font-size:10px;letter-spacing:.08em;font-weight:500;color:#b4b7bd}.p5-4852-action[data-act="share-result-link"]{min-height:58px;text-align:left}</style><script src="/assets/p5-direct-pdf.js"></script><script src="/assets/p5-keyboard-nav-v5516.js" defer></script><script defer src="/pwa-register.js"></script></body></html>

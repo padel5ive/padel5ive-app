@@ -1,0 +1,116 @@
+/* PADEL 5IVE · v5.8.2 — quiet-luxury Home CTA hierarchy.
+ * Three full-width stacked bars obstructed the padel court hero on iPhone.
+ * Keep one clear primary CTA; arrange the two secondary actions in a subtle
+ * compact row. Do not shift the photo, logo, signature, or PWA viewport.
+ * Existing running-session Resume occupies the optional third row.
+ */
+html body:not(.p54-active) #portal .p541-home-actions {
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: 52px 43px auto !important;
+  column-gap: 12px !important;
+  row-gap: 12px !important;
+  align-content: end !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+  width: min(410px, calc(100% - 44px)) !important;
+  max-width: 410px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  background: none !important;
+  border: 0 !important;
+}
+
+html body:not(.p54-active) #portal .p541-home-actions > #p54-start {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  letter-spacing: .12em !important;
+  box-shadow: none !important;
+}
+
+html body:not(.p54-active) #portal .p541-home-actions > #p58-load,
+html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button {
+  position: relative !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  flex: initial !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 43px !important;
+  min-height: 43px !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 8px 5px !important;
+  border: 1px solid rgba(214, 185, 145, .55) !important;
+  border-radius: 8px !important;
+  background: rgba(10, 25, 38, .71) !important;
+  color: #e4d0b1 !important;
+  font: 650 10px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: .09em !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html body:not(.p54-active) #portal .p541-home-actions > #p58-load {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+}
+
+html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+}
+
+html body:not(.p54-active) #portal .p541-home-actions > #p54-resume {
+  grid-column: 1 / -1 !important;
+  grid-row: 3 !important;
+  width: 100% !important;
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+}
+
+/* Grid's optional third row must completely collapse with no running session. */
+html body:not(.p54-active) #portal .p541-home-actions > #p54-resume[hidden] {
+  display: none !important;
+}
+
+/* The dynamic source contains a third row that should only consume space when
+ * Resume exists. Grid auto rows avoid a phantom gap for finished-only users. */
+html body:not(.p54-active) #portal .p541-home-actions {
+  grid-template-rows: 52px 43px !important;
+  grid-auto-rows: min-content !important;
+}
+
+@media (max-width: 390px) {
+  html body:not(.p54-active) #portal .p541-home-actions {
+    width: calc(100% - 36px) !important;
+    column-gap: 9px !important;
+  }
+  html body:not(.p54-active) #portal .p541-home-actions > #p58-load,
+  html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button {
+    font-size: 9px !important;
+    letter-spacing: .06em !important;
+  }
+}
+
+/* iPhone portrait tap targets remain accessible; no stacked three-block layout. */
+@media (max-width: 330px) {
+  html body:not(.p54-active) #portal .p541-home-actions {
+    column-gap: 7px !important;
+  }
+}

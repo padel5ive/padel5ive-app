@@ -5,7 +5,7 @@ const MODES={'fp-americano':'Americano · Fixed Partner','fp-mexicano':'Mexicano
 const get=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}};
 const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const e=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x;};
-const isFinal=s=>['champion','finished','completed','final'].includes(String(s?.stage||'').toLowerCase());
+const isFinal=s=>['champion','finished','completed','complete','final'].includes(String(s?.stage||'').toLowerCase());
 const validU=s=>s?.version===24&&Array.isArray(s.roster)&&Array.isArray(s.rounds)&&s.stage&&s.stage!=='setup'&&s.session;
 const validC=s=>!!(s?.setup?.sessionName&&s?.stage);
 let overlay,list,count,openButton,filter='all';
@@ -57,7 +57,7 @@ function render(){
   head.append(e('strong','',title(x)),badge);
   card.append(head,e('p','p57-mode',label(x)),e('p','p57-meta',dateLine(x)));
   const buttons=e('div','p57-session-actions');
-  for(const [word,fn,cls] of [['Resume',()=>resume(x),'primary'],['Backup',()=>backup(x),''],['Delete',()=>remove(x),'danger']]){
+  for(const [word,fn,cls] of [[isFinal(x.s)?'View Results':'Resume',()=>resume(x),'primary'],['Backup',()=>backup(x),''],['Delete',()=>remove(x),'danger']]){
    const b=e('button',cls,word);b.type='button';b.addEventListener('click',fn);buttons.appendChild(b);
   }
   card.appendChild(buttons);list.appendChild(card);

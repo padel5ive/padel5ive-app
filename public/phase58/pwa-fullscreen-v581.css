@@ -1,0 +1,62 @@
+/* PADEL 5IVE · v5.8.1 — iOS Home Screen PWA full-height continuity.
+ * iPhone/iPad installed PWA only; Safari browser and match engines unchanged.
+ * Fix 100svh "short viewport" exposing a flat bottom band on iOS.
+ * Preserve the approved masthead, buttons, venue photo crop and setup spacing.
+ */
+@media screen and (display-mode: standalone) {
+  html, body {
+    min-height: 100%;
+    background-color: #061321;
+  }
+
+  /* Fallback for older WKWebView versions without dynamic viewport units. */
+  #portal.portal {
+    box-sizing: border-box;
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+  #p54-workspace.p54-workspace {
+    box-sizing: border-box;
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+
+  @supports (height: 100dvh) {
+    html, body { min-height: 100dvh; }
+
+    /* The hero photo + dusk overlay must reach the actual screen bottom. */
+    #portal.portal {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+    }
+
+    /* Initial Setup must cover the same viewport as Home, including the
+       iPhone Home-indicator area; do not translate/reposition the content. */
+    #p54-workspace.p54-workspace {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+    }
+  }
+
+  #portal .p541-venue {
+    inset: 0 !important;
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+
+  /* Image/overlay continue to the very bottom; no second background strip. */
+  #portal .p541-venue::after {
+    bottom: 0 !important;
+  }
+
+  /* Workspace's existing artwork and gradient are retained, just extended. */
+  #p54-workspace.p54-workspace {
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  /* A tall screen should not gain an extra scrollbar merely from the shell. */
+  body:not(.p54-active) #portal.portal {
+    overflow: hidden !important;
+  }
+}

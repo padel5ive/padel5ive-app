@@ -9,6 +9,12 @@
   node_bundler = "esbuild"
 
 [[redirects]]
+  from = "/api/cloud-session"
+  to = "/.netlify/functions/cloud-session"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/unified-results"
   to = "/.netlify/functions/unified-results"
   status = 200

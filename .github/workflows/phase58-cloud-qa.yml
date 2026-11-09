@@ -1,0 +1,59 @@
+name: PADEL 5IVE v5.8 Cloud Session LAB QA
+on:
+  push:
+    branches: [feature/v5.8-cloud-session-lab]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  cloud-session-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build full site with Phase 5.7 and 5.8 integrations
+        run: npm run build
+      - name: Parse Cloud Session scripts
+        run: |
+          node --check netlify/functions/cloud-session.mjs
+          node --check public/phase58/cloud-home.js
+          node --check public/phase58/cloud-dashboard.js
+          node --check scripts/phase58-transform.cjs
+      - name: Exercise authentication, revision conflict and takeover
+        run: node scripts/qa-phase58.mjs
+      - name: Confirm finished sessions live only in Session History, and Round 1 reshuffle guards
+        run: node scripts/qa-phase58-resume.cjs
+      - name: Validate compiled app scripts and audit native Club menu
+        run: node scripts/qa-phase58-markup.cjs
+      - name: Validate full-height iOS PWA background without changing CTA layout
+        run: node scripts/qa-phase581-pwa-fullscreen.cjs
+      - name: Verify compact premium Home CTA hierarchy
+        run: node scripts/qa-phase582-home-cta.cjs
+      - name: Ensure baseline match control survives
+        run: |
+          node scripts/qa-v5516.cjs
+          node scripts/qa-phase574.cjs
+      - name: Verify resulting app integrations and Netlify route
+        run: |
+          grep -Fq '/phase58/cloud-home.js' public/index.html
+          grep -Fq 'data-p58-cloud' public/modes/unified/index.html
+          grep -Fq '/phase58/cloud-dashboard.js' public/modes/club-match/index.html
+          grep -Fq '/api/cloud-session' netlify.toml
+          grep -Fq 'p5-pwa-phase58-lab-01' public/sw.js
+
+  deploy-preview-smoke:
+    if: github.event_name == 'pull_request'
+    needs: cloud-session-qa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test live Netlify Deploy Preview, not production
+        run: node scripts/qa-phase58-preview.mjs

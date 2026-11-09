@@ -1,0 +1,98 @@
+/* PADEL 5IVE · Phase 5.7.1 — Public Results Champion Reveal.
+ * Pure presentation. No score, ranking, publishing or knockout mutation.
+ */
+body.share-photo-results #champion.p57-award {
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(90px,150px)!important;
+  align-items:center!important;
+  justify-content:stretch!important;
+  text-align:left!important;
+  gap:clamp(14px,3.5vw,38px)!important;
+  isolation:isolate!important;
+  overflow:hidden!important;
+  min-height:276px!important;
+  padding:clamp(27px,4vw,47px)!important;
+  margin:12px 0 22px!important;
+  border:1px solid rgba(212,180,137,.52)!important;
+  border-radius:16px!important;
+  background:#111f2c!important;
+  box-shadow:0 18px 34px rgba(3,10,18,.16)!important;
+}
+body.share-photo-results #champion.p57-award::before {
+  content:""!important;display:block!important;position:absolute!important;
+  inset:0!important;z-index:-1!important;pointer-events:none!important;
+  opacity:1!important;font-size:0!important;
+  background:
+    linear-gradient(90deg,rgba(9,20,30,.98) 0%,rgba(11,22,33,.92) 45%,rgba(12,25,36,.72) 100%),
+    linear-gradient(0deg,rgba(10,21,32,.46),transparent 70%),
+    url('/assets/p5-master-share-champion.webp') center 45% / cover no-repeat!important;
+}
+body.share-photo-results #champion.p57-award::after {
+  content:"";position:absolute;left:clamp(27px,4vw,47px);right:clamp(27px,4vw,47px);bottom:18px;
+  height:1px;pointer-events:none;background:linear-gradient(90deg,rgba(221,187,142,.6),rgba(221,187,142,.08));
+}
+body.share-photo-results #champion.p57-award > * {position:relative;z-index:1;min-width:0;}
+body.share-photo-results #champion .p57-award-head {
+  display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;
+  color:#cdb28d;font:650 10px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  letter-spacing:.18em;text-transform:uppercase;
+}
+body.share-photo-results #champion .p57-award-head::before {
+  content:"";width:33px;height:1px;background:#d3ae7c;
+}
+body.share-photo-results #champion .p57-award-kicker {
+  font:600 10px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  letter-spacing:.24em;color:#e2c69d;margin:0 0 5px;text-transform:uppercase;
+}
+body.share-photo-results #champion .p57-award-name {
+  font:680 clamp(31px,4.6vw,58px)/1.06 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  letter-spacing:-.04em!important;color:#faf2e8!important;
+  text-align:left!important;margin:0 0 13px!important;padding:0!important;
+  text-wrap:balance;overflow-wrap:anywhere;text-shadow:none!important;
+}
+body.share-photo-results #champion .p57-award-description {
+  color:#b8c5ce;font-size:12px;line-height:1.55;margin:0;
+  letter-spacing:.018em;
+}
+body.share-photo-results #champion .p57-runner {
+  display:flex!important;flex-wrap:wrap;align-items:baseline;gap:10px;
+  margin-top:22px!important;padding-top:14px;border-top:1px solid rgba(219,190,152,.22);
+  text-align:left!important;
+}
+body.share-photo-results #champion .p57-runner-label {
+  color:#c8aa82;font:650 10px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  letter-spacing:.13em;white-space:nowrap;
+}
+body.share-photo-results #champion .p57-runner-name {
+  color:#e5e7e6;font:650 clamp(13px,1.6vw,17px)/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  overflow-wrap:anywhere;
+}
+body.share-photo-results #champion .p57-trophy-panel {
+  display:flex;align-items:center;justify-content:center;min-height:175px;
+  border-left:1px solid rgba(204,169,124,.22);
+}
+body.share-photo-results #champion .p57-trophy-panel svg {
+  width:min(100%,116px);height:auto;max-height:135px;fill:none;
+  stroke:#d3ae7c;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round;
+  opacity:.86;filter:none!important;
+}
+body.share-photo-results #champion .p57-trophy-panel .p57-trophy-number {
+  fill:#d3ae7c;stroke:none;font:700 14px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+@media(max-width:640px) {
+ body.share-photo-results #champion.p57-award {
+   grid-template-columns:minmax(0,1fr) 66px!important;min-height:247px!important;
+   gap:8px!important;padding:26px 21px 29px!important;
+ }
+ body.share-photo-results #champion.p57-award::after{left:21px;right:21px;bottom:16px;}
+ body.share-photo-results #champion .p57-award-head{font-size:9px;margin-bottom:15px;letter-spacing:.14em;}
+ body.share-photo-results #champion .p57-award-name{font-size:clamp(29px,7vw,42px)!important;}
+ body.share-photo-results #champion .p57-award-description{font-size:11px;}
+ body.share-photo-results #champion .p57-runner{margin-top:17px!important;gap:6px;display:flex;flex-direction:column;align-items:start;}
+ body.share-photo-results #champion .p57-trophy-panel{min-height:112px;align-self:start;border-left:0;opacity:.67}
+ body.share-photo-results #champion .p57-trophy-panel svg{width:66px}
+}
+@media(prefers-reduced-motion:reduce) {
+ body.share-photo-results #champion.p57-award *{animation:none!important;transition:none!important;}
+}

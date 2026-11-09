@@ -57,7 +57,7 @@ function render(){
   head.append(e('strong','',title(x)),badge);
   card.append(head,e('p','p57-mode',label(x)),e('p','p57-meta',dateLine(x)));
   const buttons=e('div','p57-session-actions');
-  for(const [word,fn,cls] of [['Resume',()=>resume(x),'primary'],['Backup',()=>backup(x),''],['Delete',()=>remove(x),'danger']]){
+  for(const [word,fn,cls] of [[isFinal(x.s)?'View Results':'Resume',()=>resume(x),'primary'],['Backup',()=>backup(x),''],['Delete',()=>remove(x),'danger']]){
    const b=e('button',cls,word);b.type='button';b.addEventListener('click',fn);buttons.appendChild(b);
   }
   card.appendChild(buttons);list.appendChild(card);

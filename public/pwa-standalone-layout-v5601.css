@@ -61,3 +61,48 @@
   }
 }
 /* Deploy Preview cache refresh: v5.6.1 final standalone spacing build. */
+
+/* PWA 5.6.2 — Scroll-safe Home navigation. Keep it reachable in the
+   installed app, including when Safari restores a scrolled setup position.
+   Does not affect regular Safari, score entry or production master. */
+@media screen and (display-mode: standalone) {
+  body > nav.p54-app-nav {
+    position: sticky !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    z-index: 6000 !important;
+    min-height: 56px;
+    isolation: isolate;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    background: #0a1621 !important;
+    box-shadow: 0 1px 0 rgba(210,178,132,.25);
+  }
+  body > nav.p54-app-nav::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(-1 * env(safe-area-inset-top, 0px));
+    height: env(safe-area-inset-top, 0px);
+    background: #0a1621;
+    pointer-events: none;
+  }
+  body > nav.p54-app-nav > a#p54-home-link {
+    position: relative !important;
+    z-index: 2 !important;
+    min-height: 44px;
+    display: inline-flex !important;
+    align-items: center;
+    padding: 8px 10px !important;
+    margin: -7px -10px;
+    border-radius: 8px;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(221,184,135,.16);
+    cursor: pointer;
+  }
+  body > nav.p54-app-nav > a#p54-home-link:focus-visible {
+    outline: 2px solid #e7cba2;
+    outline-offset: 2px;
+  }
+}

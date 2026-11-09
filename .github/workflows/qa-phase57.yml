@@ -24,6 +24,7 @@ jobs:
           node --check public/assets/p5-interactive-results.js
           node --check public/assets/p5-direct-pdf.js
           node --check public/sw.js
+          node scripts/qa-phase573.cjs
           node --check netlify/functions/unified-results.mjs
       - name: Phase 5.7 regression guards
         run: |
@@ -37,7 +38,7 @@ jobs:
           const pdf=fs.readFileSync('public/assets/p5-direct-pdf.js','utf8');
           const cases={
             'home history script':home.includes('/phase57/home-session-history.js'),
-            'one compact date/time field':u.includes('class="p57-date-time"')&&u.includes('GAME DATE &amp; TIME'),
+            'two clear stacked date/time fields':u.includes('class="p57-date-time p57-date-fields"')&&u.includes('>GAME DATE</span>')&&u.includes('>GAME TIME</span>'),
             'time validated':u.includes('Select a valid Game Time')&&u.includes(':00$'),
             '24 hourly options':u.includes('option value="00:00"')&&u.includes('option value="23:00"')&&!u.includes('id="setup-time" type="time"'),
             'date/time in dashboard':u.includes('<b>Date & Time</b>'),
@@ -45,15 +46,15 @@ jobs:
             'session menu':u.includes("entry('Session Management'"),
             'no duplicated restore in setup':!u.includes('<div class="p5-v212-restore-home"><button type="button" data-act="restore">'),
             'Existing Sessions only in Home history':!u.includes('${homeExistingSessions(s)}</section>'),
-            'refined shared time control loaded':u.includes('/phase57/setup-refinement-v572.css'),
+            'refined shared time control loaded':u.includes('/phase57/setup-refinement-v572.css')&&fs.readFileSync('public/phase57/setup-refinement-v572.css','utf8').includes('5.7.3'),
             'refined Home CTA styling':fs.readFileSync('public/phase57/home-session-history.css','utf8').includes('Phase 5.7.2 — Home CTAs'),
             'centered public champion styling':fs.readFileSync('public/phase57/share-champion-v571.css','utf8').includes('centered hierarchy'),
             'winner no-KO':u.includes("winner=hasKO?(s.ko?.champion||[]):(leader[0]"),
             'PDF time':pdf.includes('dayDate(data.date)+(data.time?'),
-            'OG preview':res.includes('PADEL 5IVE · Signature Game'),
+            'OG preview':res.includes('PADEL 5IVE · Signature Game')&&res.includes('og:image:secure_url')&&res.includes('og:image:width'),
             'fixed public backdrop':res.includes('p5-unified-fixed-backdrop'),
             'public champion reveal assets':res.includes('/phase57/share-champion-v571.css')&&res.includes('/phase57/champion-render-v571.js'),
-            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&sw.includes('p5-pwa-phase57-v572'),
+            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&sw.includes('p5-pwa-phase57-v573'),
             'server optional time':api.includes('if(s.time!==undefined'),
             'master engine present':u.includes('P5EngineRegistry')&&u.includes('P5KO')&&u.includes('P5PublicResults')
           };

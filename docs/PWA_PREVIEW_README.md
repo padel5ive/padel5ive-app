@@ -33,3 +33,7 @@ Use the preview for dummy sessions: a PR Deploy Preview may have separate backen
 - `public/_headers` prevents caching the service-worker bootstrap and manifest.
 - Icons derived from PADEL 5IVE master logo using `scripts/generate-pwa-icons.py`.
 - `scripts/qa-pwa.cjs` regression/smoke checker covers registration and assets.
+
+## Standalone Layout Polish — v5.6.1
+
+The iPhone/iPad Home Screen build now loads `/pwa-standalone-layout-v5601.css` on the landing page, Unified Match Control and Team Showdown. It adds safe-area-aware vertical spacing **only in standalone display mode**, keeping Safari and production layout unchanged. Initial Setup/nav and landing headline/CTA receive separate targeted offsets. QA verified the selectors, three stylesheet links, v5.5.16 engine regression, and production build. Reopen the installed preview after the updated Netlify Deploy Preview is published; if old styling remains, fully close and reopen the PWA.

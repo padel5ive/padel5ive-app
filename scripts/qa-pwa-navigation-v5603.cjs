@@ -32,4 +32,24 @@ bodyClass.active=true;observed();
 assert.equal(workspace.scrollTop,0,'mode selection scroll reset on opening');
 listeners['doc:click']({target:{closest:q=>q==='a#p54-home-link'?{getAttribute:()=> '../../'}:null},preventDefault(){this.prevented=true}});
 assert.equal(location.assigned,'https://deploy-preview-1--padel5ive.netlify.app/');
-console.log('PWA navigation: in-flow navbar, 44px target, scroll reset and Home destination PASS');
+
+// v5.6.4: Safari/PWA parity guardrails for three separate viewports.
+const shell=fs.readFileSync('public/index.html','utf8');
+const sw=fs.readFileSync('public/sw.js','utf8');
+const headers=fs.readFileSync('public/_headers','utf8');
+assert.ok(shell.includes('id="p54-workspace"'),'Mode selector must keep its own scroll viewport');
+assert.ok(shell.includes('class="p542-topline"'),'Mode chooser Home navbar must exist');
+for(const sel of ['#portal .masthead','#portal .p541-home-actions','#portal .signature',
+  '#p54-workspace.p54-workspace','#p54-workspace .p542-topline',
+  'body > nav.p54-app-nav','body > nav.p54-app-nav > a#p54-home-link']) {
+  assert.ok(css.includes(sel),'Safe-area CSS selector missing: '+sel);
+}
+assert.ok(css.includes('overscroll-behavior-y: contain'),'Mode chooser scroll must remain contained');
+assert.ok(css.includes('padding-top: calc(var(--p5-standalone-safe-top) + 5px)'),'iPhone mode chooser safe-area guard');
+assert.ok(!css.includes('position: fixed !important'),'PWA nav must never overlay match header');
+assert.ok(!css.includes('translateY('),'PWA visual parity must not translate whole pages');
+assert.ok(sw.includes('p5-pwa-lab-v564-1'),'Service worker cache version must match update');
+assert.ok(sw.includes("'/pwa-standalone-layout-v5601.css'"),'Offline PWA must precache standalone layout');
+assert.ok(headers.includes('/pwa-standalone-layout-v5601.css'),'PWA stylesheet must revalidate');
+
+console.log('PWA navigation and standalone visual parity: in-flow navbar, 44px target, scroll reset and Home destination PASS');

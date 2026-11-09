@@ -26,8 +26,8 @@ jobs:
           node --check scripts/phase58-transform.cjs
       - name: Exercise authentication, revision conflict and takeover
         run: node scripts/qa-phase58.mjs
-      - name: Inspect finished-session resume and Round 1 arrival/reshuffle controls
-        run: node scripts/qa-v58-audit-session.cjs
+      - name: Confirm finished sessions live only in Session History, and Round 1 reshuffle guards
+        run: node scripts/qa-phase58-resume.cjs
       - name: Validate compiled app scripts and audit native Club menu
         run: node scripts/qa-phase58-markup.cjs
       - name: Ensure baseline match control survives

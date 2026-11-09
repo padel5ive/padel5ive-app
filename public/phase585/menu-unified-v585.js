@@ -39,7 +39,14 @@ function unified(root){
  nodes(content,results);
  content.append(results);
  const sessionGroup=block('SESSION DATA');
- nodes(sessionContent,sessionGroup);
+ // Move only the actual native controls, not the nested legacy SESSION DATA
+ // heading/card. This removes the duplicate heading and redundant whitespace.
+ const cloud=sessionContent.querySelector('[data-p58-cloud]');
+ const backup=sessionContent.querySelector('[data-act="backup"]');
+ const restore=sessionContent.querySelector('[data-act="restore"]');
+ const restoreFile=sessionContent.querySelector('#restore-input');
+ if(cloud){cloud.textContent='Cloud Session';cloud.classList.add('p585-cloud-row');sessionGroup.append(cloud);}
+ for(const item of [backup,restore,restoreFile])if(item)sessionGroup.append(item);
  content.append(sessionGroup);
  const details=create('details','p585-tools');
  const summary=create('summary','','Advanced Tools');
@@ -81,6 +88,12 @@ function club(root){
  const sessionGroup=block('SESSION DATA');
  if(session){const el=session.querySelector('.mc32-advanced-body');if(el)nodes(el,sessionGroup);session.remove()}
  if(advanced){const el=advanced.querySelector('.mc32-advanced-body');if(el)nodes(el,sessionGroup);advanced.remove()}
+ const cloudButton=sessionGroup.querySelector('[data-p58-cloud]');
+ if(cloudButton){
+   cloudButton.textContent='Cloud Session';
+   cloudButton.classList.add('p585-cloud-row');
+   sessionGroup.insertBefore(cloudButton,sessionGroup.querySelector('.p585-heading')?.nextSibling||sessionGroup.firstChild);
+ }
  content.append(sessionGroup);mark(root);
 }
 function removeLiveBadge(){

@@ -65,10 +65,14 @@ jobs:
           script='<script defer src="/pwa-register.js"></script>'
           for p in paths:
             s=p.read_text('utf-8')
-            assert s.count('</head>')==1 and s.count('</body>')==1, str(p)+' expected standard HTML'
+            assert '</head>' in s and s.rstrip().endswith('</html>'), str(p)+' missing HTML closing tags'
             assert '/manifest.webmanifest' not in s and 'pwa-register.js' not in s, str(p)+' already patched'
-            s=s.replace('</head>',head_add+'</head>',1)
-            s=s.replace('</body>',script+'</body>',1)
+            lhs,sep,rhs=s.rpartition('</head>')
+            assert sep, str(p)+' head not found'
+            s=lhs+head_add+sep+rhs
+            lhs,sep,rhs=s.rpartition('</body>')
+            assert sep, str(p)+' body not found'
+            s=lhs+script+sep+rhs
             p.write_text(s,encoding='utf-8')
             assert s.count('rel="manifest"')==1 and s.count('/pwa-register.js')==1
             print('PWA enhanced:',p)

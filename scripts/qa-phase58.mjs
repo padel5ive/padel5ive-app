@@ -39,6 +39,7 @@ assert.equal(raw.devices.length,1);assert.ok(raw.pinHash&&!JSON.stringify(raw).i
 for(let i=0;i<5;i++){const r=await call('join',{code:owner.code,pin:'bad'});assert.equal(r.status,401);checks++}
 assert.equal((await call('join',{code:owner.code,pin:owner.pin})).status,429);checks++;
 now+=15*60_000+1;
+const renew=await call('take-control',{code:owner.code,token:owner.token});assert.equal(renew.status,200);checks++;
 const joined=await call('join',{code:owner.code,pin:owner.pin,label:'iPad'});assert.equal(joined.status,200);
 const ipad=joined.body;assert.equal(ipad.role,'viewer');assert.deepEqual(ipad.data,valid());checks++;
 const deny=await call('save',{code:owner.code,token:ipad.token,revision:1,data:valid()});assert.equal(deny.status,423);checks++;
@@ -63,8 +64,8 @@ const transfer=await call('take-control',{code:owner.code,token:android.token});
 const snapshot=await call('sync',{code:owner.code,token:android.token,force:true});
 assert.equal(snapshot.status,200);assert.equal(snapshot.body.data.stage,'ko');checks++;
 // CAS rejects two writes that started at the same version.
-const c1=call('save',{code:owner.code,token:android.token,revision:4,data:{...valid(),stage:'stage1'}});
-const c2=call('save',{code:owner.code,token:android.token,revision:4,data:{...valid(),stage:'champion'}});
+const c1=call('save',{code:owner.code,token:android.token,revision:3,data:{...valid(),stage:'stage1'}});
+const c2=call('save',{code:owner.code,token:android.token,revision:3,data:{...valid(),stage:'champion'}});
 const both=await Promise.all([c1,c2]);assert.deepEqual(both.map(x=>x.status).sort(),[200,409]);checks++;
 assert.equal((await call('sync',{code:owner.code,token:'nonsense',force:true})).status,401);checks++;
 assert.equal((await call('join',{code:'123',pin:'0000'})).status,400);checks++;

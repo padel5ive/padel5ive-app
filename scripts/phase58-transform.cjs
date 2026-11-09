@@ -1,0 +1,48 @@
+/* PADEL 5IVE v5.8 isolated Cloud Session hooks.
+ * Runs only after the already locked Phase 5.7 transform in build.
+ * Engine logic and existing score controls are left untouched.
+ */
+const fs=require('node:fs');
+function patch(path,from,to,label){
+ let s=fs.readFileSync(path,'utf8');
+ if(s.includes(to))return;
+ const n=s.split(from).length-1;
+ if(n!==1)throw Error('v5.8 source drift: '+label+' expected one target, found '+n);
+ s=s.replace(from,to);
+ fs.writeFileSync(path,s);
+}
+function inject(path,token,markup,position='first'){
+ let s=fs.readFileSync(path,'utf8');
+ if(s.includes(markup))return;
+ const i=position==='last'?s.lastIndexOf(token):s.indexOf(token);
+ if(i<0)throw Error('v5.8 HTML insertion point missing: '+path+' '+token);
+ s=s.slice(0,i)+markup+'\n'+s.slice(i);
+ fs.writeFileSync(path,s);
+}
+inject('public/index.html','</head>','<link rel="stylesheet" href="/phase58/cloud-session.css">');
+inject('public/index.html','</body>','<script defer src="/phase58/cloud-home.js"></script>','last');
+for(const page of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
+ inject(page,'</head>','<link rel="stylesheet" href="/phase58/cloud-session.css">');
+ inject(page,'</body>','<script defer src="/phase58/cloud-dashboard.js"></script>','last');
+}
+// Unified native Menu & Settings includes Session Management. Insert a real action
+// into that SAME native menu; fixed mini-button remains a fallback on Club Match.
+patch('public/modes/unified/index.html',
+ "block('SESSION DATA',[act('Backup Data','backup'),act('Restore Backup JSON','restore')])+",
+ "block('SESSION DATA',[act('Backup Data','backup'),act('Restore Backup JSON','restore')])+`<button type=\"button\" data-p58-cloud class=\"p58-menu-action\">CLOUD SESSION</button>`+",
+ 'Unified Session Management native menu action');
+patch('public/sw.js',"const VERSION = 'p5-pwa-phase57-v577';","const VERSION = 'p5-pwa-phase58-lab-01';",'PWA version');
+patch('public/sw.js',
+ "'/phase57/social-card-v574.js',",
+ "'/phase57/social-card-v574.js', '/phase58/cloud-session.css', '/phase58/cloud-home.js', '/phase58/cloud-dashboard.js',",
+ 'PWA cloud client precache');
+patch('public/sw.js',
+ "asset.startsWith('/phase57/') ||",
+ "asset.startsWith('/phase57/') || asset.startsWith('/phase58/') ||",
+ 'PWA cloud asset cache');
+const home=fs.readFileSync('public/index.html','utf8');
+const unified=fs.readFileSync('public/modes/unified/index.html','utf8');
+const club=fs.readFileSync('public/modes/club-match/index.html','utf8');
+if(!home.includes('/phase58/cloud-home.js')||!unified.includes('data-p58-cloud')||
+ !unified.includes('/phase58/cloud-dashboard.js')||!club.includes('/phase58/cloud-dashboard.js'))throw Error('v5.8 missing cloud UI links');
+console.log('PADEL 5IVE v5.8 cloud integration applied (LAB only).');

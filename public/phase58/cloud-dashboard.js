@@ -19,10 +19,10 @@ const e=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=c
 const stable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;return JSON.stringify(copy)};
 const formatDate=s=>{if(!/^\d{4}-\d\d-\d\d$/.test(s||''))return s||'';const d=new Date(s+'T12:00:00Z');return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(d)};
 function message(m){const s=m.summary||{},date=[formatDate(s.date),s.time].filter(Boolean).join(' · ');
- return '**PADEL 5IVE · CLOUD SESSION**\n*BEYOND 5IVE. BEYOND PLAY.*\n\n'+
- '**'+(s.session||'Game Session')+'**\n'+(date?date+'\n\n':'\n')+
- location.origin+'\n\n**SESSION CODE:** '+m.code+'\n**ACCESS PIN:** '+m.pin+
- '\n\n**HOW TO ACCESS**\n1. Open the link.\n2. Select **Load Session**.\n3. Enter the Session Code & PIN.\n4. Tap **Load Session**.';
+ return '*PADEL 5IVE · CLOUD SESSION*\n_BEYOND 5IVE. BEYOND PLAY._\n\n'+
+ '*'+(s.session||'Game Session')+'*\n'+(date?date+'\n\n':'\n')+
+ location.origin+'\n\n*SESSION CODE:* '+m.code+'\n*ACCESS PIN:* '+m.pin+
+ '\n\n*HOW TO ACCESS*\n1. Open the link.\n2. Select Load Session.\n3. Enter the Session Code & PIN.\n4. Tap Load Session.';
 }
 async function api(action,opts={}){
  const res=await fetch(API,{method:'POST',credentials:'same-origin',cache:'no-store',

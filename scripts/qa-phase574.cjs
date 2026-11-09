@@ -68,6 +68,9 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  assert(image.includes("entry.revoked")&&image.includes("image/png")&&image.includes("image/jpeg")&&image.includes("social.png"));
  const api=fs.readFileSync('netlify/functions/unified-results.mjs','utf8');
  for(const k of ['MAX_PREVIEW_BYTES','previewBytes','previewImageType(bytes)','previewType','previewRevision'])assert(api.includes(k),'Publish pipeline missing '+k);
+ assert(api.includes('previewReady:!!body.previewBytes,previewType:body.previewType||null,previewRevision:body.previewBytes?revision:0'),'Updated report without image must not keep a stale leaderboard preview');
+ const homeCss=fs.readFileSync('public/phase57/home-session-history.css','utf8');
+ assert(homeCss.includes('gap:24px!important')&&homeCss.includes('gap:20px!important'),'Home buttons must have generous iPad/iPhone vertical spacing');
  const compiled=fs.readFileSync('public/modes/unified/index.html','utf8');
  assert(compiled.includes('P5SocialCard.render(data)'),'Unified publishing must generate a compact preview');
  assert(compiled.includes('let preview=null'),'Unsupported Canvas or oversized image must not block results publication');

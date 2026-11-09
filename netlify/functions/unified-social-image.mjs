@@ -4,7 +4,8 @@ const STORE='padel5ive-unified-results-5-4-13';
 const ID=/^[A-Za-z0-9_-]{6,32}$/;
 export default async function handler(request){
  if(request.method!=='GET'&&request.method!=='HEAD')return new Response('Method not allowed',{status:405});
- const id=(new URL(request.url).searchParams.get('id')||'').replace(/\\.png$/,'');
+ const slug=new URL(request.url).searchParams.get('id')||'';
+ const id=slug.endsWith('.png')?slug.slice(0,-4):slug;
  if(!ID.test(id))return new Response('Not found',{status:404});
  try{
   const store=getStore(STORE,{consistency:'strong'});

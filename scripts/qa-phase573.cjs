@@ -34,7 +34,7 @@ assert(pub.includes('og:site_name')&&pub.includes('og:image:type')&&pub.includes
 assert(pub.includes('og:image:width" content="1200"')&&pub.includes('og:image:height" content="630"'),'WhatsApp 1200x630 dimensions missing');
 assert(pub.includes('og-cover.jpg?v=573'),'WhatsApp OG image version missing');
 assert(pub.includes('noindex,follow,noarchive'),'public report should remain unindexed but allow sharing');
-assert(sw.includes('p5-pwa-phase57-v573'),'old PWA asset cache must be invalidated');
+assert(sw.includes('p5-pwa-phase57-v574'),'old PWA asset cache must be invalidated');
 assert(app.includes("if(!/^(?:[01]\\d|2[0-3]):00$/.test(time||''))"),'game time validation must be enforced');
 assert(app.includes("['setup-pairing','setup-courts','setup-format','setup-date','setup-time']"),'hour selection must trigger setup validation');
 console.log('PASS Phase 5.7.3 — 2 sibling Date/Time labels, 24 hours, visible iOS picker, Home vertical, public OG metadata.');

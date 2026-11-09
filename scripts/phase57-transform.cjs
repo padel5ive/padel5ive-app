@@ -34,20 +34,27 @@ inject('public/results/unified/index.html','</body>','<script defer src="/phase5
 let s=read('public/modes/unified/index.html');
 s=one(s,"session:'',date:'',courts:null","session:'',date:'',time:'',courts:null",'new state game time');
 const oldDateLabel='<label class="p5-b2-wide">GAME DATE<span class="p5-b2-date-wrap">';
-if(!s.includes('class="p57-date-time"')){
+if(!s.includes('class="p57-date-time p57-date-fields"')){
  const start=s.indexOf(oldDateLabel),end=s.indexOf('</label>',start);
- if(start<0||end<0||end-start>1800)throw Error('Phase57 date markup changed');
- const dateMarkup=s.slice(start,end+8);
- const dateContent=dateMarkup.slice(oldDateLabel.length,-8);
+ if(start<0||end<start||end-start>1800)throw Error('Phase57 game date markup drifted');
+ const dateBody=s.slice(start+oldDateLabel.length,end);
+ if(!dateBody.includes('id="setup-date"')||!/<\/span>\s*$/.test(dateBody))throw Error('Phase57 date inner wrapper mismatch');
+ // Remove the old wrapper's closing span before giving it a valid label and wrapper.
+ const dateInner=dateBody.replace(/<\/span>\s*$/,'');
  const hours=Array.from({length:24},(_,i)=>{
   const val=String(i).padStart(2,'0')+':00';
-  const label=String(i%12||12)+':00 '+(i<12?'AM':'PM');
-  const selected='${s.time==='+JSON.stringify(val)+'?"selected":""}';
-  return '<option value="'+val+'" '+selected+'>'+label+'</option>';
+  const selected=String.fromCharCode(36)+'{s.time==='+JSON.stringify(val)+'?"selected":""}';
+  return '<option value="'+val+'" '+selected+'>'+val+'</option>';
  }).join('');
- const replacement='<div class="p57-date-time"><div class="p57-date-time-label">GAME DATE &amp; TIME</div><div class="p57-date-time-row">'+
-  '<label class="p57-date-control"><span class="p5-b2-date-wrap">'+dateContent+'</label>'+
-  '<label class="p57-time-control"><select id="setup-time" aria-label="Game Time"><option value="">Select hour</option>'+hours+'</select></label></div></div>';
+ const replacement='<div class="p57-date-time p57-date-fields">'+
+  '<label class="p57-date-control p57-field"><span class="p57-field-label">GAME DATE</span><span class="p5-b2-date-wrap">'+dateInner+'</span></label>'+
+  '<label class="p57-time-control p57-field"><span class="p57-field-label">GAME TIME</span><span class="p57-time-wrap"><select id="setup-time" aria-label="Game Time" required><option value="">Select hour</option>'+hours+'</select></span></label></div>';
+ // Invariant: date + hour are two sibling labels. A malformed nested label can
+ // silently discard the hour input in Safari and disable Continue forever.
+ if((replacement.match(/<label\b/g)||[]).length!==2||
+    (replacement.match(/<\/label>/g)||[]).length!==2||
+    (replacement.match(/id="setup-time"/g)||[]).length!==1||
+    (replacement.match(/id="setup-date"/g)||[]).length!==1)throw Error('Phase57 date and time markup is not balanced');
  s=s.slice(0,start)+replacement+s.slice(end+8);
 }
 // session time is required for new sessions, optional for legacy snapshots.
@@ -77,23 +84,7 @@ const originalAdvanced="const advanced=entry('Advanced Settings','settings',bloc
 const replacementAdvanced="const sessions=entry('Session Management','settings',block('SESSION DATA',[act('Backup Data','backup'),act('Restore Backup JSON','restore')])+\`<input id=\"restore-input\" type=\"file\" accept=\"application/json,.json\" style=\"display:none\">\`);\\n  const advanced=entry('Advanced Settings','settings',block('UNDO / REDO',[historyControls])+block('SYSTEM DIAGNOSTICS',[audit,act('System Check','system-check'),act('Activity Log','activity-log')]));";
 s=one(s,originalAdvanced,replacementAdvanced.replace('\\n','\n'),'session management');
 s=one(s,"\${playersCourts}\${management}\${share}\${advanced}","\${playersCourts}\${management}\${share}\${sessions}\${advanced}",'menu sessions');
-// Time input is intentionally native on iOS, not a separate custom date picker.
-if(!s.includes('p57-date-time-style')){
- const headClose=s.indexOf('</head>');if(headClose<0)throw Error('Phase57 head tag missing');
- const styles=`<style id="p57-date-time-style">
-#americano .p57-date-time{grid-column:1/-1!important;min-width:0!important;width:100%!important}
-#americano .p57-date-time-label{color:#d7bd93;font-size:10px;letter-spacing:.12em;font-weight:750;margin-bottom:8px}
-#americano .p57-date-time-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(145px,195px);gap:10px;align-items:stretch;min-width:0}
-#americano .p57-date-control,#americano .p57-time-control{display:flex!important;min-width:0;width:100%;align-items:stretch}
-#americano .p57-date-control .p5-b2-date-wrap{width:100%!important;min-width:0!important;min-height:50px!important;height:50px!important;position:relative!important}
-#americano .p57-date-control #setup-date-display{max-width:calc(100% - 34px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-#americano .p57-time-control select{width:100%!important;height:50px!important;min-height:50px!important;padding:0 13px!important;background:#111d29!important;color:#eee3d1!important;border:1px solid rgba(210,196,170,.32)!important;border-radius:11px!important;font:600 13px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;outline:none;cursor:pointer}
-#americano .p57-time-control select:focus-visible{outline:2px solid #d7b88b!important;outline-offset:2px!important}
-@media(max-width:580px){#americano .p57-date-time-row{grid-template-columns:minmax(0,1fr) minmax(124px,36%);gap:8px}#americano .p57-date-control #setup-date-display{font-size:11px}}
-@media(max-width:350px){#americano .p57-date-time-row{grid-template-columns:minmax(0,1fr)}#americano .p57-date-time-row .p57-time-control select{height:46px!important;min-height:46px!important}}
-</style>`;
- s=s.slice(0,headClose)+styles+s.slice(headClose);
-}
+// The native date and hour controls are styled via setup-refinement-v572.css.
 write('public/modes/unified/index.html',s);
 let viewer=read('public/assets/p5-interactive-results.js');
 viewer=one(viewer,"dayDate(data.date).replace(' · ', ', ')","dayDate(data.date).replace(' · ', ', ')+(data.time?' · '+data.time:'')",'public results date/time');

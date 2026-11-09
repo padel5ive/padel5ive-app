@@ -13,7 +13,7 @@ const MODE_IDS = new Set([
   'fp-mexicano','individual-mexicano','structured-mexicano'
 ]);
 const STAGES = new Set(['registration','stage1','stage1finished','ko','champion']);
-const MAX_BYTES=600000;
+const MAX_BYTES=1200000,MAX_REPORT_BYTES=600000,MAX_PREVIEW_BYTES=400000;
 const STORE_NAME='padel5ive-unified-results-5-4-13';
 function json(value,status=200){
   return new Response(JSON.stringify(value),{
@@ -84,6 +84,16 @@ async function readBody(request){
   if(Buffer.byteLength(raw,'utf8')>MAX_BYTES)throw Object.assign(new Error('Results payload exceeds size limit'),{status:413});
   let body;try{body=JSON.parse(raw);}catch{throw Object.assign(new Error('Invalid JSON body'),{status:400});}
   if(!validateReport(body?.data))throw Object.assign(new Error('Invalid or unconfirmed Unified results snapshot'),{status:400});
+  if(Buffer.byteLength(JSON.stringify(body.data),'utf8')>MAX_REPORT_BYTES)throw Object.assign(new Error('Results data exceeds report size limit'),{status:413});
+  if(body.preview!==undefined&&body.preview!==null){
+    if(typeof body.preview!=='string'||body.preview.length>550000||!/^[-a-zA-Z0-9+/=]+$/.test(body.preview))throw Object.assign(new Error('Invalid social preview image'),{status:400});
+    const bytes=Buffer.from(body.preview,'base64');
+    if(bytes.byteLength>MAX_PREVIEW_BYTES||bytes.byteLength<60||
+       bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||
+       bytes.readUInt32BE(16)!==1200||bytes.readUInt32BE(20)!==630)
+       throw Object.assign(new Error('Social preview must be a 1200x630 PNG'),{status:400});
+    body.previewBytes=bytes;
+  }
   return body;
 }
 export default async function handler(request){
@@ -101,6 +111,7 @@ export default async function handler(request){
         if(!pinConfigured())return json({error:'Unified publishing PIN not configured on this Netlify site'},503);
         if(!pinValid(request.headers.get('X-Padel-Pin')))return json({error:'Invalid publishing PIN'},401);
         const body=await readBody(request),id=randomBytes(12).toString('base64url'),token=randomBytes(32).toString('base64url'),now=new Date().toISOString();
+        if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
         await store.setJSON(id,{version:1,hash:sha(token),data:body.data,revision:1,createdAt:now,updatedAt:now,revoked:false});
         return json({id,editToken:token,revision:1,updatedAt:now},201);
       }
@@ -113,6 +124,7 @@ export default async function handler(request){
         const body=await readBody(request);
         if(!Number.isInteger(body.revision)||body.revision!==entry.revision)return json({error:'Results revision conflict. Reload the latest publishing state.'},409);
         const revision=entry.revision+1,now=new Date().toISOString();
+        if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
         // Not an atomic database transaction: concurrent organizer updates remain a staging QA risk.
         await store.setJSON(id,{...entry,data:body.data,revision,updatedAt:now});
         return json({id,revision,updatedAt:now});

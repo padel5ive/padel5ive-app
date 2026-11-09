@@ -1,0 +1,106 @@
+name: PADEL 5IVE — Build PWA Isolated Preview
+on:
+  push:
+    branches:
+      - feature/pwa-preview-v5.6
+    paths:
+      - '.github/workflows/build-pwa-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-pwa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PWA feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/pwa-preview-v5.6
+          persist-credentials: true
+      - name: Verify untouched production sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object public/index.html)" = "243640792a441c532057226c65ce05c1994c90da"
+          test "$(git hash-object public/modes/unified/index.html)" = "88803f371e31d48d94574eee80fa0f2268b71902"
+          test "$(git hash-object public/modes/club-match/index.html)" = "0b366aa0e4b55e86a57d7014e5037d9fc2699b12"
+          test "$(git hash-object public/assets/p5-master-logo-original.png)" = "66e0385258090355c94fa660b51500a279f11d7b"
+          sha256sum public/assets/p5-direct-pdf.js public/assets/p5-showdown-engine.js             public/assets/p5-fair-cycle-v5515.js             netlify/functions/results.mjs netlify/functions/unified-results.mjs > /tmp/p5-pwa-protected.sha256
+          node --check public/sw.js
+          node --check public/pwa-register.js
+          node --check scripts/qa-pwa.cjs
+      - name: Set up icon generation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate install icons from approved PADEL 5IVE logo
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check Pillow==11.1.0
+          python scripts/generate-pwa-icons.py
+          test -s public/pwa/icons/apple-touch-icon.png
+          test -s public/pwa/icons/icon-192.png
+          test -s public/pwa/icons/icon-512.png
+          test -s public/pwa/icons/icon-maskable-512.png
+      - name: Activate PWA only in feature branch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          paths=[
+            Path('public/index.html'),
+            Path('public/modes/unified/index.html'),
+            Path('public/modes/club-match/index.html')
+          ]
+          head_add=(
+            '<link rel="manifest" href="/manifest.webmanifest">'
+            '<link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/apple-touch-icon.png">'
+            '<meta name="apple-mobile-web-app-capable" content="yes">'
+            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+            '<meta name="apple-mobile-web-app-title" content="PADEL 5IVE">'
+          )
+          script='<script defer src="/pwa-register.js"></script>'
+          for p in paths:
+            s=p.read_text('utf-8')
+            assert s.count('</head>')==1 and s.count('</body>')==1, str(p)+' expected standard HTML'
+            assert '/manifest.webmanifest' not in s and 'pwa-register.js' not in s, str(p)+' already patched'
+            s=s.replace('</head>',head_add+'</head>',1)
+            s=s.replace('</body>',script+'</body>',1)
+            p.write_text(s,encoding='utf-8')
+            assert s.count('rel="manifest"')==1 and s.count('/pwa-register.js')==1
+            print('PWA enhanced:',p)
+          PY
+      - name: Validate PWA and application regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/qa-pwa.cjs
+          node scripts/qa-v5516.cjs
+          npm run build
+          sha256sum --check /tmp/p5-pwa-protected.sha256
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('public/manifest.webmanifest').read_text())
+          assert m['display']=='standalone' and m['scope']=='/'
+          for icon in m['icons']:
+              assert Path('public'+icon['src']).is_file()
+          for p in ['public/index.html','public/modes/unified/index.html','public/modes/club-match/index.html']:
+              s=Path(p).read_text()
+              assert '/manifest.webmanifest' in s and '/pwa-register.js' in s
+          print('PWA manifest / path / icon consistency: PASS')
+          PY
+      - name: Commit isolated feature branch (keep production unchanged)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/build-pwa-preview.yml
+          git config user.name "PADEL 5IVE PWA Lab Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Build isolated PADEL 5IVE PWA preview with safe offline caching"
+          git push origin HEAD:feature/pwa-preview-v5.6

@@ -13,7 +13,7 @@ if(begin>=0){
   if(finish<0||finish-begin>1700)throw Error('Fairness Review template changed unexpectedly');
   const removable=html.slice(begin,finish+fairnessEnd.length);
   if(!removable.includes('FAIRNESS REVIEW · Preplanned sequence:')||!removable.includes('FAIRNESS CHECK · No consecutive rest'))throw Error('Fairness Review display mismatch');
-  html=html.slice(0,begin)+html.slice(finish+fairnessEnd.length);
+  html=html.slice(0,begin).replace(/[ \\t]*$/,'')+html.slice(finish+fairnessEnd.length);
 }else if(html.includes('FAIRNESS REVIEW · Preplanned sequence:'))throw Error('Unrecognized Fairness Review rendering remains');
 const courtInfoStart='const courtInfo='+tick+'<div class="p5-v26-utilization"';
 const courtInfoEnd='</div>'+tick+';';

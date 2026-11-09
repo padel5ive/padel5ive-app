@@ -21,8 +21,14 @@
   force = true
 
 [[redirects]]
+  from = "/social/u/*"
+  to = "/.netlify/functions/unified-social-image?id=:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/u/*"
-  to = "/results/unified/index.html"
+  to = "/.netlify/functions/unified-share-page?id=:splat"
   status = 200
   force = true
 

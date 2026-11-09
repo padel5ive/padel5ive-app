@@ -33,3 +33,23 @@ Automated checks validate source structure, no-KO results and metadata, **not** 
 9. **PWA offline/online:** Ensure saved local matches survive switching modes, reload and reconnection.
 
 **Do not merge PR #3 until all device and hosted publication checks pass.**
+
+## Phase 5.7.4 — Dynamic WhatsApp Top 5 acceptance
+
+**Dev preview:** https://deploy-preview-3--padel5ive.netlify.app (PR #3, never production).
+
+### New tests
+1. Publish a sample Americano session with at least six fixed pairs and several confirmed Stage 1 scores. The public `/u/{id}` page must continue to show the original full interactive standings and matches. **The WhatsApp image must contain exactly the top five**, in the official Wins → DIFF → Points order; no Registered Pairs list.
+2. Verify a **live session** says `LIVE STANDINGS`, not Final. After finishing without KO, its Top 5 heading becomes `FINAL LEADERBOARD`.
+3. Publish a **completed KO session**. The graphic must headline the actual KO **Champion and Runner-Up**, and label ranking below `STAGE 1 TOP 5` (KO winner is not necessarily Stage 1 rank #1).
+4. Recheck **Mexicano** and **Individual/Flexible** results: same Top 5 ranking semantics, with one name per player rather than two-name fixed pairs.
+5. Inspect the image URL from public HTML metadata. `og:image` must be a per-session absolute HTTPS URL such as `/social/u/{id}.png?v=1`. The response must be `image/png` and contain a **1200 × 630** PNG. The card shows session name, game mode, pairing, date/time, quiet dark-navy style, and subtle 5 watermark.
+6. Update scores and **publish again** on the same link. The image URL's `v` parameter must increase, and the image must show the new leaderboard. Be aware that WhatsApp may keep its own cached preview for an already shared URL; **test a newly published link** if the WhatsApp client has stale metadata.
+7. Open the actual shared link in Safari to ensure page scroll and interactive bracket still work; the fixed wallpaper must not move with the page. The dynamic server-rendered metadata must not replace the working browser viewer.
+8. Test **legacy public links** after production deployment. Links that predate Phase 5.7.4 and have no stored preview must continue to show published results with the previous static branded OG cover.
+9. **Storage safety:** data published from a Deploy Preview must live in an isolated QA store, never the production results store. A test result published on the preview should not appear on the production hostname. Existing production links must remain readable on production.
+10. **PWA:** the renderer is precached for offline app UI, but dynamic social image URLs and published public result pages must never be served from the PWA's cached assets.
+
+### Acceptance boundary
+GitHub Actions validates the full source transform, standings, format permutations, PNG Canvas rendering contract, dynamic route wiring, storage isolation, and PWA cache rules. **Device Safari + real Netlify Functions + actual WhatsApp crawler tests are still mandatory** before the production merge.
+

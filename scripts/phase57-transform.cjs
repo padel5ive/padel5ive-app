@@ -97,7 +97,7 @@ api=one(api,"if(!Number.isInteger(s.courts)||s.courts<1||s.courts>5)return false
 write('netlify/functions/unified-results.mjs',api);
 // PWA caches the versioned Session History shell for offline PWA use.
 let serviceWorker=read('public/sw.js');
-serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v572';",'PWA cache version');
+serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v573';",'PWA cache version');
 serviceWorker=one(serviceWorker,"'/pwa-standalone-layout-v5601.css',","'/pwa-standalone-layout-v5601.css', '/phase57/home-session-history.js', '/phase57/home-session-history.css', '/phase57/setup-refinement-v572.css',",'PWA precache');
 serviceWorker=one(serviceWorker,"asset.startsWith('/assets/') || asset.startsWith('/pwa/') ||","asset.startsWith('/assets/') || asset.startsWith('/pwa/') || asset.startsWith('/phase57/') ||",'PWA asset cache');
 write('public/sw.js',serviceWorker);
@@ -105,5 +105,9 @@ write('public/sw.js',serviceWorker);
 let publicHtml=read('public/results/unified/index.html');
 publicHtml=one(publicHtml,'content="PADEL 5IVE · Official Results"','content="PADEL 5IVE · Signature Game"','WhatsApp OG title');
 publicHtml=one(publicHtml,'content="PADEL 5IVE Signature Game · Official Tournament Results"','content="Official Match Results · Beyond 5IVE. Beyond Play."','WhatsApp OG description');
+// The public /u/{id} HTML must expose OG metadata before any scripts execute.
+for(const token of ['og:site_name','og:image:width','og:image:height','og:image:secure_url','twitter:image']){
+ if(!publicHtml.includes(token))throw Error('Missing social preview metadata: '+token);
+}
 write('public/results/unified/index.html',publicHtml);
 console.log('Phase 5.7 integrated source patch completed.');

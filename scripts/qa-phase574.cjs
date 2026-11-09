@@ -44,18 +44,27 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  assert.equal(ind.pairing,'FLEXIBLE PAIRING');
  const canvas=fs.readFileSync('public/phase57/social-card-v574.js','utf8');
  const records=[];
+ const drawn=[];
+ const imageRequests=[];
  const jpegQualities=[];
- const g={fillRect(){},fillText(v){records.push(String(v))},save(){},restore(){},measureText(v){return {width:String(v).length*11}},createLinearGradient(){return {addColorStop(){}}},globalAlpha:1,fillStyle:'',font:'',textAlign:'',textBaseline:''};
+ const g={fillRect(){},fillText(v){records.push(String(v))},drawImage(...args){drawn.push(args)},save(){},restore(){},measureText(v){return {width:String(v).length*11}},createLinearGradient(){return {addColorStop(){}}},globalAlpha:1,fillStyle:'',font:'',textAlign:'',textBaseline:''};
  const window={};
- vm.runInNewContext(canvas,{window,document:{createElement:tag=>{assert.equal(tag,'canvas');return {width:0,height:0,getContext:()=>g,toDataURL:(mime,quality)=>{jpegQualities.push({mime,quality});return 'data:image/jpeg;base64,QUJDRA==';}};}}});
- const img=window.P5SocialCard.render(src);
+ class ImageMock{
+  naturalWidth=260;naturalHeight=338;
+  set src(url){imageRequests.push(url);if(this.onload)this.onload();}
+ }
+ vm.runInNewContext(canvas,{window,Image:ImageMock,document:{createElement:tag=>{assert.equal(tag,'canvas');return {width:0,height:0,getContext:()=>g,toDataURL:(mime,quality)=>{jpegQualities.push({mime,quality});return 'data:image/jpeg;base64,QUJDRA==';}};}}});
+ const img=await window.P5SocialCard.render(src);
  assert.equal(img,'QUJDRA==');
+ assert(imageRequests.every(url=>url==='/assets/p5-master-logo-original.png')&&imageRequests.length>0,'Must load the original approved PADEL 5IVE logo');
+ assert(drawn.length>=3,'Must draw the original logo crop with embossed layers');
+ assert(drawn.every(x=>x.length===9&&x[1]===39&&x[2]===27&&x[3]===180&&x[4]===245),'Crop must exclude the PADEL5IVE wordmark');
  assert.equal(jpegQualities[0].mime,'image/jpeg');
  assert.equal(jpegQualities[0].quality,.86);
  assert(records.includes('LIVE STANDINGS'));
  assert(records.includes('Player 6 & Partner 6'));
  assert(records.some(x=>x.includes('OFFICIAL RESULTS')));
- records.length=0;window.P5SocialCard.render({...src,stage:'champion',ko:{format:'double',champion:[2],runnerUp:[1]}});
+ records.length=0;await window.P5SocialCard.render({...src,stage:'champion',ko:{format:'double',champion:[2],runnerUp:[1]}});
  assert(records.includes('TOURNAMENT CHAMPIONS'));
  assert(records.includes('STAGE 1 TOP 5'));
  const route=fs.readFileSync('netlify.toml','utf8');
@@ -74,16 +83,21 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  const championCss=fs.readFileSync('public/phase57/share-champion-v571.css','utf8');
  assert(!championCss.includes("url('/assets/p5-master-share-court.webp')"),'Champion Reveal must not retain the old venue-photo collage');
  assert(championCss.includes('tonal navy')||championCss.includes('tonal'), 'Champion Reveal should use the neutral matte editorial treatment');
- assert(canvas.includes('embossed numeral 5 only')&&canvas.includes("g.fillText('5',613,514)"),'Social card must draw subtle embossed numeral, never a logo asset');
+ assert(canvas.includes('TRUE original embossed numeral')&&canvas.includes("g.drawImage(five,39,27,180,245,396,103,320,436)"),'Social preview must use the actual cropped numeral 5');
+ const visualHome=fs.readFileSync('public/phase57/home-visual-v577.css','utf8');
+ assert(visualHome.includes('html body:not(.p54-active) #portal .p541-home-actions')&&visualHome.includes('gap:26px!important')&&visualHome.includes('gap:19px!important'),'Home gap must override the original #portal specificity');
+ const visualChampion=fs.readFileSync('public/phase57/share-champion-v577.css','utf8');
+ assert(visualChampion.includes('#app #champion.champion::before')&&visualChampion.includes('background-image:linear-gradient('),'Final champion style must override old inline photo');
+ assert(page.includes('/phase57/share-champion-v577.css'),'Dynamic OG page must load new champion CSS');
  const compiled=fs.readFileSync('public/modes/unified/index.html','utf8');
- assert(compiled.includes('P5SocialCard.render(data)'),'Unified publishing must generate a compact preview');
+ assert(compiled.includes('await window.P5SocialCard.render(data)'),'Unified publishing must generate a compact preview');
  assert(compiled.includes('let preview=null'),'Unsupported Canvas or oversized image must not block results publication');
  assert(compiled.includes('console.warn(\'Social card unavailable; results link remains publishable\''),'Missing non-blocking preview fallback');
  assert(compiled.includes('body:JSON.stringify({data,preview,revision:stored.revision||1})'),'UPDATE must carry PNG');
  assert(compiled.includes('body:JSON.stringify({data,preview})'),'POST must carry PNG');
  assert(compiled.includes('/phase57/social-card-v574.js'),'Renderer must load with app');
  const worker=fs.readFileSync('public/sw.js','utf8');
- assert(worker.includes('p5-pwa-phase57-v575')&&worker.includes('/phase57/social-card-v574.js'),'PWA offline social renderer missing');
+ assert(worker.includes('p5-pwa-phase57-v577')&&worker.includes('/phase57/social-card-v574.js'),'PWA offline social renderer missing');
  assert(worker.includes("'/social/'"),'Social images must bypass the PWA cache');
  console.log('PASS Phase 5.7.4 — Top 5, live/final/KO, Mexicano/Individual, Canvas, OG, server/image routes, PWA.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

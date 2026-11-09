@@ -1,0 +1,39 @@
+name: PADEL 5IVE v5.8.4 Home + Share UX QA
+on:
+  push:
+    branches: [fix/v5.8.4-home-ui-polish]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build layered game and Home assets
+        run: npm run build
+      - name: Verify new standalone scripts and compiled UI
+        run: |
+          node --check public/phase58/home-scroll-v584.js
+          node --check scripts/phase584-transform.cjs
+          node scripts/qa-v584-ui.cjs
+      - name: Verify locked engine integrations and prior UX
+        run: |
+          node scripts/qa-v583-ui.cjs
+          node scripts/qa-phase57.cjs 2>/dev/null || test ! -f scripts/qa-phase57.cjs
+          node scripts/qa-phase573.cjs
+          node scripts/qa-phase574.cjs
+          node scripts/qa-phase58-markup.cjs
+          node scripts/qa-phase581-pwa-fullscreen.cjs
+          node scripts/qa-phase582-home-cta.cjs
+          # The v5.6.3 legacy test pins the PRE-5.7 SW cache label and is
+          # superseded by the current production PWA integration checks.
+          node scripts/qa-pwa.cjs
+          node scripts/qa-v5516.cjs
+          git diff --check

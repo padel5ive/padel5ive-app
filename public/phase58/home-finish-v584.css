@@ -1,0 +1,61 @@
+/* PADEL 5IVE v5.8.4 — Home-only ambient continuation and true PWA
+   viewport lock. Hero art and CTA layout otherwise remain unchanged. */
+@media (max-width:760px){
+  /* The old foreground mask vanished abruptly, leaving a large flat navy
+     section under the net. Keep court perspective visible further down. */
+  #portal .p541-venue > img.p544-foreground {
+    -webkit-mask-image:linear-gradient(180deg,
+      transparent 0%,rgba(0,0,0,.5) 9%,#000 20%,
+      #000 79%,rgba(0,0,0,.95) 88%,rgba(0,0,0,.72) 96%,
+      rgba(0,0,0,.54) 100%)!important;
+    mask-image:linear-gradient(180deg,
+      transparent 0%,rgba(0,0,0,.5) 9%,#000 20%,
+      #000 79%,rgba(0,0,0,.95) 88%,rgba(0,0,0,.72) 96%,
+      rgba(0,0,0,.54) 100%)!important;
+  }
+  #portal .p541-venue::after{
+    background:linear-gradient(180deg,
+      rgba(3,12,25,.71) 0%,rgba(3,12,25,.40) 16%,
+      rgba(3,12,25,.04) 30%,rgba(3,12,25,0) 49%,
+      rgba(3,12,25,.025) 63%,rgba(3,12,25,.15) 75%,
+      rgba(3,12,25,.42) 87%,rgba(3,12,25,.86) 100%)!important;
+  }
+}
+/* Installed app: Home is a single, non-scrolling visual viewport, not a
+   scrollable 100svh section plus an extra 100dvh overflow strip. */
+@media screen and (display-mode:standalone){
+  html,body {overscroll-behavior-y:none;}
+  body:not(.p54-active){
+    overflow-x:hidden!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-y:none!important;
+  }
+  body:not(.p54-active) #portal.portal{
+    position:fixed!important;
+    inset:0!important;
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:100vh!important;
+    min-height:100vh!important;
+    max-height:100vh!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+  }
+  @supports(height:100dvh){
+    body:not(.p54-active) #portal.portal{
+      height:100dvh!important;
+      min-height:100dvh!important;
+      max-height:100dvh!important;
+    }
+  }
+  body:not(.p54-active) #portal .p541-venue {
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+  }
+}
+/* Keep the existing iPad/laptop placement and typography; this layer is
+   strictly for Home background continuity and installed-app viewport. */

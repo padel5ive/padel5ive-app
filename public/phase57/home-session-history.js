@@ -5,7 +5,7 @@ const MODES={'fp-americano':'Americano · Fixed Partner','fp-mexicano':'Mexicano
 const get=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}};
 const set=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const e=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x;};
-const isFinal=s=>['champion','finished','completed','final'].includes(String(s?.stage||'').toLowerCase());
+const isFinal=s=>['champion','finished','completed','complete','final'].includes(String(s?.stage||'').toLowerCase());
 const validU=s=>s?.version===24&&Array.isArray(s.roster)&&Array.isArray(s.rounds)&&s.stage&&s.stage!=='setup'&&s.session;
 const validC=s=>!!(s?.setup?.sessionName&&s?.stage);
 let overlay,list,count,openButton,filter='all';

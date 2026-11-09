@@ -4,17 +4,17 @@
 import { resultsStore } from '../helpers/unified-store.mjs';
 import { projectResults } from '../helpers/unified-ranking.mjs';
 const ID=/^[A-Za-z0-9_-]{6,32}$/;
-const STORE='padel5ive-unified-results-5-4-13';
+export const config = { path: '/u/:id' };
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clean=value=>String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim();
 const response=(text,status=200)=>new Response(text,{status,headers:{
  'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=0, must-revalidate',
  'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
 const notFound=()=>response('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>PADEL 5IVE · Results Unavailable</title><body><h1>Results unavailable</h1><p>Check your organizer link.</p></body></html>',404);
-export default async function handler(request){
+export default async function handler(request,context){
  if(request.method!=='GET'&&request.method!=='HEAD')return new Response('Method not allowed',{status:405});
  const url=new URL(request.url);
- const id=url.searchParams.get('id')||'';
+ const id=context?.params?.id||url.pathname.match(/\/u\/([^/]+)\/?$/)?.[1]||'';
  if(!ID.test(id))return notFound();
  let entry;try{entry=await resultsStore(request).get(id,{type:'json'});}catch(e){console.error('Unified share document',e);return new Response('Results service unavailable',{status:503});}
  if(!entry||entry.revoked||!entry.data)return notFound();

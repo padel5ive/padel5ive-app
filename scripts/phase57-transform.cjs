@@ -77,7 +77,7 @@ s=one(s,"<span><b>Date</b> \${esc(s.date||'—')}</span>","<span><b>Date & Time<
 s=one(s,"session:state.session||'',date:state.date||'',","session:state.session||'',date:state.date||'',time:state.time||'',",'published time');
 // Every publish/update receives its own PNG image, matching that snapshot's Top 5.
 s=one(s,"const data=check(snapshot(state));",
- "const data=check(snapshot(state));\\n  if(!window.P5SocialCard?.render)throw Error('Social preview renderer not loaded. Reload and try again.');\\n  const preview=window.P5SocialCard.render(data);",'generate social preview');
+ "const data=check(snapshot(state));\n  if(!window.P5SocialCard?.render)throw Error('Social preview renderer not loaded. Reload and try again.');\n  const preview=window.P5SocialCard.render(data);",'generate social preview');
 s=one(s,"body:JSON.stringify({data,revision:stored.revision||1})","body:JSON.stringify({data,preview,revision:stored.revision||1})",'send updated social image');
 s=one(s,"body:JSON.stringify({data})","body:JSON.stringify({data,preview})",'send new social image');
 

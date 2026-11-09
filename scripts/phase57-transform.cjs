@@ -48,12 +48,14 @@ s=one(s,originalAdvanced,replacementAdvanced.replace('\\n','\n'),'session manage
 s=one(s,"\${playersCourts}\${management}\${share}\${advanced}","\${playersCourts}\${management}\${share}\${sessions}\${advanced}",'menu sessions');
 // Time input is intentionally native on iOS, not a separate custom date picker.
 if(!s.includes('p57-game-time-style')){
- s=one(s,'</head>',`<style id="p57-game-time-style">
+ const headClose=s.indexOf('</head>');if(headClose<0)throw Error('Phase57 head tag missing');
+ const styles=`<style id="p57-game-time-style">
 #americano .p57-game-time{grid-column:1/-1!important}
 #americano .p5-b2-time-wrap{display:flex;align-items:center;height:50px;min-height:50px;width:100%;padding:0 13px;border:1px solid rgba(210,196,170,.32);border-radius:11px;background:#111d29}
 #americano #setup-time{display:block;box-sizing:border-box;min-height:45px;width:100%;border:none;background:transparent;color:#f0e9dd;color-scheme:dark;outline:0;font:500 15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 #americano #setup-time:focus-visible{outline:2px solid #d7b88b;outline-offset:2px;border-radius:4px}
-</style></head>`,'time input styles');
+</style>`;
+ s=s.slice(0,headClose)+styles+s.slice(headClose);
 }
 write('public/modes/unified/index.html',s);
 let viewer=read('public/assets/p5-interactive-results.js');

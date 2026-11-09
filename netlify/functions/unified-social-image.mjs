@@ -1,5 +1,5 @@
 /* Phase 5.7.4 social image — only public, non-revoked results are readable. */
-import { getStore } from '@netlify/blobs';
+import { resultsStore } from '../helpers/unified-store.mjs';
 const STORE='padel5ive-unified-results-5-4-13';
 const ID=/^[A-Za-z0-9_-]{6,32}$/;
 export default async function handler(request){
@@ -8,7 +8,7 @@ export default async function handler(request){
  const id=slug.endsWith('.png')?slug.slice(0,-4):slug;
  if(!ID.test(id))return new Response('Not found',{status:404});
  try{
-  const store=getStore(STORE,{consistency:'strong'});
+  const store=resultsStore(request);
   const entry=await store.get(id,{type:'json'});
   if(!entry||entry.revoked||!entry.previewReady)return new Response('Not found',{status:404});
   const bytes=await store.get(id+'.social.png',{type:'arrayBuffer'});

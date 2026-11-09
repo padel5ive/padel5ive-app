@@ -1,0 +1,47 @@
+/* PADEL 5IVE 5.8.5 — One photograph, one Home viewport. 
+ * The pre-composed source contains the venue, perspective floor and soft
+ * darkness. No layered masks, repeated photo or painted bottom seam.
+ */
+@media(max-width:760px){
+ #portal .p541-venue{
+   background-image:url('/phase585/home-venue-portrait.webp')!important;
+   background-position:center center!important;
+   background-size:cover!important;
+   background-repeat:no-repeat!important;
+   background-color:#061422!important;
+ }
+ #portal .p541-venue > img{
+   display:none!important;
+   visibility:hidden!important;
+ }
+ #portal .p541-venue::after{
+   content:""!important;
+   position:absolute!important;
+   inset:0!important;
+   z-index:0!important;
+   pointer-events:none!important;
+   background:linear-gradient(180deg,
+     rgba(2,10,22,.26) 0%,rgba(2,10,22,.1) 20%,
+     transparent 32%,transparent 52%,
+     rgba(2,10,22,.04) 64%,rgba(2,10,22,.21) 79%,
+     rgba(2,10,22,.48) 100%)!important;
+ }
+}
+/* Prevent Home from returning to a scrolled viewport in the installed PWA.
+   Initial Setup is a different screen with its own scroll container. */
+@media screen and (display-mode:standalone){
+ html,body{overscroll-behavior-y:none;}
+ body:not(.p54-active){overflow-x:hidden!important;overflow-y:hidden!important;}
+ body:not(.p54-active) #portal.portal{
+   position:fixed!important;inset:0!important;
+   box-sizing:border-box!important;width:100%!important;
+   height:100vh!important;min-height:100vh!important;max-height:100vh!important;
+   margin:0!important;padding:0!important;overflow:hidden!important;
+ }
+ @supports (height:100dvh){
+  body:not(.p54-active) #portal.portal{
+    height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;
+  }
+ }
+ body:not(.p54-active) #portal .p541-venue{height:100%!important;min-height:100%!important;inset:0!important;}
+}

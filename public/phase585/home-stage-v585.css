@@ -10,9 +10,16 @@
    background-repeat:no-repeat!important;
    background-color:#061422!important;
  }
- #portal .p541-venue > img{
+ /* Override old Phase 5.4.4 display:block!important on BOTH venue layers.
+    The previous general >img selector was less specific and let the two
+    legacy image layers leak above the new source photograph. */
+ html body #portal .p541-venue > img,
+ html body #portal .p541-venue > img.p544-ambient,
+ html body #portal .p541-venue > img.p544-foreground {
    display:none!important;
    visibility:hidden!important;
+   opacity:0!important;
+   pointer-events:none!important;
  }
  #portal .p541-venue::after{
    content:""!important;

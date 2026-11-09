@@ -1,10 +1,10 @@
 /* Phase 5.7.4 social image — only public, non-revoked results are readable. */
 import { resultsStore } from '../helpers/unified-store.mjs';
-const STORE='padel5ive-unified-results-5-4-13';
+export const config = { path: '/social/u/*' };
 const ID=/^[A-Za-z0-9_-]{6,32}$/;
 export default async function handler(request){
  if(request.method!=='GET'&&request.method!=='HEAD')return new Response('Method not allowed',{status:405});
- const slug=new URL(request.url).searchParams.get('id')||'';
+ const slug=new URL(request.url).pathname.split('/').pop()||'';
  const id=slug.endsWith('.png')?slug.slice(0,-4):slug;
  if(!ID.test(id))return new Response('Not found',{status:404});
  try{

@@ -1,0 +1,17 @@
+name: PADEL 5IVE v5.8.6 Dashboard Background Audit
+on:
+  push:
+    branches: [feature/v5.8.5-visual-navigation-review]
+    paths: ['scripts/qa-v586-background-audit.cjs','.github/workflows/qa-v586-dashboard.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/qa-v586-background-audit.cjs

@@ -1,102 +1,71 @@
-/* PADEL 5IVE PWA Lab 5.6.1 — Standalone Safe-Area Layout Refinement
- * Standalone only: restore vertical breathing room lost when Safari chrome
- * disappears. Preserve all production UI, game engines, backgrounds, scoring.
- * No transforms on page roots: fixed elements, modals and scroll are untouched.
+/* PADEL 5IVE PWA Lab v5.6.4 — Safari-matched standalone visual rhythm.
+ * Scope: standalone only. Three independently scrolling layouts:
+ * Landing, Game Mode chooser overlay and Match Control. No sticky overlay.
  */
 @media screen and (display-mode: standalone) {
-  :root {
-    /* On iPhones with a taller status bar, compensate without double-counting it. */
-    --p5-pwa-top-adjust: max(20px, calc(env(safe-area-inset-top, 0px) - 36px));
-  }
+  :root { --p5-standalone-safe-top: env(safe-area-inset-top, 0px); }
 
-  /* HOME — lower the entire branding block, not just the wordmark. */
-  #portal .masthead {
-    padding-top: calc(clamp(35px, 5.1svh, 60px) + var(--p5-pwa-top-adjust)) !important;
-  }
+  /* Landing — distribute the extra fullscreen height like Safari. */
+  #portal .masthead { padding-top: clamp(50px, 6svh, 78px) !important; }
+  #portal .p541-home-actions { bottom: clamp(120px, 18svh, 188px) !important; }
+  #portal .signature { bottom: clamp(64px, 9svh, 105px) !important; }
 
-  /* HOME — bring the CTA a little lower while retaining footer clearance. */
-  #portal .p541-home-actions {
-    bottom: calc(clamp(71px, 10.4svh, 108px) - 12px) !important;
+  /* Game Mode Selection is a fixed, independently scrollable overlay. */
+  #p54-workspace.p54-workspace {
+    box-sizing: border-box;
+    padding-top: calc(var(--p5-standalone-safe-top) + 8px) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
+  #p54-workspace > .p54-shell { padding-top: 17px !important; }
+  #p54-workspace .p542-topline { position: relative; z-index: 2; }
+  #p54-workspace .p542-topline .p54-back { min-height: 44px !important; }
 
-  /* UNIFIED / TEAM SHOWDOWN — navigation and content are separate page layers.
-   * Let the nav establish top breathing room, and move the setup stack as a unit.
-   * No blanket body padding: it could disturb overlays/score entry modals.
-   */
-  body > .p54-app-nav {
-    padding-top: calc(12px + var(--p5-pwa-top-adjust)) !important;
-  }
-  body > main.wrap {
-    padding-top: max(22px, 2.4svh) !important;
-  }
-
-  @media (max-width: 760px) {
-    #portal .masthead {
-      padding-top: calc(clamp(35px, 5.3svh, 56px) + var(--p5-pwa-top-adjust)) !important;
-    }
-    #portal .p541-home-actions {
-      bottom: calc(clamp(82px, 12.3svh, 110px) - 14px) !important;
-    }
-    body > main.wrap {
-      padding-top: max(17px, 2.1svh) !important;
-    }
-  }
-
-  /* Short screens: don't consume disproportionate space above the court. */
-  @media (max-width: 760px) and (max-height: 680px) {
-    :root { --p5-pwa-top-adjust: max(14px, calc(env(safe-area-inset-top, 0px) - 44px)); }
-    #portal .masthead {
-      padding-top: calc(22px + var(--p5-pwa-top-adjust)) !important;
-    }
-    #portal .p541-home-actions {
-      bottom: 62px !important;
-    }
-  }
-
-  /* Print/PDF must retain the locked production layout. */
-  @media print {
-    #portal .masthead, body > .p54-app-nav, body > main.wrap {
-      padding-top: initial !important;
-    }
-  }
-}
-/* Deploy Preview cache refresh: v5.6.1 final standalone spacing build. */
-
-/* PWA v5.6.3: restore in-flow navigation, do not cover the game header. */
-@media screen and (display-mode: standalone) {
+  /* Game pages: Home bar remains in normal document flow; never sticky. */
   body > nav.p54-app-nav {
     position: relative !important;
     top: auto !important;
-    z-index: 50 !important;
-    min-height: 0 !important;
-    isolation: auto !important;
-    overflow: visible !important;
-    pointer-events: auto !important;
     transform: none !important;
+    filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    opacity: 1 !important;
+    z-index: 35 !important;
+    padding-top: calc(var(--p5-standalone-safe-top) + 10px) !important;
+    padding-bottom: 13px !important;
+    background: #0a1621 !important;
     box-shadow: none !important;
-  }
-  body > nav.p54-app-nav::before {
-    content: none !important;
-    display: none !important;
+    pointer-events: auto !important;
   }
   body > nav.p54-app-nav > a#p54-home-link {
     display: inline-flex !important;
-    align-items: center !important;
     min-height: 44px !important;
-    min-width: 44px;
-    box-sizing: border-box;
-    padding: 8px 12px !important;
+    align-items: center;
     margin: 0 !important;
-    position: relative !important;
-    z-index: 1 !important;
+    padding: 8px 10px !important;
     pointer-events: auto !important;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(221,184,135,.18);
     border-radius: 8px;
-    cursor: pointer;
   }
-  body > nav.p54-app-nav > a#p54-home-link:focus-visible {
-    outline: 2px solid #e7cba2;
-    outline-offset: 2px;
+  body > nav.p54-app-nav .p54-app-context,
+  body > nav.p54-app-nav > a { opacity: 1 !important; filter: none !important; }
+  body > main.wrap, body > div.wrap { margin-top: 0 !important; }
+
+  @media (max-width: 760px) {
+    /* Fallback for notched iPhones reporting a zero safe-area inset. */
+    :root { --p5-standalone-safe-top: max(env(safe-area-inset-top, 0px), 47px); }
+    #portal .masthead { padding-top: clamp(93px, 11svh, 116px) !important; }
+    #portal .p541-home-actions { bottom: clamp(120px, 18svh, 180px) !important; }
+    #portal .signature { bottom: clamp(64px, 9svh, 95px) !important; }
+    #p54-workspace.p54-workspace {
+      padding-top: calc(var(--p5-standalone-safe-top) + 5px) !important;
+    }
+    body > main.wrap, body > div.wrap { padding-top: 12px !important; }
+  }
+  @media (max-height: 670px) and (max-width: 760px) {
+    #portal .masthead { padding-top: 82px !important; }
+    #portal .p541-home-actions { bottom: 68px !important; }
+    #portal .signature { bottom: 13px !important; }
   }
 }

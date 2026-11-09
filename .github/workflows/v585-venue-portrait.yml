@@ -5,6 +5,7 @@ on:
     branches: [feature/v5.8.5-visual-navigation-review]
     paths:
       - scripts/phase585-venue-art.py
+      - .github/workflows/v585-venue-portrait.yml
 permissions:
   contents: write
 jobs:

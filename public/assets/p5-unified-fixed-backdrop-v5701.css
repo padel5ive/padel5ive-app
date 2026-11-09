@@ -1,0 +1,46 @@
+/* PADEL 5IVE Phase 5.7 — Fixed background for public Americano / Mexicano results.
+ * Keep the venue image on a dedicated viewport-locked layer, not a scrolling
+ * body background or negative-z-index pseudo element. This mirrors the tested
+ * Team Showdown backdrop strategy without touching results UI or engines.
+ */
+html { background:#0a1825; }
+body.share-photo-results {
+  background-color:transparent!important;
+  background-image:none!important;
+  background-attachment:scroll!important;
+}
+body.share-photo-results::before,
+body.share-photo-results::after {
+  content:none!important;
+  display:none!important;
+}
+body.share-photo-results > .p5-unified-fixed-backdrop {
+  position:fixed!important;
+  top:0!important;
+  right:0!important;
+  bottom:0!important;
+  left:0!important;
+  width:100%!important;
+  height:100vh!important;
+  height:100lvh!important;
+  z-index:0!important;
+  pointer-events:none!important;
+  overflow:hidden!important;
+  background-color:#0a1825;
+  background-image:
+    linear-gradient(180deg,rgba(8,19,30,.90),rgba(8,18,29,.955) 58%,rgba(7,17,27,.97)),
+    url('/assets/p5-master-share-hero.webp');
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  transform:translate3d(0,0,0);
+  -webkit-transform:translate3d(0,0,0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  contain:paint;
+}
+/* Loaded/empty/error states all sit above the same fixed wallpaper. */
+body.share-photo-results > .wrap {
+  position:relative!important;
+  z-index:1!important;
+}

@@ -65,7 +65,8 @@ jobs:
           if(Object.values(cases).some(v=>!v))process.exit(1);
           NODE
           sum1="$(sha256sum public/modes/unified/index.html public/index.html public/assets/p5-direct-pdf.js public/results/unified/index.html | sha256sum)"
-          node scripts/phase57-transform.cjs
+          # Phase57 has already run as part of npm build; recheck the layered v5.8 transform for idempotency.
+          node scripts/phase58-transform.cjs
           sum2="$(sha256sum public/modes/unified/index.html public/index.html public/assets/p5-direct-pdf.js public/results/unified/index.html | sha256sum)"
           test "$sum1" = "$sum2"
           git diff --check

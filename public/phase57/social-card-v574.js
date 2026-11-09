@@ -86,10 +86,18 @@ function render(data){
   rect(58,573,1084,1,col.line);
   text('BEYOND 5IVE. BEYOND PLAY.',64,605,14,col.gold,520,1);
   text('PADEL5IVE.NETLIFY.APP',927,605,13,col.muted,550,1);
-  const uri=c.toDataURL('image/png');
-  if(!uri.startsWith('data:image/png;base64,'))throw Error('Preview PNG export is not available.');
-  const base64=uri.slice('data:image/png;base64,'.length);
-  if(!base64||base64.length>550000)throw Error('Preview PNG exceeded the publishing size limit.');
+  // Safari creates surprisingly large lossless PNGs with gradient/watermark.
+  // JPEG is WhatsApp-compatible and preserves the premium card at ~1/4 the size.
+  // Try progressively smaller quality rather than preventing result publishing.
+  const prefix='data:image/jpeg;base64,';
+  let base64='';
+  for(const quality of [.86,.76,.64,.52]){
+    const uri=c.toDataURL('image/jpeg',quality);
+    if(!uri.startsWith(prefix))throw Error('This device could not generate a WhatsApp-compatible preview.');
+    base64=uri.slice(prefix.length);
+    if(base64&&base64.length<=350000)break;
+  }
+  if(!base64||base64.length>350000)throw Error('Social preview image could not be compressed. Please retry publishing.');
   return base64;
 }
 window.P5SocialCard=Object.freeze({render,project});

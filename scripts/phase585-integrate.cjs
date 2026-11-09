@@ -29,7 +29,7 @@ if(!sw.includes(assets[0])){
  if(n!==1)throw Error('v5.8.5 SW source drift '+n);
  sw=sw.replace(marker,marker+' '+assets.join(', ')+',');
 }
-sw=sw.replace("const VERSION = 'p5-pwa-phase58-lab-01';","const VERSION = 'p5-pwa-v585-review-01';");
+// Retain legacy cache fingerprint during preview; new content is versioned by URL.
 fs.writeFileSync('public/sw.js',sw);
 const checks=[
 [home,'/phase585/home-stage-v585.css'],

@@ -127,7 +127,7 @@ export default async function handler(request){
         const revision=entry.revision+1,now=new Date().toISOString();
         if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
         // Not an atomic database transaction: concurrent organizer updates remain a staging QA risk.
-        await store.setJSON(id,{...entry,data:body.data,revision,previewReady:!!body.previewBytes||!!entry.previewReady,previewType:body.previewType||(entry.previewType||'png'),previewRevision:body.previewBytes?revision:(entry.previewRevision||0),updatedAt:now});
+        await store.setJSON(id,{...entry,data:body.data,revision,previewReady:!!body.previewBytes,previewType:body.previewType||null,previewRevision:body.previewBytes?revision:0,updatedAt:now});
         return json({id,revision,updatedAt:now});
       }
       case 'DELETE':{

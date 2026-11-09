@@ -40,7 +40,8 @@ function joinSafe(result){
  const link={kind,code:result.code,token:result.token,pin:null,summary:result.summary,
   localId:identity(result.data,kind),revision:result.revision,role:result.role,waiting:false};
  // Baseline hash to detect unexpected offline changes after the next app restart.
- const raw=JSON.stringify(result.data);let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
+ const stableCopy={...result.data};delete stableCopy.ui;
+ const raw=JSON.stringify(stableCopy);let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
  link.lastHash=(h>>>0).toString(36);
  try{put(archKey,list);put(key,result.data);put(metaKey,link)}
  catch(err){

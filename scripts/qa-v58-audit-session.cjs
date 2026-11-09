@@ -1,18 +1,13 @@
-/* Read-only embedded master audit: Home resume visibility and Arriving/Reshuffle scope. */
+/* v5.8 Home Resume/final state and Arrival/Reshuffle source audit. */
 const fs=require('node:fs');
-function slices(name,file,terms,limit=18,before=200,after=600){
- const s=fs.readFileSync(file,'utf8');
- console.log('\n==== '+name+' byteLength '+s.length);
- for(const term of terms){
-  console.log('\n-- '+term+' --');
-  let at=0,n=0,tot=0;
-  while((at=s.toLowerCase().indexOf(term.toLowerCase(),at))!==-1){
-   tot++;
-   if(n++<limit)console.log('OFFSET '+at+' '+s.slice(Math.max(0,at-before),Math.min(s.length,at+after)).replace(/\n{3,}/g,'\n\n').slice(0,before+after));
-   at+=term.length||1;
-  }
-  console.log('TOTAL_MATCHES '+term+' '+tot);
- }
+const home=fs.readFileSync('public/index.html','utf8'),unified=fs.readFileSync('public/modes/unified/index.html','utf8');
+for(const [title,src,needle,before,after] of [
+ ['Home Resume renderer',home,"node.textContent=(secondary?item.label+' · ':'RESUME · ')",2900,1850],
+ ['Home Resume element',home,'id="p54-resume"',450,550],
+ ['Home Session collector',home,'const sessions=[]',1200,2600],
+ ['Arrival panel gate',unified,'const prematch=s.currentRound===0&&done(s)===0',350,1450],
+ ['Arrival guard',unified,"function canReshuffle(){",160,700]
+]){
+ const i=src.lastIndexOf(needle);
+ console.log('\n==== '+title+' @'+i+' ====\n'+(i>=0?src.slice(Math.max(0,i-before),Math.min(src.length,i+after)):'NOT FOUND'));
 }
-slices('Home','public/index.html',['p54-resume','Resume ·','resumeSession','resumeLabel','champion','p541-home-actions'],8,200,350);
-slices('Unified','public/modes/unified/index.html',['reshuffle','arriving','arrival','Shuffle Round 1','shuffle-round','reshuffle-round','data-act="reshuffle"','round===0','round===1'],13,220,450);

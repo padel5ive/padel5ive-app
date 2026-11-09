@@ -20,17 +20,8 @@
   status = 200
   force = true
 
-[[redirects]]
-  from = "/social/u/*"
-  to = "/.netlify/functions/unified-social-image?id=:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/u/*"
-  to = "/.netlify/functions/unified-share-page?id=:splat"
-  status = 200
-  force = true
+# Dynamic public results /u/:id and /social/u/* are handled by
+# Netlify Functions config.path (avoids unsupported splat-to-query rewrites).
 
 [[redirects]]
   from = "/r/*"

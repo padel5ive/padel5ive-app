@@ -1,31 +1,17 @@
 const fs=require('fs');
-const files=['public/index.html','public/modes/unified/index.html','public/modes/club-match/index.html','public/assets/p5-reporting-foundation.js','public/assets/p5-interactive-results.js','netlify/functions/unified-results.mjs'];
-const pats={
-'public/index.html':['START NEW SESSION','Existing Sessions','Restore Backup JSON','Game Date','Start New Session','P5PreviewLaunch','localStorage','p5-home','p5-session','data-mode','date','type="time"'],
-'public/modes/unified/index.html':['Restore Backup JSON','Existing Sessions','Start New Session','Session History','Session Management','sessionName','gameDate','gameTime','sessionDate','localStorage','P5ReportUI.openShare','P5DirectPDF','champion reveal','Runner-Up','OFFICIAL CHAMPION','function saveSession','sessionHistory','backup','p5-session'],
-'public/modes/club-match/index.html':['P5ReportUI.openShare','sessionName','gameDate','gameTime','OFFICIAL CHAMPION'],
-'public/assets/p5-reporting-foundation.js':['openShare','makePayload','date','time','window.P5ReportUI'],
-'public/assets/p5-interactive-results.js':['Session','Game Date','data.date','date','final','render('],
-'netlify/functions/unified-results.mjs':['GET','method','read','blob','headers','request','payload']
-};
-for(const f of files){
- const s=fs.readFileSync(f,'utf8');
- console.log('===FILE '+f+' len='+s.length+' lines='+s.split('\n').length+'===');
- for(const pattern of pats[f]){
-  const needle=pattern.toLowerCase(); let start=0, count=0;
-  const total=s.toLowerCase().split(needle).length-1;
-  console.log('PATTERN '+JSON.stringify(pattern)+' total='+total);
-  while(count<3){
-   const i=s.toLowerCase().indexOf(needle,start);
-   if(i<0)break;
-   let a=Math.max(0,i-220),b=Math.min(s.length,i+pattern.length+360);
-   console.log('  @'+i+' '+JSON.stringify(s.slice(a,b)).slice(0,1050));
-   start=i+pattern.length; count++;
-  }
- }
- if(f.includes('/index.html')){
-   for(const m of s.matchAll(/<(?:input|button|select|section|nav|dialog)[^>]{0,350}>/gi)){
-    if(/session|date|time|restore|backup|champion|history|existing/i.test(m[0]))console.log('TAG '+m[0].slice(0,380));
-   }
- }
+const home=fs.readFileSync('public/index.html','utf8'),eng=fs.readFileSync('public/modes/unified/index.html','utf8'),club=fs.readFileSync('public/modes/club-match/index.html','utf8');
+function at(s,name,marker,before,after){
+ const i=s.indexOf(marker);
+ console.log('=== '+name+' / '+JSON.stringify(marker)+' @'+i+'===');
+ if(i>=0)console.log(s.slice(Math.max(0,i-before),Math.min(s.length,i+after)));
 }
+console.log('HOME KEY SECTION:');
+at(home,'home','const KEY_UNI',200,2300);
+at(home,'home','function resume',200,6800);
+at(home,'home','function renderResume',100,4500);
+console.log('ENGINE KEY/STATE/SESSION:');
+for(const [t,b,a] of [['const LIBRARY_KEY',120,600],['const KEY=',120,500],['function stateNew',100,2400],['function library()',600,4000],['function archiveActive',140,1400],['function save()',200,1100],['function homeExistingSessions',400,2200],['function setup(s)',150,4500],['function menu(s)',150,3000],['function champion(s)',100,2800],['function showPublish(state)',130,800],['window.P5PublicResults',150,1600],['function render()',130,1700],['case \'restore\'',200,900],['case \'session-resume\'',200,1300],['const restoreInput',100,800],['setup-date',300,700],['data-act="restore"',250,550],['setup-session',250,900],['function newTournament',100,800],['const sessionId=',200,850],['function publish(state',150,1800]]){
+ at(eng,'engine',t,b,a);
+}
+console.log('CLUB KEYS:');
+for(const [t,b,a] of [['LIBRARY',230,700],['session-library',160,400],['function save',100,450],['function render',100,450]])at(club,'club',t,b,a);

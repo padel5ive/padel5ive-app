@@ -63,3 +63,10 @@
  .p58-launch{bottom:calc(11px + env(safe-area-inset-bottom));right:11px;padding:9px 12px;font-size:9px}
  .p58-status{bottom:calc(52px + env(safe-area-inset-bottom));right:11px}
 }
+
+/* Dashboard action lives in native Session Management, not a floating CTA. */
+.p58-launch{display:none!important}
+body:not(.p58-cloud-connected) .p58-status{display:none!important}
+.p58-status{bottom:calc(12px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right));box-shadow:0 4px 12px #0004}
+[data-p58-cloud].p58-menu-action{margin:5px 0 2px;min-height:43px;font-weight:650}
+@media(max-width:600px){.p58-status{bottom:calc(9px + env(safe-area-inset-bottom));right:10px}}

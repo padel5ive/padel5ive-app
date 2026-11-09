@@ -36,47 +36,49 @@ if end>H-210:
     photo_top=max(115,H-210-scaled_height)
     end=photo_top+scaled_height
 work=Image.new('RGB',(W,H),(5,17,31))
-# Extend dark ceiling upward naturally by smoothly blending the first existing
-# rows with venue-specific ambient colors. No hard horizontal seam.
-ceiling_color=source.getpixel((source.width//2,max(0,int(source.height*.055))))
+# The photographic upper ceiling is mirrored from the first real frame and
+# darkened gently; this keeps the same roof color and avoids a flat brown band.
+ceiling_height=min(scaled_height//5,178)
+ceiling=main.crop((0,0,W,ceiling_height))
+ceiling=ImageOps.flip(ceiling).resize((W,photo_top),Image.Resampling.BICUBIC)
+ceiling=ceiling.filter(ImageFilter.GaussianBlur(5))
 for y in range(photo_top):
-    t=y/max(1,photo_top)
-    dark=(4,14,27)
-    p=tuple(int(dark[i]*(1-t)+ceiling_color[i]*t*.53) for i in range(3))
-    ImageDraw.Draw(work).line((0,y,W,y),fill=p)
+    row=ceiling.crop((0,y,W,y+1))
+    t=y/max(1,photo_top-1)
+    # The brand sits against deep navy; the lower reflection meets the actual
+    # venue at full intensity and the original ceiling row is unchanged.
+    shade=.15+.85*(t**1.4)
+    row=ImageEnhance.Brightness(row).enhance(shade)
+    work.paste(row,(0,y))
 # Full crop, exact photographic source pixel lines.
 work.paste(main,(0,photo_top))
 # Extend the lower blue court using edge-aware panorama projection; no separate
 # sharp image/CSS mask. The center stripe is explicitly continued in perspective.
 if end<H:
     floor_len=H-end
-    # Work off the lowest 18% of the SOURCE-CROPPED photo, which should depict
-    # only playing surface. Source colour is retained by the repeats.
-    band_height=max(28,min(180,round(scaled_height*.19)))
-    floor=main.crop((0,scaled_height-band_height,W,scaled_height))
-    # Cross-dissolve the texture's repeat cycle to prevent a repeated-row seam.
+    # Last court pixels in the real photo are solid playing surface (net and
+    # boundary rails sit substantially higher). Do not repeat a tall strip:
+    # repeating a court row creates fake horizontal baseline stripes.
+    last=main.crop((0,scaled_height-1,W,scaled_height))
+    start_y=max(0,scaled_height-40)
     for y in range(floor_len):
         t=y/max(1,floor_len-1)
-        a=(y/(1.5+0.3*t))%band_height
-        sample=floor.crop((0,int(a),W,int(a)+1)).resize((W,1))
-        # Perspective scale increases toward the near baseline.
-        scale=1.0+0.17*t
-        row=sample.resize((int(W*scale),1),Image.Resampling.BICUBIC)
-        x=(row.width-W)//2
+        # Non-periodic floor continuation samples only the final solid court
+        # region, then opens horizontally in a natural near-camera perspective.
+        sample_y=round(start_y+(scaled_height-1-start_y)*(1-(1-t)**3))
+        row=main.crop((0,sample_y,W,sample_y+1))
+        expand=1.0+0.23*(t**1.35)
+        newwidth=round(W*expand)
+        row=row.resize((newwidth,1),Image.Resampling.BICUBIC)
+        x=(newwidth-W)//2
         row=row.crop((x,0,x+W,1))
-        # Subtle photographic darkening below CTA, never solid flat navy.
-        shade=1.0-0.30*max(0,t-.13)/.87
-        if shade!=1:row=ImageEnhance.Brightness(row).enhance(shade)
+        # Baked vignette is gradual. A true blue court texture and central line
+        # continue beneath the Home actions rather than a flat navy CSS strip.
+        shade=1.0-0.29*max(0,t-.20)/.80
+        row=ImageEnhance.Brightness(row).enhance(shade)
+        if y<42:
+            row=Image.blend(last,row,y/42.0)
         work.paste(row,(0,end+y))
-    # Full-width lower gradient is baked INTO the photo with soft transitions;
-    # preserve the central court stripe, court texture and perspective.
-    # Smooth first floor rows where the original photograph meets extrapolated floor.
-    feather=min(115,floor_len)
-    for y in range(feather):
-        t=y/max(1,feather)
-        a=work.crop((0,end+y,W,end+y+1))
-        original_edge=main.crop((0,scaled_height-1,W,scaled_height))
-        Image.Image.paste(work,Image.blend(original_edge,a,min(1,t**0.8)),(0,end+y))
 # A subtle editorial vignette whose strongest coverage is beneath UI controls;
 # it NEVER deletes or abruptly masks the photo.
 overlay=Image.new('RGBA',(W,H),(0,0,0,0))

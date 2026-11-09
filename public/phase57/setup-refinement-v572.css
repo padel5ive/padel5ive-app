@@ -1,145 +1,133 @@
-/* PADEL 5IVE 5.7.2 — Shared Initial Setup, grouped Date & Time.
- * Presentation-only override. The native controls preserve iPad/iPhone pickers,
- * focus semantics, and their original event listeners.
- */
-#americano .p5-b2-setup .p57-date-time {
-  display:block!important;
-  grid-column:1/-1!important;
-  min-width:0!important;
-  width:100%!important;
-  margin:0!important;
-}
-#americano .p57-date-time-label {
-  color:#d4b78d!important;
-  font-size:10px!important;
-  font-weight:720!important;
-  letter-spacing:.13em!important;
-  margin:0 0 8px!important;
-}
-#americano .p57-date-time-row {
+/* PADEL 5IVE 5.7.3 — Date + Time are two clear, full-width stacked controls.
+ * Native Safari date input preserved; hour selection has its own visible field.
+ * This replaces the experimental combined-row treatment from 5.7.2. */
+#americano .p5-b2-setup .p57-date-time.p57-date-fields {
   box-sizing:border-box!important;
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) clamp(136px,28%,190px)!important;
-  gap:0!important;
-  min-width:0!important;
-  min-height:52px!important;
-  height:52px!important;
-  align-items:stretch!important;
-  background:#101f2c!important;
-  border:1px solid rgba(204,184,155,.34)!important;
-  border-radius:10px!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.022)!important;
-  overflow:hidden!important;
-  transition:border-color .18s ease!important;
-}
-#americano .p57-date-time-row:focus-within {
-  border-color:#d0b18a!important;
-  outline:2px solid rgba(208,177,138,.38)!important;
-  outline-offset:2px!important;
-}
-#americano .p57-date-control,
-#americano .p57-time-control {
-  position:relative!important;
   display:flex!important;
+  flex-direction:column!important;
+  grid-column:1/-1!important;
+  align-items:stretch!important;
+  gap:15px!important;
+  width:100%!important;
   min-width:0!important;
-  height:50px!important;
-  align-items:center!important;
   margin:0!important;
   padding:0!important;
-  color:#f1e5d3!important;
+}
+#americano .p57-date-time .p57-field {
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:7px!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
   background:transparent!important;
   border:0!important;
   border-radius:0!important;
 }
-#americano .p57-date-control .p5-b2-date-wrap {
+#americano .p57-date-time .p57-field-label {
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  color:#d0b38a!important;
+  font:720 10px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+}
+#americano .p57-date-time .p5-b2-date-wrap,
+#americano .p57-date-time .p57-time-wrap {
+  box-sizing:border-box!important;
+  position:relative!important;
   display:flex!important;
   align-items:center!important;
-  box-sizing:border-box!important;
   width:100%!important;
+  max-width:none!important;
   min-width:0!important;
   height:50px!important;
   min-height:50px!important;
-  padding:0 15px!important;
-  background:transparent!important;
-  border:0!important;
-  border-radius:0!important;
+  margin:0!important;
+  padding:0 14px!important;
+  border:1px solid rgba(210,196,170,.32)!important;
+  border-radius:10px!important;
+  background:#111d29!important;
   box-shadow:none!important;
+  color:#eee4d5!important;
 }
-#americano .p57-date-control #setup-date-display {
-  flex:1!important;
+#americano .p57-date-time .p5-b2-date-wrap:focus-within,
+#americano .p57-date-time .p57-time-wrap:focus-within {
+  border-color:#d8b98e!important;
+  outline:2px solid rgba(216,185,142,.35)!important;
+  outline-offset:2px!important;
+}
+#americano .p57-date-time #setup-date-display {
+  display:block!important;
+  flex:1 1 auto!important;
+  width:auto!important;
+  max-width:calc(100% - 32px)!important;
   min-width:0!important;
-  max-width:none!important;
   overflow:hidden!important;
-  white-space:nowrap!important;
   text-overflow:ellipsis!important;
-  font:600 13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
-  color:#e8ded1!important;
+  white-space:nowrap!important;
+  font:600 13px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  color:#e9e3da!important;
 }
-#americano .p57-date-control #setup-date-display.p5-date-empty {
-  color:#aab7bd!important;
+#americano .p57-date-time #setup-date-display.p5-date-empty {
+  color:#9eacb8!important;
   font-weight:450!important;
 }
-#americano .p57-date-control .p5-b2-date-wrap > svg {
+#americano .p57-date-time .p5-b2-date-wrap > svg {
   flex:none!important;
-  margin-left:9px!important;
-  opacity:.85!important;
+  margin-left:auto!important;
+  color:#d6c2a4!important;
+  opacity:.88!important;
 }
-#americano .p57-time-control::before {
+#americano .p57-date-time .p57-time-wrap {
+  padding:0!important;
+}
+#americano .p57-date-time .p57-time-wrap::after {
   content:""!important;
   position:absolute!important;
-  left:0!important;
-  top:11px!important;
-  bottom:11px!important;
-  width:1px!important;
-  background:rgba(212,187,148,.25)!important;
+  z-index:1!important;
+  top:calc(50% - 4px)!important;
+  right:18px!important;
+  width:7px!important;
+  height:7px!important;
+  border-right:1.5px solid #c9baa3!important;
+  border-bottom:1.5px solid #c9baa3!important;
+  transform:rotate(45deg)!important;
   pointer-events:none!important;
 }
-#americano .p57-time-control::after {
-  content:""!important;
-  position:absolute!important;
-  right:16px!important;
-  top:50%!important;
-  width:6px!important;
-  height:6px!important;
-  border-right:1.5px solid #c5b8a4!important;
-  border-bottom:1.5px solid #c5b8a4!important;
-  transform:translateY(-65%) rotate(45deg)!important;
-  pointer-events:none!important;
-}
-#americano .p57-time-control #setup-time {
-  appearance:none!important;
+#americano .p57-date-time #setup-time {
   -webkit-appearance:none!important;
+  appearance:none!important;
+  display:block!important;
+  visibility:visible!important;
+  position:relative!important;
+  opacity:1!important;
+  pointer-events:auto!important;
   box-sizing:border-box!important;
   width:100%!important;
-  height:50px!important;
-  min-height:50px!important;
   min-width:0!important;
-  padding:0 29px 0 16px!important;
+  height:48px!important;
+  min-height:48px!important;
   margin:0!important;
+  padding:0 42px 0 14px!important;
   border:0!important;
-  border-radius:0!important;
+  border-radius:9px!important;
   outline:none!important;
   background:transparent!important;
-  color:#e8ded1!important;
+  color:#e9e3da!important;
   color-scheme:dark!important;
-  font:600 13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
-  letter-spacing:.005em!important;
-  box-shadow:none!important;
+  font:600 13px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+  letter-spacing:.01em!important;
   cursor:pointer!important;
 }
-#americano .p57-time-control #setup-time:invalid {color:#aab7bd!important;}
-#americano .p57-time-control #setup-time option {color:#e8ded1;background:#152635;}
-@media(max-width:650px) {
- #americano .p57-date-time-row {grid-template-columns:minmax(0,1fr) 38%!important;}
- #americano .p57-date-control .p5-b2-date-wrap {padding:0 11px!important;}
- #americano .p57-date-control #setup-date-display {font-size:11px!important;}
- #americano .p57-time-control #setup-time {font-size:12px!important;padding:0 25px 0 10px!important;}
- #americano .p57-time-control::after {right:11px!important;}
-}
-@media(max-width:360px) {
- #americano .p57-date-time-row {grid-template-columns:minmax(0,1fr) 42%!important;}
- #americano .p57-date-control .p5-b2-date-wrap {padding:0 8px!important;}
-}
-@media(prefers-reduced-motion:reduce) {
- #americano .p57-date-time-row{transition:none!important;}
+#americano .p57-date-time #setup-time:invalid { color:#9eacb8!important; }
+#americano .p57-date-time #setup-time option { color:#e9e3da;background:#152635; }
+@media(max-width:600px) {
+  #americano .p5-b2-setup .p57-date-time.p57-date-fields {gap:13px!important;}
+  #americano .p57-date-time .p5-b2-date-wrap,
+  #americano .p57-date-time .p57-time-wrap {height:50px!important;min-height:50px!important;}
 }

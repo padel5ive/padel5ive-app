@@ -32,3 +32,82 @@
 .p57-restore{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;min-height:41px;padding:10px 16px;border:1px solid #9c8060;color:#e6cba4;border-radius:7px;font-size:11px;letter-spacing:.035em}
 .p57-panel>footer p{font-size:11px;line-height:1.6;color:#9caeb8;margin:10px 0 0}
 @media(max-width:540px){.p57-overlay{align-items:start;padding:calc(13px + env(safe-area-inset-top,0px)) 11px 11px}.p57-panel{max-height:calc(100dvh - 24px);padding:18px;border-radius:14px}.p57-session{padding:13px}.p57-session-actions button{padding:8px 11px}.p57-panel>header{padding-bottom:16px}.p57-history-nav{margin:17px 0 12px}}
+
+
+/* Phase 5.7.2 — Home CTAs share one measured grid and baseline.
+ * Session History is subordinate visually, never a separate floating tile. */
+body:not(.p54-active) .p541-home-actions {
+  display:grid!important;
+  grid-template-columns:minmax(0,1.17fr) minmax(0,1fr)!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  column-gap:12px!important;
+  row-gap:10px!important;
+  width:min(100%,630px)!important;
+  max-width:630px!important;
+  margin:21px auto 0!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-start,
+body:not(.p54-active) .p541-home-actions > #p57-history-button {
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:11px!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:55px!important;
+  height:auto!important;
+  margin:0!important;
+  padding:13px 18px!important;
+  border-radius:9px!important;
+  text-align:center!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  line-height:1.35!important;
+  letter-spacing:.105em!important;
+  white-space:normal!important;
+  box-shadow:none!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-start {
+  grid-column:1!important;
+}
+body:not(.p54-active) .p541-home-actions > #p57-history-button {
+  grid-column:2!important;
+  border:1px solid rgba(215,190,150,.50)!important;
+  background:rgba(11,27,39,.82)!important;
+  color:#e5d0ad!important;
+}
+body:not(.p54-active) .p541-home-actions > #p57-history-button:hover,
+body:not(.p54-active) .p541-home-actions > #p57-history-button:focus-visible {
+  border-color:#dec4a0!important;
+  background:rgba(24,44,58,.94)!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-start svg {
+  width:17px!important;
+  height:17px!important;
+  flex:none!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-resume {
+  grid-column:1/-1!important;
+  justify-self:stretch!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:5px 0 0!important;
+}
+body:not(.p54-active) .p541-home-actions > #p54-resume[hidden] {display:none!important;}
+@media(max-width:570px){
+ body:not(.p54-active) .p541-home-actions {
+   grid-template-columns:minmax(0,1fr)!important;
+   width:min(100%,440px)!important;
+   row-gap:10px!important;
+   margin:17px auto 0!important;
+ }
+ body:not(.p54-active) .p541-home-actions > #p54-start,
+ body:not(.p54-active) .p541-home-actions > #p57-history-button {
+   grid-column:1!important;
+   min-height:52px!important;
+   padding:13px 12px!important;
+ }
+ body:not(.p54-active) .p541-home-actions > #p54-resume{grid-column:1!important;}
+}

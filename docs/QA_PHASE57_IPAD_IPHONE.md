@@ -7,6 +7,14 @@
 2. Go to **Deploys → Deploy Previews**, open the preview for GitHub **PR #3**, and tap its preview URL.
 3. If no preview is shown, stop: do not test `padel5ive.netlify.app` (production) or the previous v5.6.6 preview.
 
+## Phase 5.7.2 editorial acceptance (iPad + iPhone)
+
+1. **Home CTA alignment:** Start New Session (primary) and Session History (secondary) share one grid, equal visual height, a consistent horizontal baseline on iPad, and clean stacked controls on iPhone. Active resume remains below both.
+2. **Initial Setup:** Existing Sessions cards must **not** appear under the setup form. All historical sessions remain available through the Home Session History overlay; this change must not delete local data.
+3. **Game Date & Time:** On both form factors, native date and hour controls are visually grouped inside a **single** navy surface and external border; same height, typography and internal divider. No light-coloured/banded hour select.
+4. **Public champion:** The hero is centered, with a refined trophy, legible winner and secondary runner-up. Venue court photo is deliberately subdued; there must be **no oversized/cropped numeral 5** or artificial glow.
+5. **Public results long scroll:** In Safari, outer venue background stays fixed while all sections (including bracket) remain scrollable; this is independent from the photograph inside the champion card.
+
 ## Smoke test
 1. **PWA home → Session History:** All / Active / Past. If none exists, the empty state should display. Check backup, resume and delete of disposable test sessions.
 2. **New Session:** Americano and Mexicano. Check Game Date **and Game Time**; verify time remains on dashboard after registration.

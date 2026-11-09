@@ -1,0 +1,19 @@
+name: PADEL 5IVE v5.8.4 Home UI Source Audit
+on:
+  push:
+    branches: [fix/v5.8.4-home-ui-polish]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Locate native selectors and Home runtime layout
+        run: node scripts/qa-v584-source-audit.cjs
+      - run: |
+          npm ci
+          npm run build

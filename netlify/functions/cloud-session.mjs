@@ -64,6 +64,7 @@ function metadata(entry,id,ts,includeData){
 }
 async function read(store,code){return await store.getWithMetadata('session/'+code,{consistency:'strong',type:'json'})}
 async function write(store,code,entry,etag){return await store.setJSON('session/'+code,entry,{onlyIfMatch:etag})}
+const changed=result=>result?.modified===true&&typeof result.etag==='string'&&result.etag.length>0;
 function verify(entry,token){
  if(!TOKEN.test(String(token||'')))return null;
  const h=hash(token);const d=entry.devices?.find(d=>eq(d.hash,h));return d?.id||null;
@@ -99,7 +100,8 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
       devices:[{id,hash:hash(token),label:safe(input.label)||'Primary device',joinedAt:ts}],
       controller:{id,expires:ts+LEASE_MS},request:null};
      const result=await store.setJSON('session/'+code,entry,{onlyIfNew:true});
-     if(result.modified)return json({...metadata(entry,id,ts,false),pin,token,created:true},201);
+     if(changed(result))return json({...metadata(entry,id,ts,false),pin,token,created:true},201);
+     if(result.modified) return error('Cloud write could not be verified. Please retry.',503);
     }
     return error('Could not generate unique code. Please retry.',503);
    }
@@ -125,7 +127,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     const next={...entry,devices:[...entry.devices,{id,hash:hash(token),
      label:safe(input.label)||'Connected device',joinedAt:ts}],failures:{count:0,until:0}};
     const saved=await write(store,code,next,etag);
-    if(!saved.modified)return error('Session changed. Please retry.',409);
+    if(!changed(saved))return error('Session changed or cloud write could not be verified. Please retry.',409);
     return json({...metadata(next,id,ts,true),token});
    }
    const id=verify(entry,input.token);
@@ -142,14 +144,14 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     const next={...entry,data:input.data,summary:summary(input.data,entry.kind),
       revision:entry.revision+1,updatedAt:ts,controller:{id,expires:ts+LEASE_MS}};
     const saved=await write(store,code,next,etag);
-    if(!saved.modified)return json({ok:false,error:'Concurrent update rejected. No data overwritten.'},409);
+    if(!changed(saved))return json({ok:false,error:'Concurrent update rejected or write unverified. No data overwritten.'},409);
     return json(metadata(next,id,ts,false));
    }
    if(action==='heartbeat'){
     if(role(entry,id,ts)!=='controller')return error('Control lease is no longer active',423);
     const next={...entry,controller:{id,expires:ts+LEASE_MS}};
     const saved=await write(store,code,next,etag);
-    if(!saved.modified)return error('Session changed; retry sync',409);
+    if(!changed(saved))return error('Session changed; retry sync',409);
     return json(metadata(next,id,ts,false));
    }
    if(action==='take-control'){
@@ -158,12 +160,12 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if(active){
      const next={...entry,request:{id,expires:ts+120_000}};
      const saved=await write(store,code,next,etag);
-     if(!saved.modified)return error('Control request conflict; retry',409);
+     if(!changed(saved))return error('Control request conflict; retry',409);
      return json({...metadata(next,id,ts,false),waiting:true},202);
     }
     const next={...entry,controller:{id,expires:ts+LEASE_MS},request:null};
     const saved=await write(store,code,next,etag);
-    if(!saved.modified)return error('Control already changed; retry',409);
+    if(!changed(saved))return error('Control already changed; retry',409);
     return json(metadata(next,id,ts,false));
    }
    if(action==='approve-control'){
@@ -173,7 +175,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
      return error('No pending transfer request',409);
     const next={...entry,controller:{id:target,expires:ts+LEASE_MS},request:null};
     const saved=await write(store,code,next,etag);
-    if(!saved.modified)return error('Transfer conflict; retry',409);
+    if(!changed(saved))return error('Transfer conflict; retry',409);
     return json(metadata(next,id,ts,false));
    }
    if(action==='release-control'){
@@ -181,7 +183,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     const target=entry.request?.id&&entry.request.expires>ts?entry.request.id:null;
     const next={...entry,controller:target?{id:target,expires:ts+LEASE_MS}:null,request:null};
     const saved=await write(store,code,next,etag);
-    if(!saved.modified)return error('Release conflict; retry',409);
+    if(!changed(saved))return error('Release conflict; retry',409);
     return json(metadata(next,id,ts,false));
    }
   }catch(e){

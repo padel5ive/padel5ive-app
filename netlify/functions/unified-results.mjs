@@ -112,7 +112,7 @@ export default async function handler(request){
         if(!pinValid(request.headers.get('X-Padel-Pin')))return json({error:'Invalid publishing PIN'},401);
         const body=await readBody(request),id=randomBytes(12).toString('base64url'),token=randomBytes(32).toString('base64url'),now=new Date().toISOString();
         if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
-        await store.setJSON(id,{version:1,hash:sha(token),data:body.data,revision:1,createdAt:now,updatedAt:now,revoked:false});
+        await store.setJSON(id,{version:1,hash:sha(token),data:body.data,revision:1,previewReady:!!body.previewBytes,previewRevision:body.previewBytes?1:0,createdAt:now,updatedAt:now,revoked:false});
         return json({id,editToken:token,revision:1,updatedAt:now},201);
       }
       case 'PUT':{
@@ -126,7 +126,7 @@ export default async function handler(request){
         const revision=entry.revision+1,now=new Date().toISOString();
         if(body.previewBytes)await store.set(id+'.social.png',body.previewBytes);
         // Not an atomic database transaction: concurrent organizer updates remain a staging QA risk.
-        await store.setJSON(id,{...entry,data:body.data,revision,updatedAt:now});
+        await store.setJSON(id,{...entry,data:body.data,revision,previewReady:!!body.previewBytes||!!entry.previewReady,previewRevision:body.previewBytes?revision:(entry.previewRevision||0),updatedAt:now});
         return json({id,revision,updatedAt:now});
       }
       case 'DELETE':{

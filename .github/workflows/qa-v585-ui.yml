@@ -23,6 +23,10 @@ jobs:
           node --check public/phase585/menu-unified-v585.js
           node --check public/phase585/home-scroll-v585.js
           node scripts/qa-v585-ui.cjs
+      - name: Simulate rendered Unified and Club menus with event preservation
+        run: |
+          npm install --no-save jsdom@26
+          node scripts/qa-v585-dom.cjs
       - name: Core match and cloud feature regressions
         run: |
           node scripts/qa-v583-ui.cjs

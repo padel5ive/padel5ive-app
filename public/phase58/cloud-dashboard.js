@@ -93,11 +93,12 @@ function render(){
  const controls=e('div','p58-control-actions');
  if(meta.role==='viewer'){
   controls.append(btn(meta.waiting?'REQUEST SENT · CHECK STATUS':'TAKE CONTROL',async()=>{
+   const oldRevision=meta.revision;
    const r=await api('take-control',{code:meta.code,token:meta.token});
    Object.assign(meta,{role:r.role,waiting:!!r.waiting,revision:r.revision,summary:r.summary});persist();
    if(r.waiting)alert('Approval requested from the active device. If it is offline, control becomes available after its lease expires.');
    else if(r.role==='controller'){
-    if(r.revision!==meta.revision)conflict=true;
+    if(r.revision!==oldRevision)conflict=true;
     else conflict=false;
    }
   },true));

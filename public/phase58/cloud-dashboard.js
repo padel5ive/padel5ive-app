@@ -51,6 +51,7 @@ function mark(){
  status.dataset.state=conflict?'danger':offline?'warning':view()?'viewer':'ready';
  if(openButton)openButton.textContent=meta?'CLOUD SESSION':'SAVE TO CLOUD';
  document.body.classList.toggle('p58-view-only',view());
+ document.body.classList.toggle('p58-cloud-connected',!!meta);
  if(stamp)stamp.textContent=meta?'REVISION '+meta.revision+' · '+(role()==='controller'?'ACTIVE CONTROLLER':'VIEW ONLY'):'';
 }
 function info(text){const p=e('p','p58-message',text);return p}

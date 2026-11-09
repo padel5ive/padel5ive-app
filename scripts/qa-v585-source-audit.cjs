@@ -37,3 +37,12 @@ for(const filename of ['public/index.html','public/modes/unified/index.html','pu
   }
  }
 }
+
+const c=fs.readFileSync('public/modes/club-match/index.html','utf8');
+const menuAt=c.indexOf('id="mainMenu"');
+console.log('==== CLUB MENU HTML ====\n'+c.slice(menuAt-300,menuAt+6500));
+for(const term of ["LIVE</","LEADERBOARD","leaderboard","p5-live"]){let start=-1;for(let j=0;j<10&&(start=c.indexOf(term,start+1))>=0;j++){if(start>2800000)console.log('CLUB '+term+' '+start+'\n'+c.slice(Math.max(0,start-550),start+650));}}
+const u=fs.readFileSync('public/modes/unified/index.html','utf8');
+const menuUi=u.indexOf("const sessions=entry('Session Management'");
+console.log('==== UNIFIED MENU ====\n'+u.slice(menuUi-250,menuUi+2100));
+ 

@@ -44,12 +44,16 @@ jobs:
             'time published':u.includes("time:state.time||''"),
             'session menu':u.includes("entry('Session Management'"),
             'no duplicated restore in setup':!u.includes('<div class="p5-v212-restore-home"><button type="button" data-act="restore">'),
+            'Existing Sessions only in Home history':!u.includes('${homeExistingSessions(s)}</section>'),
+            'refined shared time control loaded':u.includes('/phase57/setup-refinement-v572.css'),
+            'refined Home CTA styling':fs.readFileSync('public/phase57/home-session-history.css','utf8').includes('Phase 5.7.2 — Home CTAs'),
+            'centered public champion styling':fs.readFileSync('public/phase57/share-champion-v571.css','utf8').includes('centered hierarchy'),
             'winner no-KO':u.includes("winner=hasKO?(s.ko?.champion||[]):(leader[0]"),
             'PDF time':pdf.includes('dayDate(data.date)+(data.time?'),
             'OG preview':res.includes('PADEL 5IVE · Signature Game'),
             'fixed public backdrop':res.includes('p5-unified-fixed-backdrop'),
             'public champion reveal assets':res.includes('/phase57/share-champion-v571.css')&&res.includes('/phase57/champion-render-v571.js'),
-            'PWA cache':sw.includes('/phase57/home-session-history.js'),
+            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&sw.includes('p5-pwa-phase57-v572'),
             'server optional time':api.includes('if(s.time!==undefined'),
             'master engine present':u.includes('P5EngineRegistry')&&u.includes('P5KO')&&u.includes('P5PublicResults')
           };

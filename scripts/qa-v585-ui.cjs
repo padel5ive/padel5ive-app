@@ -4,10 +4,10 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const get=p=>fs.readFileSync(p,'utf8');
 const home=get('public/index.html'),uni=get('public/modes/unified/index.html'),club=get('public/modes/club-match/index.html');
 const css=get('public/phase585/home-stage-v585.css'),menu=get('public/phase585/menu-unified-v585.js'),style=get('public/phase585/menu-unified-v585.css'),scroll=get('public/phase585/home-scroll-v585.js'),sw=get('public/sw.js');
-const art=fs.readFileSync('public/phase585/home-venue-portrait.webp');
+const art=fs.readFileSync('public/phase585/home-venue-user-refined-hd.webp');
 const checks={
- 'single photographic portrait, no fallback to double-image layers':css.includes('background-image:url(')&&css.includes('/phase585/home-venue-portrait.webp')&&css.includes('#portal .p541-venue > img')&&css.includes('display:none!important'),
- 'photo is original source extended on the review branch':art.length>150000&&art.subarray(0,4).toString()==='RIFF'&&art.subarray(8,12).toString()==='WEBP',
+ 'single photographic portrait, no fallback to double-image layers':css.includes('background-image:url(')&&css.includes('/phase585/home-venue-user-refined-hd.webp')&&css.includes('#portal .p541-venue > img')&&css.includes('display:none!important'),
+ 'photo is the full-resolution approved venue image with refined tonal treatment':art.length>250000&&art.subarray(0,4).toString()==='RIFF'&&art.subarray(8,12).toString()==='WEBP',
  'light venue fade, no foreground mask':!css.includes('mask-image')&&!css.includes('blur(25px)'),
  'mobile Home only':css.includes('@media(max-width:760px)'),
  'installed PWA Home fixed viewport':css.includes('position:fixed!important')&&css.includes('height:100dvh!important'),
@@ -26,7 +26,9 @@ const checks={
  'LIVE removed only from leaderboard':menu.includes('removeLiveBadge()')&&menu.includes('.p5-b41-leaderboard')&&uni.includes("pill=live?'LIVE':'FINAL'"),
  'stage status retained at top':uni.includes('p5-si-status')&&club.includes('id="headerStatus"'),
  'uniform button rows against master importance':style.includes('html body #americano .p5-4852-content .p585-group')&&style.includes('html body #mainMenu .p5-4852-content .p585-group'),
- 'PWA new review resources precached':sw.includes("'/phase585/home-venue-portrait.webp'")&&sw.includes("'/phase585/menu-unified-v585.js'"),
+ 'PWA approved venue photo and menu scripts precached':sw.includes("'/phase585/home-venue-user-refined-hd.webp'")&&sw.includes("'/phase585/menu-unified-v585.js'"),
+ 'Cloud Session native row and duplicate-heading fix':menu.includes("cloud.textContent='Cloud Session'")&&menu.includes("const sessionGroup=block('SESSION DATA')")&&style.includes('button.p585-cloud-row'),
+ 'Advanced Tools kept collapsible':menu.includes("const tools=create('details','p585-tools')"),
  'PWA published report bypass safe':sw.includes("'/api/'")&&sw.includes("'/results/'"),
  'Club stages and court management preserved':club.includes('data-action="apply-courts"')&&club.includes('data-menu-section="Match Management"')
 };

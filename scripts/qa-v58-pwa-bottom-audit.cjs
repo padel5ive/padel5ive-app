@@ -20,3 +20,17 @@ const tail=h.lastIndexOf('id="portal"'),view=h.lastIndexOf('id="p54-workspace"')
 console.log('PORTAL markup at '+tail+'\n'+h.slice(Math.max(0,tail-450),tail+350));
 console.log('WORKSPACE markup at '+view+'\n'+h.slice(Math.max(0,view-350),view+300));
 console.log('STANDALONE CSS\n'+css.slice(0,1500));
+
+for(const [name,re] of [
+ ['portal root',/(?:#portal|\.portal)\s*\{[^}]{0,1700}\}/gi],
+ ['workspace root',/\.p54-workspace\s*\{[^}]{0,1700}\}/gi],
+ ['venue root',/\.p541-venue\s*\{[^}]{0,1700}\}/gi],
+ ['masthead',/\.masthead\s*\{[^}]{0,700}\}/gi],
+ ['body active',/body\.p54-active\s*\{[^}]{0,500}\}/gi],
+ ['html viewport',/html\s*,?\s*body\s*\{[^}]{0,750}\}/gi]
+]){
+ const list=[...h.matchAll(re)];
+ console.log('\nCOMPACT '+name+' COUNT '+list.length);
+ list.slice(0,8).concat(list.slice(-8)).forEach(m=>console.log('CSS AT '+m.index+' '+m[0].replace(/\s+/g,' ').slice(0,1450)));
+}
+

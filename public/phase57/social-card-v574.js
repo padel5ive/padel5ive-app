@@ -52,8 +52,15 @@ function render(data){
   };
   rect(0,0,W,H,col.bg);
   const glow=g.createLinearGradient(0,0,W,H);glow.addColorStop(0,'#192d3d');glow.addColorStop(.65,'#101e2c');glow.addColorStop(1,'#0e1b29');rect(0,0,W,H,glow);
-  // Quiet-luxury standalone numeral watermark, not the wordmark or a photo.
-  g.save();g.globalAlpha=.047;g.fillStyle='#e6c69b';g.font='900 540px Arial, sans-serif';g.textAlign='center';g.fillText('5',615,515);g.restore();g.textAlign='left';
+  // Phase 5.7.6 — embossed numeral 5 only, NO original numeral logo/signage.
+  // Offset relief strokes create quiet depth with no neon glow or busy photo.
+  // Canvas layers stay translucent to protect result text and the Top 5.
+  g.save();
+  g.font='900 540px Arial, sans-serif';g.textAlign='center';
+  g.globalAlpha=.085;g.fillStyle='#05111d';g.fillText('5',619,520);
+  g.globalAlpha=.045;g.fillStyle='#9fb1bb';g.fillText('5',613,514);
+  g.globalAlpha=.033;g.fillStyle='#bb986b';g.fillText('5',615,517);
+  g.restore();g.textAlign='left';
   rect(0,0,W,6,'#b99b72');
   rect(58,92,1084,1,col.line);
   text('PADEL 5IVE  ·  MATCH CONTROL',64,67,19,col.gold,650,2);

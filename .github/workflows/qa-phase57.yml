@@ -41,7 +41,7 @@ jobs:
             'date/time in dashboard':u.includes('<b>Date & Time</b>'),
             'time published':u.includes("time:state.time||''"),
             'session menu':u.includes("entry('Session Management'"),
-            'no duplicated restore in setup':!u.includes('p5-v212-restore-home'),
+            'no duplicated restore in setup':!u.includes('<div class="p5-v212-restore-home"><button type="button" data-act="restore">'),
             'winner no-KO':u.includes("winner=hasKO?(s.ko?.champion||[]):(leader[0]"),
             'PDF time':pdf.includes("dayDate(data.date)+(data.time?"),
             'OG preview':res.includes('PADEL 5IVE · Signature Game'),

@@ -19,7 +19,7 @@ if(!club.includes('TEAM SHOWDOWN')&&!club.includes('Team Showdown'))throw Error(
 if(!unified.includes('P5ReportUI.openShare')||!club.includes('P5ReportUI.openShare'))throw Error('Shared publisher not wired to both dashboards');
 if(!club.includes('P5DirectPDF.exportShowdown(showdownReportData())'))throw Error('Team Showdown direct PDF not connected');
 if(!routes.includes('publish = "public"')||!routes.includes('functions = "netlify/functions"'))throw Error('Netlify publishing or functions config missing');
-if(!routes.includes('to = "/results/unified/index.html"')||!routes.includes('to = "/results/showdown/index.html"'))throw Error('Public results redirects missing');
+if(!routes.includes('to = "/.netlify/functions/unified-share-page?id=:splat"')||!routes.includes('to = "/results/showdown/index.html"'))throw Error('Public results redirects missing');
 const viewer=read('public/assets/p5-interactive-results.js');
 if(!viewer.includes('Knockout Bracket')||!viewer.includes('Analyze Your')||!viewer.includes('fetch(\'/api/unified-results'))throw Error('Unified real data viewer missing');
 if(viewer.includes('P5_QA_DATA')||viewer.includes('data=check(window.P5_QA_DATA)'))throw Error('Unified QA demo accidentally included');

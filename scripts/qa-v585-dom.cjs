@@ -22,7 +22,8 @@ async function checkUnified(){
  assert.equal(root.children.length,3,'Unified must have three categories');
  assert.equal(root.lastElementChild.querySelector('summary .p5-4852-label').textContent,'Session & Results');
  assert.strictEqual(root.querySelector('[data-act="share-result-link"]'),share,'Share native button identity preserved');
- assert.strictEqual(root.querySelector('[data-p58-cloud]')?.textContent,'Cloud','Cloud control preserved');
+ assert.strictEqual(root.querySelector('[data-p58-cloud]')?.textContent,'Cloud Session','Cloud control preserved with refined label');
+ assert.equal(Array.from(root.querySelectorAll('.p585-heading')).filter(x=>x.textContent.trim()==='SESSION DATA').length,1,'No duplicate Session Data heading');
  assert(root.querySelector('.p585-tools'),'Advanced Tools remains accessible');
  share.click();assert.equal(calls,1,'Live Share event survives move');
  assert(!doc.querySelector('.p5-b41-leaderboard .pill'),'Leaderboard LIVE removed');
@@ -32,7 +33,7 @@ async function checkUnified(){
  dom.window.close();
 }
 async function checkClub(){
- const html='<div id="mainMenu"><div class="ops-actions"><section class="p5-4852-menu">'+club()+'</section><details class="mc32-advanced"><summary>Session Management</summary><div class="mc32-advanced-body"><button data-p58-cloud type="button">CLOUD SESSION</button></div></details><details class="mc32-advanced"><summary>Advanced Settings</summary><div class="mc32-advanced-body"><button data-action="backup">Backup</button><button data-action="restore">Restore</button></div></details></div></div>';
+ const html='<div id="mainMenu"><div class="ops-actions"><section class="p5-4852-menu">'+club()+'</section><details class="mc32-advanced"><summary>Session Management</summary><div class="mc32-advanced-body"><button data-p58-cloud type="button">CLOUD SESSION</button></div></details><details class="mc32-advanced"><summary>Advanced Settings</summary><div class="mc32-advanced-body"><button data-action="backup">Backup</button><button data-action="restore">Restore</button><button data-action="system-check">System Check</button></div></details></div></div>';
  const dom=new JSDOM(html,{url:'https://example.test/modes/club-match/',pretendToBeVisual:true,runScripts:'outside-only'});
  const doc=dom.window.document,root=doc.querySelector('.p5-4852-menu');
  const backup=doc.querySelector('[data-action="backup"]'),pdf=doc.querySelector('#exportPdf');let count=0;backup.addEventListener('click',()=>count++);
@@ -48,6 +49,7 @@ async function checkClub(){
  assert.strictEqual(root.querySelector('#exportPdf'),pdf,'PDF original button preserved');
  assert(root.querySelector('[data-action="restore"]'),'Restore action preserved');
  assert(root.querySelector('[data-p58-cloud]'),'Cloud launcher preserved');
+ assert(root.querySelector('.p585-tools [data-action="system-check"]'),'Club diagnostics remain under Advanced Tools');
  backup.click();assert.equal(count,1,'Backup original event survives move');
  assert(!doc.querySelector('.ops-actions > details.mc32-advanced'),'Legacy extra tabs removed');
  dom.window.close();

@@ -1,12 +1,14 @@
 const fs=require('node:fs');
-for(const p of ['public/modes/unified/index.html','public/modes/club-match/index.html','public/assets/p5-reporting-foundation.css']){
- const s=fs.readFileSync(p,'utf8');
- console.log('==== FILE '+p+' BYTES '+s.length);
- for(const term of ['FAIRNESS REVIEW','Fairness Review','fairness-review','consecutive-rest','COURT UTILIZATION','Court Utilization','court-utilization','Share Final Results Link','Share Results Link','ORGANIZER PIN','Organizer PIN','share-results','share-final','p5-v2-fair','p5-fairness']){
-   const found=[];let x=0;
-   while((x=s.indexOf(term,x))!==-1 && found.length<9){found.push(x);x+=term.length;}
-   for(const i of found){
-     console.log('TERM '+JSON.stringify(term)+' @'+i+' ---\n'+s.slice(Math.max(0,i-900),Math.min(s.length,i+1250)).replace(/\n{3,}/g,'\n\n')+'\n---END');
-   }
+for(const path of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
+const s=fs.readFileSync(path,'utf8');console.log('FILE '+path+' '+s.length);
+for(const term of ["const act=","function act(","function entry(","p5-share-label-copy","p5-4852-action-chevron","p5-4852-action::after","p5-4852-action >","p5-4852-content .p5-4852-action","p5-v26-utilization","p5-b2-fairness-warning","const courtInfo="]){
+ let loc=-1,count=0;
+ while((loc=s.indexOf(term,loc+1))>=0){
+  if(count<4||((term==="p5-share-label-copy"||term==="p5-4852-action::after")&&loc>2e6)){
+   console.log('NEEDLE '+term+' @'+loc+'\n'+s.slice(Math.max(0,loc-1100),Math.min(s.length,loc+1500))+'\n===END===');
+  }
+  count++;
  }
+ console.log('COUNT '+term+' '+count);
+}
 }

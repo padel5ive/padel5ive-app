@@ -23,7 +23,7 @@ function enhance(){
  const content=el('div','p57-award-content');
  content.append(
   el('div','p57-award-head','PADEL 5IVE  /  OFFICIAL FINAL RESULT'),
-  el('div','p57-award-kicker',isFinalRanking?'SESSION WINNER':'TOURNAMENT CHAMPIONS'),
+  el('div','p57-award-kicker',isFinalRanking?'SESSION CHAMPIONS':'TOURNAMENT CHAMPIONS'),
   el('h2','p57-award-name',title),
   el('p','p57-award-description',subtitle)
  );

@@ -17,7 +17,17 @@ function inject(path,marker,html,label){
  s=one(s,marker,html+marker,label);write(path,s);
 }
 inject('public/index.html','</head>','<link rel="stylesheet" href="/phase57/home-session-history.css">','Home CSS');
-inject('public/modes/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/setup-refinement-v572.css">','Shared Date & Time v5.7.2 CSS');
+// The giant embedded master contains multiple literal </head> tokens in strings.
+// Insert only in the actual document head (first closing tag), not an embedded template.
+{
+ const p='public/modes/unified/index.html',link='<link rel="stylesheet" href="/phase57/setup-refinement-v572.css">';
+ let html=read(p);
+ if(!html.includes(link)){
+  const at=html.indexOf('</head>');
+  if(at<0||at>html.indexOf('<body'))throw Error('Phase57 missing real document head for setup CSS');
+  html=html.slice(0,at)+link+html.slice(at);write(p,html);
+ }
+}
 inject('public/index.html','</body>','<script defer src="/phase57/home-session-history.js"></script>','Home session controller');
 inject('public/results/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/share-champion-v571.css">','Champion Reveal CSS');
 inject('public/results/unified/index.html','</body>','<script defer src="/phase57/champion-render-v571.js"></script>','Champion Reveal script');

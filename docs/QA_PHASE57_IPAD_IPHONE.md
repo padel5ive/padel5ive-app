@@ -7,13 +7,19 @@
 2. Go to **Deploys → Deploy Previews**, open the preview for GitHub **PR #3**, and tap its preview URL.
 3. If no preview is shown, stop: do not test `padel5ive.netlify.app` (production) or the previous v5.6.6 preview.
 
-## Phase 5.7.2 editorial acceptance (iPad + iPhone)
+## Phase 5.7.3 visual and functional acceptance (iPad + iPhone)
 
-1. **Home CTA alignment:** Start New Session (primary) and Session History (secondary) share one grid, equal visual height, a consistent horizontal baseline on iPad, and clean stacked controls on iPhone. Active resume remains below both.
-2. **Initial Setup:** Existing Sessions cards must **not** appear under the setup form. All historical sessions remain available through the Home Session History overlay; this change must not delete local data.
-3. **Game Date & Time:** On both form factors, native date and hour controls are visually grouped inside a **single** navy surface and external border; same height, typography and internal divider. No light-coloured/banded hour select.
-4. **Public champion:** The hero is centered, with a refined trophy, legible winner and secondary runner-up. Venue court photo is deliberately subdued; there must be **no oversized/cropped numeral 5** or artificial glow.
-5. **Public results long scroll:** In Safari, outer venue background stays fixed while all sections (including bracket) remain scrollable; this is independent from the photograph inside the champion card.
+1. **Home:** Start New Session (gold primary) is ABOVE Session History (navy-outline secondary) on **both** iPad landscape and iPhone portrait. Both must be centered, same width, same height; Resume appears below them when active.
+2. **Initial Setup:** Existing Sessions is absent from the form. It remains available exclusively through Home Session History without data loss.
+3. **Game Date:** full-width date field with its native Safari date picker.
+4. **Game Time:** separate, full-width hour dropdown **below the date**, with 24 choices from 00:00 to 23:00. The option must be visible and selectable. With session name, date, mode, courts, and format filled, selecting an hour enables **Continue to Registration**.
+5. **Time persistence:** after Continue to Registration, the dashboard, PDF, and public results should display the selected time; existing legacy sessions without a time continue to load.
+6. **Public Champion:** centered trophy, winner and runner-up, court photography subtly darkened; no oversized cropped 5 and no competing watermark.
+7. **Fixed Share Results wallpaper:** iPad and iPhone Safari vertical scrolling must not move the venue backdrop; leaderboard and KO bracket stay scrollable.
+8. **WhatsApp social preview:** send an actual newly published `/u/{id}` public link through WhatsApp. Confirm the minimal **PADEL 5IVE · Signature Game** image card with the existing 1200×630 JPEG cover and **Official Match Results** description. If a previously shared URL displays stale metadata, test a newly published URL; WhatsApp caches links independently of the site.
+9. **PWA cache:** reopen standalone PWA after an update; confirm revised controls appear without clearing saved matches.
+
+Automated checks validate source structure, no-KO results and metadata, **not** real Safari interaction or WhatsApp's external crawler. Do not merge until these device tests pass.
 
 ## Smoke test
 1. **PWA home → Session History:** All / Active / Past. If none exists, the empty state should display. Check backup, resume and delete of disposable test sessions.

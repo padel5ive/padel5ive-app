@@ -70,7 +70,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  for(const k of ['MAX_PREVIEW_BYTES','previewBytes','previewImageType(bytes)','previewType','previewRevision'])assert(api.includes(k),'Publish pipeline missing '+k);
  assert(api.includes('previewReady:!!body.previewBytes,previewType:body.previewType||null,previewRevision:body.previewBytes?revision:0'),'Updated report without image must not keep a stale leaderboard preview');
  const homeCss=fs.readFileSync('public/phase57/home-session-history.css','utf8');
- assert(homeCss.includes('gap:24px!important')&&homeCss.includes('gap:20px!important'),'Home buttons must have generous iPad/iPhone vertical spacing');
+ assert(homeCss.includes('gap:22px!important')&&homeCss.includes('gap:16px!important'),'Home CTA gap must be 22px on iPad and 16px on iPhone');
+ const championCss=fs.readFileSync('public/phase57/share-champion-v571.css','utf8');
+ assert(!championCss.includes("url('/assets/p5-master-share-court.webp')"),'Champion Reveal must not retain the old venue-photo collage');
+ assert(championCss.includes('tonal navy')||championCss.includes('tonal'), 'Champion Reveal should use the neutral matte editorial treatment');
+ assert(canvas.includes('embossed numeral 5 only')&&canvas.includes("g.fillText('5',613,514)"),'Social card must draw subtle embossed numeral, never a logo asset');
  const compiled=fs.readFileSync('public/modes/unified/index.html','utf8');
  assert(compiled.includes('P5SocialCard.render(data)'),'Unified publishing must generate a compact preview');
  assert(compiled.includes('let preview=null'),'Unsupported Canvas or oversized image must not block results publication');

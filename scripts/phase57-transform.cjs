@@ -38,8 +38,10 @@ inject('public/index.html','</head>','<link rel="stylesheet" href="/phase57/home
   html=html.slice(0,at)+tag+html.slice(at);write(p,html);
  }
 }
+inject('public/index.html','</head>','<link rel="stylesheet" href="/phase57/home-visual-v577.css">','Home specific CTA spacing');
 inject('public/index.html','</body>','<script defer src="/phase57/home-session-history.js"></script>','Home session controller');
 inject('public/results/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/share-champion-v571.css">','Champion Reveal CSS');
+inject('public/results/unified/index.html','</head>','<link rel="stylesheet" href="/phase57/share-champion-v577.css">','Public champion hard override');
 inject('public/results/unified/index.html','</body>','<script defer src="/phase57/champion-render-v571.js"></script>','Champion Reveal script');
 let s=read('public/modes/unified/index.html');
 s=one(s,"session:'',date:'',courts:null","session:'',date:'',time:'',courts:null",'new state game time');
@@ -76,6 +78,11 @@ s=one(s,"['setup-pairing','setup-courts','setup-format','setup-date'].includes",
 s=one(s,"<span><b>Date</b> \${esc(s.date||'—')}</span>","<span><b>Date & Time</b> \${esc(s.date||'—')}\${s.time?' · '+esc(s.time):''}</span>",'header date/time');
 s=one(s,"session:state.session||'',date:state.date||'',","session:state.session||'',date:state.date||'',time:state.time||'',",'published time');
 // Social preview is best effort. No image-size or unsupported Canvas error may block Share Results.
+// Original logo crop loads asynchronously. Await the preview BEFORE the API POST/PUT,
+ // while retaining the existing catch: rendering failure never blocks publishing.
+s=one(s,"try{if(window.P5SocialCard?.render)preview=window.P5SocialCard.render(data);}",
+        "try{if(window.P5SocialCard?.render)preview=await window.P5SocialCard.render(data);}",
+        'await original numeral image');
 s=one(s,"const data=check(snapshot(state));",
  "const data=check(snapshot(state));\n  let preview=null;\n  try{if(window.P5SocialCard?.render)preview=window.P5SocialCard.render(data);}\n  catch(e){console.warn('Social card unavailable; results link remains publishable',e);}",'generate social preview');
 s=one(s,"body:JSON.stringify({data,revision:stored.revision||1})","body:JSON.stringify({data,preview,revision:stored.revision||1})",'send updated social image');
@@ -113,8 +120,8 @@ api=one(api,"if(!Number.isInteger(s.courts)||s.courts<1||s.courts>5)return false
 write('netlify/functions/unified-results.mjs',api);
 // PWA caches the versioned Session History shell for offline PWA use.
 let serviceWorker=read('public/sw.js');
-serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v575';",'PWA cache version');
-serviceWorker=one(serviceWorker,"'/pwa-standalone-layout-v5601.css',","'/pwa-standalone-layout-v5601.css', '/phase57/home-session-history.js', '/phase57/home-session-history.css', '/phase57/setup-refinement-v572.css', '/phase57/social-card-v574.js',",'PWA precache');
+serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v577';",'PWA cache version');
+serviceWorker=one(serviceWorker,"'/pwa-standalone-layout-v5601.css',","'/pwa-standalone-layout-v5601.css', '/phase57/home-session-history.js', '/phase57/home-session-history.css', '/phase57/home-visual-v577.css', '/phase57/setup-refinement-v572.css', '/phase57/social-card-v574.js',",'PWA precache');
 serviceWorker=one(serviceWorker,"asset.startsWith('/assets/') || asset.startsWith('/pwa/') ||","asset.startsWith('/assets/') || asset.startsWith('/pwa/') || asset.startsWith('/phase57/') ||",'PWA asset cache');
 serviceWorker=one(serviceWorker,"const DENY_PREFIXES = ['/api/', '/.netlify/', '/results/', '/r/', '/u/'];","const DENY_PREFIXES = ['/api/', '/.netlify/', '/results/', '/r/', '/u/', '/social/'];",'PWA bypass dynamic OG image');
 

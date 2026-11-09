@@ -78,8 +78,6 @@ s=one(s,"['setup-pairing','setup-courts','setup-format','setup-date'].includes",
 s=one(s,"<span><b>Date</b> \${esc(s.date||'—')}</span>","<span><b>Date & Time</b> \${esc(s.date||'—')}\${s.time?' · '+esc(s.time):''}</span>",'header date/time');
 s=one(s,"session:state.session||'',date:state.date||'',","session:state.session||'',date:state.date||'',time:state.time||'',",'published time');
 // Social preview is best effort. No image-size or unsupported Canvas error may block Share Results.
-s=one(s,"const data=check(snapshot(state));",
- "const data=check(snapshot(state));\n  let preview=null;\n  try{if(window.P5SocialCard?.render)preview=window.P5SocialCard.render(data);}\n  catch(e){console.warn('Social card unavailable; results link remains publishable',e);}",'generate social preview');
 // The source is patched once to an awaitable social renderer. Preserve the
 // legacy app shell in Git; never duplicate this initializer on a second build.
 s=one(s,"const data=check(snapshot(state));",

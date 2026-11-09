@@ -1,0 +1,62 @@
+/* PADEL 5IVE PWA Lab 5.6.1 — Standalone Safe-Area Layout Refinement
+ * Standalone only: restore vertical breathing room lost when Safari chrome
+ * disappears. Preserve all production UI, game engines, backgrounds, scoring.
+ * No transforms on page roots: fixed elements, modals and scroll are untouched.
+ */
+@media screen and (display-mode: standalone) {
+  :root {
+    /* On iPhones with a taller status bar, compensate without double-counting it. */
+    --p5-pwa-top-adjust: max(20px, calc(env(safe-area-inset-top, 0px) - 36px));
+  }
+
+  /* HOME — lower the entire branding block, not just the wordmark. */
+  #portal .masthead {
+    padding-top: calc(clamp(35px, 5.1svh, 60px) + var(--p5-pwa-top-adjust)) !important;
+  }
+
+  /* HOME — bring the CTA a little lower while retaining footer clearance. */
+  #portal .p541-home-actions {
+    bottom: calc(clamp(71px, 10.4svh, 108px) - 12px) !important;
+  }
+
+  /* UNIFIED / TEAM SHOWDOWN — navigation and content are separate page layers.
+   * Let the nav establish top breathing room, and move the setup stack as a unit.
+   * No blanket body padding: it could disturb overlays/score entry modals.
+   */
+  body > .p54-app-nav {
+    padding-top: calc(12px + var(--p5-pwa-top-adjust)) !important;
+  }
+  body > main.wrap {
+    padding-top: max(22px, 2.4svh) !important;
+  }
+
+  @media (max-width: 760px) {
+    #portal .masthead {
+      padding-top: calc(clamp(35px, 5.3svh, 56px) + var(--p5-pwa-top-adjust)) !important;
+    }
+    #portal .p541-home-actions {
+      bottom: calc(clamp(82px, 12.3svh, 110px) - 14px) !important;
+    }
+    body > main.wrap {
+      padding-top: max(17px, 2.1svh) !important;
+    }
+  }
+
+  /* Short screens: don't consume disproportionate space above the court. */
+  @media (max-width: 760px) and (max-height: 680px) {
+    :root { --p5-pwa-top-adjust: max(14px, calc(env(safe-area-inset-top, 0px) - 44px)); }
+    #portal .masthead {
+      padding-top: calc(22px + var(--p5-pwa-top-adjust)) !important;
+    }
+    #portal .p541-home-actions {
+      bottom: 62px !important;
+    }
+  }
+
+  /* Print/PDF must retain the locked production layout. */
+  @media print {
+    #portal .masthead, body > .p54-app-nav, body > main.wrap {
+      padding-top: initial !important;
+    }
+  }
+}

@@ -1,0 +1,88 @@
+name: PADEL 5IVE PWA — Standalone Safe Area Polish
+on:
+  push:
+    branches:
+      - feature/pwa-preview-v5.6
+    paths:
+      - '.github/workflows/pwa-safearea-polish.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p5-pwa-safearea
+  cancel-in-progress: false
+
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PWA preview, never production
+        uses: actions/checkout@v4
+        with:
+          ref: feature/pwa-preview-v5.6
+          persist-credentials: true
+      - name: Verify PWA baseline and preserve engine fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object public/index.html)" = "7c4f99d27b5477d7bd82605abb8058844099ea3e"
+          test "$(git hash-object public/modes/unified/index.html)" = "e88379c8734c835fa8a6904244368fa91a74e52f"
+          test "$(git hash-object public/modes/club-match/index.html)" = "efd444f2df03bb444bba9c4dd8952abc4bb038eb"
+          test -s public/pwa-standalone-layout-v5601.css
+          sha256sum public/assets/p5-direct-pdf.js public/assets/p5-showdown-engine.js             public/assets/p5-fair-cycle-v5515.js             netlify/functions/results.mjs netlify/functions/unified-results.mjs > /tmp/p5-pwa-locked.sha256
+      - name: Include standalone layout patch in all three app pages
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          marker='<link rel="stylesheet" href="/pwa-standalone-layout-v5601.css">'
+          paths=[
+            Path('public/index.html'),
+            Path('public/modes/unified/index.html'),
+            Path('public/modes/club-match/index.html')
+          ]
+          for path in paths:
+            html=path.read_text('utf-8')
+            assert html.count('rel="manifest"')==1, f'{path}: expected PWA manifest'
+            assert 'pwa-standalone-layout-v5601.css' not in html, f'{path}: duplicate layout patch'
+            i=html.find('</head>')
+            assert i>0, f'{path}: missing head close'
+            html=html[:i]+marker+html[i:]
+            path.write_text(html,encoding='utf-8')
+            assert html.count(marker)==1, f'{path}: CSS not injected exactly once'
+            print('SAFE AREA:',path,'bytes',len(html))
+          PY
+      - name: Verify selector scope, engines, and release build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          css=Path('public/pwa-standalone-layout-v5601.css').read_text()
+          assert '@media screen and (display-mode: standalone)' in css
+          for s in ['#portal .masthead','#portal .p541-home-actions','body > .p54-app-nav','body > main.wrap','safe-area-inset-top']:
+             assert s in css, s
+          for path in ['public/index.html','public/modes/unified/index.html','public/modes/club-match/index.html']:
+             doc=Path(path).read_text()
+             assert doc.count('/pwa-standalone-layout-v5601.css')==1
+          print('Standalone-only CSS layout consistency: PASS')
+          PY
+          node scripts/qa-pwa.cjs
+          node scripts/qa-v5516.cjs
+          npm run build
+          sha256sum --check /tmp/p5-pwa-locked.sha256
+          git diff --check
+      - name: Push tested preview-only polish
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/pwa-safearea-polish.yml
+          rm -f .github/workflows/inspect-pwa-layout.yml .github/workflows/inspect-pwa-rules.yml
+          git config user.name "PADEL 5IVE PWA Lab Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Polish PWA standalone safe area, landing and initial setup spacing"
+          git push origin HEAD:feature/pwa-preview-v5.6

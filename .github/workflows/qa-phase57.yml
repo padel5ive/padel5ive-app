@@ -25,6 +25,9 @@ jobs:
           node --check public/assets/p5-direct-pdf.js
           node --check public/sw.js
           node scripts/qa-phase573.cjs
+          node scripts/qa-phase574.cjs
+          node --check netlify/functions/unified-share-page.mjs
+          node --check netlify/functions/unified-social-image.mjs
           node --check netlify/functions/unified-results.mjs
       - name: Phase 5.7 regression guards
         run: |

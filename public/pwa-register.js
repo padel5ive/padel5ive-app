@@ -29,7 +29,7 @@
     offlineIndicator();
     navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then(reg => {
-        window.PADEL5IVE_PWA = Object.freeze({ version: '5.6.5-lab', update: () => reg.update() });
+        window.PADEL5IVE_PWA = Object.freeze({ version: '5.7.7', update: () => reg.update() });
         if (navigator.onLine) reg.update().catch(() => {});
       })
       .catch(err => console.warn('PADEL 5IVE PWA registration unavailable:', err));

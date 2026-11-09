@@ -6,9 +6,12 @@
 import { getStore } from '@netlify/blobs';
 import { createHash } from 'node:crypto';
 const PRODUCTION_STORE='padel5ive-unified-results-5-4-13';
-export function resultsStore(request){
- const host=new URL(request.url).hostname.toLowerCase();
+export function storeNameForUrl(url){
+ const host=new URL(url).hostname.toLowerCase();
  const preview=/^(?:deploy-preview-[0-9]+|[a-z0-9-]+)--padel5ive\.netlify\.app$/.test(host);
  const suffix=preview?'-qa-'+createHash('sha256').update(host).digest('hex').slice(0,10):'';
- return getStore(PRODUCTION_STORE+suffix,{consistency:'strong'});
+ return PRODUCTION_STORE+suffix;
+}
+export function resultsStore(request){
+ return getStore(storeNameForUrl(request.url),{consistency:'strong'});
 }

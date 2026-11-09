@@ -1,0 +1,39 @@
+name: Inspect PWA Layout Selectors
+on:
+  push:
+    branches: [feature/pwa-preview-v5.6]
+    paths: ['.github/workflows/inspect-pwa-layout.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/pwa-preview-v5.6
+      - name: Identify CSS selectors and page markup
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for path in ['public/index.html','public/modes/unified/index.html','public/modes/club-match/index.html']:
+              s=Path(path).read_text('utf-8')
+              print('\n==========',path,'bytes',len(s),'==========')
+              print('HEAD',repr(s[:1000]))
+              for rx in [r'<body[^>]*>',r'<main[^>]*>',r'<header[^>]*>',r'<section[^>]*>',r'class="[^"]*(?:hero|header|brand|landing|intro|shell|setup|mast|top|app)[^"]*"']:
+                  matches=list(re.finditer(rx,s,re.I))
+                  print('TAG',rx,'COUNT',len(matches))
+                  for m in matches[:12]: print('TAGHIT',repr(s[max(0,m.start()-70):m.end()+90]))
+              if path.endswith('index.html') and path=='public/index.html':
+                  for key in ['START NEW SESSION','SIGNATURE GAME','BEYOND 5IVE','safe-area-inset-top','100vh','min-height','@media (display-mode: standalone)','apple-mobile-web-app']:
+                      matches=list(re.finditer(re.escape(key),s,re.I))
+                      print('SEARCH',key,'COUNT',len(matches))
+                      for m in matches[:12]:print('HIT',repr(s[max(0,m.start()-280):m.end()+260]).replace('\\n',' '))
+              else:
+                  for key in ['INITIAL SETUP','MATCH CONTROL','p5-b2-form','p5-b2','p5-51','safe-area-inset-top','height:100vh','min-height:100vh','@media (display-mode: standalone)']:
+                      matches=list(re.finditer(re.escape(key),s,re.I))
+                      print('SEARCH',key,'COUNT',len(matches))
+                      for m in matches[:5]:print('HIT',repr(s[max(0,m.start()-240):m.end()+230]).replace('\\n',' '))
+          PY

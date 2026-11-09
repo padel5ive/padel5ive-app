@@ -21,16 +21,26 @@ inject('public/index.html','</body>','<script defer src="/phase57/home-session-h
 let s=read('public/modes/unified/index.html');
 s=one(s,"session:'',date:'',courts:null","session:'',date:'',time:'',courts:null",'new state game time');
 const oldDateLabel='<label class="p5-b2-wide">GAME DATE<span class="p5-b2-date-wrap">';
-if(!s.includes('id="setup-time"')){
+if(!s.includes('class="p57-date-time"')){
  const start=s.indexOf(oldDateLabel),end=s.indexOf('</label>',start);
- if(start<0||end<0||end-start>1800)throw Error('Phase57 game-date markup changed');
- const insert='<label class="p5-b2-wide p57-game-time">GAME TIME<span class="p5-b2-time-wrap"><input id="setup-time" type="time" step="60" value="\${esc(s.time||\'\')}" aria-label="Game Time"></span></label>';
- s=s.slice(0,end+8)+insert+s.slice(end+8);
+ if(start<0||end<0||end-start>1800)throw Error('Phase57 date markup changed');
+ const dateMarkup=s.slice(start,end+8);
+ const dateContent=dateMarkup.slice(oldDateLabel.length,-8);
+ const hours=Array.from({length:24},(_,i)=>{
+  const val=String(i).padStart(2,'0')+':00';
+  const label=String(i%12||12)+':00 '+(i<12?'AM':'PM');
+  const selected='${s.time==='+JSON.stringify(val)+'?"selected":""}';
+  return '<option value="'+val+'" '+selected+'>'+label+'</option>';
+ }).join('');
+ const replacement='<div class="p57-date-time"><div class="p57-date-time-label">GAME DATE &amp; TIME</div><div class="p57-date-time-row">'+
+  '<label class="p57-date-control"><span class="p5-b2-date-wrap">'+dateContent+'</label>'+
+  '<label class="p57-time-control"><select id="setup-time" aria-label="Game Time"><option value="">Select hour</option>'+hours+'</select></label></div></div>';
+ s=s.slice(0,start)+replacement+s.slice(end+8);
 }
 // session time is required for new sessions, optional for legacy snapshots.
 s=one(s,"const ready=Boolean($('setup-session')?.value.trim()&&date?.value&&game.value","const ready=Boolean($('setup-session')?.value.trim()&&date?.value&&$('setup-time')?.value&&game.value",'setup validation');
 s=one(s,"const session=$('setup-session')?.value.trim(),date=$('setup-date')?.value,game=","const session=$('setup-session')?.value.trim(),date=$('setup-date')?.value,time=$('setup-time')?.value,game=",'collect time');
-s=one(s,"if(!validDate)return toast('Select a valid Game Date');","if(!validDate)return toast('Select a valid Game Date');\n  if(!/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(time||''))return toast('Select a valid Game Time');",'validate time');
+s=one(s,"if(!validDate)return toast('Select a valid Game Date');","if(!validDate)return toast('Select a valid Game Date');\n  if(!/^(?:[01]\\d|2[0-3]):00$/.test(time||''))return toast('Select a valid Game Time');",'validate time');
 s=one(s,"s.session=session;s.date=date;s.mode=candidate.id;","s.session=session;s.date=date;s.time=time;s.mode=candidate.id;",'save time');
 s=one(s,"['setup-pairing','setup-courts','setup-format','setup-date'].includes","['setup-pairing','setup-courts','setup-format','setup-date','setup-time'].includes",'time input change');
 s=one(s,"<span><b>Date</b> \${esc(s.date||'—')}</span>","<span><b>Date & Time</b> \${esc(s.date||'—')}\${s.time?' · '+esc(s.time):''}</span>",'header date/time');
@@ -47,13 +57,19 @@ const replacementAdvanced="const sessions=entry('Session Management','settings',
 s=one(s,originalAdvanced,replacementAdvanced.replace('\\n','\n'),'session management');
 s=one(s,"\${playersCourts}\${management}\${share}\${advanced}","\${playersCourts}\${management}\${share}\${sessions}\${advanced}",'menu sessions');
 // Time input is intentionally native on iOS, not a separate custom date picker.
-if(!s.includes('p57-game-time-style')){
+if(!s.includes('p57-date-time-style')){
  const headClose=s.indexOf('</head>');if(headClose<0)throw Error('Phase57 head tag missing');
- const styles=`<style id="p57-game-time-style">
-#americano .p57-game-time{grid-column:1/-1!important}
-#americano .p5-b2-time-wrap{display:flex;align-items:center;height:50px;min-height:50px;width:100%;padding:0 13px;border:1px solid rgba(210,196,170,.32);border-radius:11px;background:#111d29}
-#americano #setup-time{display:block;box-sizing:border-box;min-height:45px;width:100%;border:none;background:transparent;color:#f0e9dd;color-scheme:dark;outline:0;font:500 15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-#americano #setup-time:focus-visible{outline:2px solid #d7b88b;outline-offset:2px;border-radius:4px}
+ const styles=`<style id="p57-date-time-style">
+#americano .p57-date-time{grid-column:1/-1!important;min-width:0!important;width:100%!important}
+#americano .p57-date-time-label{color:#d7bd93;font-size:10px;letter-spacing:.12em;font-weight:750;margin-bottom:8px}
+#americano .p57-date-time-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(145px,195px);gap:10px;align-items:stretch;min-width:0}
+#americano .p57-date-control,#americano .p57-time-control{display:flex!important;min-width:0;width:100%;align-items:stretch}
+#americano .p57-date-control .p5-b2-date-wrap{width:100%!important;min-width:0!important;min-height:50px!important;height:50px!important;position:relative!important}
+#americano .p57-date-control #setup-date-display{max-width:calc(100% - 34px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+#americano .p57-time-control select{width:100%!important;height:50px!important;min-height:50px!important;padding:0 13px!important;background:#111d29!important;color:#eee3d1!important;border:1px solid rgba(210,196,170,.32)!important;border-radius:11px!important;font:600 13px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;outline:none;cursor:pointer}
+#americano .p57-time-control select:focus-visible{outline:2px solid #d7b88b!important;outline-offset:2px!important}
+@media(max-width:580px){#americano .p57-date-time-row{grid-template-columns:minmax(0,1fr) minmax(124px,36%);gap:8px}#americano .p57-date-control #setup-date-display{font-size:11px}}
+@media(max-width:350px){#americano .p57-date-time-row{grid-template-columns:minmax(0,1fr)}#americano .p57-date-time-row .p57-time-control select{height:46px!important;min-height:46px!important}}
 </style>`;
  s=s.slice(0,headClose)+styles+s.slice(headClose);
 }

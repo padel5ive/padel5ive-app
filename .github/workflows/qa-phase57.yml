@@ -16,6 +16,7 @@ jobs:
       - name: Verify addon syntax
         run: |
           node --check public/phase57/home-session-history.js
+          node --check public/phase57/champion-render-v571.js
           node --check scripts/phase57-transform.cjs
       - name: Integrate and validate published output
         run: |
@@ -36,8 +37,36 @@ jobs:
           const pdf=fs.readFileSync('public/assets/p5-direct-pdf.js','utf8');
           const cases={
             'home history script':home.includes('/phase57/home-session-history.js'),
-            'time native input':u.includes('id="setup-time" type="time"'),
-            'time validated':u.includes("Select a valid Game Time"),
+            'one compact date/time field':u.includes('class="p57-date-time"')&&u.includes('GAME DATE &amp; TIME'),
+            'time validated':u.includes("Select a valid Game Time")&&u.includes(':00
+            'date/time in dashboard':u.includes('<b>Date & Time</b>'),
+            'time published':u.includes("time:state.time||''"),
+            'session menu':u.includes("entry('Session Management'"),
+            'no duplicated restore in setup':!u.includes('<div class="p5-v212-restore-home"><button type="button" data-act="restore">'),
+            'winner no-KO':u.includes("winner=hasKO?(s.ko?.champion||[]):(leader[0]"),
+            'PDF time':pdf.includes("dayDate(data.date)+(data.time?"),
+            'OG preview':res.includes('PADEL 5IVE · Signature Game'),
+            'fixed public backdrop':res.includes('p5-unified-fixed-backdrop'),
+            'public champion reveal assets':res.includes('/phase57/share-champion-v571.css')&&res.includes('/phase57/champion-render-v571.js'),
+            'PWA cache':sw.includes('/phase57/home-session-history.js'),
+            'server optional time':api.includes('if(s.time!==undefined'),
+            'master engine present':u.includes('P5EngineRegistry')&&u.includes('P5KO')&&u.includes('P5PublicResults')
+          };
+          for(const [k,v] of Object.entries(cases))console.log((v?'PASS ':'FAIL ')+k);
+          if(Object.values(cases).some(v=>!v))process.exit(1);
+          NODE
+          # Idempotent patch; should not change the output on a second run.
+          sum1="$(sha256sum public/modes/unified/index.html public/index.html public/assets/p5-direct-pdf.js | sha256sum)"
+          node scripts/phase57-transform.cjs
+          sum2="$(sha256sum public/modes/unified/index.html public/index.html public/assets/p5-direct-pdf.js | sha256sum)"
+          test "$sum1" = "$sum2"
+          git diff --check
+      - name: Protect locked engines and production
+        run: |
+          test "$(git show HEAD:public/modes/unified/index.html | git hash-object --stdin)" = "13985b66f07eb50569daf86a7cbcb6571a312f5c"
+          test "$(git hash-object public/modes/club-match/index.html)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
+),
+            '24 hourly time options':u.includes('option value="00:00"')&&u.includes('option value="23:00"')&&!u.includes('id="setup-time" type="time"'),
             'date/time in dashboard':u.includes('<b>Date & Time</b>'),
             'time published':u.includes("time:state.time||''"),
             'session menu':u.includes("entry('Session Management'"),

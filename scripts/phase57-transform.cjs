@@ -35,6 +35,9 @@ s=one(s,"s.session=session;s.date=date;s.mode=candidate.id;","s.session=session;
 s=one(s,"['setup-pairing','setup-courts','setup-format','setup-date'].includes","['setup-pairing','setup-courts','setup-format','setup-date','setup-time'].includes",'time input change');
 s=one(s,"<span><b>Date</b> \${esc(s.date||'—')}</span>","<span><b>Date & Time</b> \${esc(s.date||'—')}\${s.time?' · '+esc(s.time):''}</span>",'header date/time');
 s=one(s,"session:state.session||'',date:state.date||'',","session:state.session||'',date:state.date||'',time:state.time||'',",'published time');
+s=one(s,"const hasKO=s.ko?.format!=='none',leader=statistics(s),winner=s.ko.champion||[],runner=s.ko.runnerUp||(!hasKO&&leader[1]?[leader[1].id]:null);",
+"const hasKO=!!(s.ko&&s.ko.format&&s.ko.format!=='none'),leader=statistics(s),winner=hasKO?(s.ko?.champion||[]):(leader[0]?[leader[0].id]:[]),runner=hasKO?(s.ko?.runnerUp||null):(leader[1]?[leader[1].id]:null);",'no-KO winner and runner-up');
+
 // Move JSON restore into Session Management, remove its setup footer button.
 // The setup is still available from Home Session History.
 const originalFooter='<div class="p5-v212-restore-home"><button type="button" data-act="restore">Restore Backup JSON</button><input id="restore-input" type="file" accept="application/json,.json" hidden aria-label="Restore tournament backup"></div>';
@@ -62,4 +65,15 @@ write('public/assets/p5-direct-pdf.js',pdf);
 let api=read('netlify/functions/unified-results.mjs');
 api=one(api,"if(!Number.isInteger(s.courts)||s.courts<1||s.courts>5)return false;","if(s.time!==undefined&&(typeof s.time!=='string'||(s.time!==''&&!/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(s.time))))return false;\n  if(!Number.isInteger(s.courts)||s.courts<1||s.courts>5)return false;",'API optional time');
 write('netlify/functions/unified-results.mjs',api);
+// PWA caches the versioned Session History shell for offline PWA use.
+let serviceWorker=read('public/sw.js');
+serviceWorker=one(serviceWorker,"const VERSION = 'p5-pwa-lab-v566-1';","const VERSION = 'p5-pwa-phase57-v5701';",'PWA cache version');
+serviceWorker=one(serviceWorker,"'/pwa-standalone-layout-v5601.css',","'/pwa-standalone-layout-v5601.css', '/phase57/home-session-history.js', '/phase57/home-session-history.css',",'PWA precache');
+serviceWorker=one(serviceWorker,"asset.startsWith('/assets/') || asset.startsWith('/pwa/') ||","asset.startsWith('/assets/') || asset.startsWith('/pwa/') || asset.startsWith('/phase57/') ||",'PWA asset cache');
+write('public/sw.js',serviceWorker);
+// Keep WhatsApp preview discreet: one canonical title/description, not a giant data card.
+let publicHtml=read('public/results/unified/index.html');
+publicHtml=one(publicHtml,'content="PADEL 5IVE · Official Results"','content="PADEL 5IVE · Signature Game"','WhatsApp OG title');
+publicHtml=one(publicHtml,'content="PADEL 5IVE Signature Game · Official Tournament Results"','content="Official Match Results · Beyond 5IVE. Beyond Play."','WhatsApp OG description');
+write('public/results/unified/index.html',publicHtml);
 console.log('Phase 5.7 integrated source patch completed.');

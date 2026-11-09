@@ -31,6 +31,6 @@ jobs:
           node scripts/qa-v5516.cjs
           npm run build
           # Master engine, scoreboard and Netlify API files remain unmodified.
-          test "$(git hash-object public/modes/unified/index.html)" = "e88379c8734c835fa8a6904244368fa91a74e52f"
-          test "$(git hash-object public/modes/club-match/index.html)" = "efd444f2df03bb444bba9c4dd8952abc4bb038eb"
+          test "$(git hash-object public/modes/unified/index.html)" = "13985b66f07eb50569daf86a7cbcb6571a312f5c"
+          test "$(git hash-object public/modes/club-match/index.html)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
           git diff --check

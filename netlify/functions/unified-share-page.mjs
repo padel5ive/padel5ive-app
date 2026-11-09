@@ -1,7 +1,7 @@
 /* Phase 5.7.4 dynamic Open Graph document — previews work without browser JS.
  * Existing read-only results viewer markup, functionality and metadata remain.
  */
-import { getStore } from '@netlify/blobs';
+import { resultsStore } from '../helpers/unified-store.mjs';
 import { projectResults } from '../helpers/unified-ranking.mjs';
 const ID=/^[A-Za-z0-9_-]{6,32}$/;
 const STORE='padel5ive-unified-results-5-4-13';
@@ -16,7 +16,7 @@ export default async function handler(request){
  const url=new URL(request.url);
  const id=url.searchParams.get('id')||'';
  if(!ID.test(id))return notFound();
- let entry;try{entry=await getStore(STORE,{consistency:'strong'}).get(id,{type:'json'});}catch(e){console.error('Unified share document',e);return new Response('Results service unavailable',{status:503});}
+ let entry;try{entry=await resultsStore(request).get(id,{type:'json'});}catch(e){console.error('Unified share document',e);return new Response('Results service unavailable',{status:503});}
  if(!entry||entry.revoked||!entry.data)return notFound();
  let summary;try{summary=projectResults(entry.data);}catch{return notFound();}
  const base=url.origin;

@@ -8,6 +8,7 @@ const art=fs.readFileSync('public/phase585/home-venue-user-refined-hd.webp');
 const checks={
  'single photographic portrait, no fallback to double-image layers':css.includes('background-image:url(')&&css.includes('/phase585/home-venue-user-refined-hd.webp')&&css.includes('#portal .p541-venue > img')&&css.includes('display:none!important'),
  'photo is the full-resolution approved venue image with refined tonal treatment':art.length>250000&&art.subarray(0,4).toString()==='RIFF'&&art.subarray(8,12).toString()==='WEBP',
+ 'old layered image selectors explicitly overruled':css.includes('html body #portal .p541-venue > img.p544-ambient')&&css.includes('html body #portal .p541-venue > img.p544-foreground')&&css.includes('display:none!important'),
  'light venue fade, no foreground mask':!css.includes('mask-image')&&!css.includes('blur(25px)'),
  'mobile Home only':css.includes('@media(max-width:760px)'),
  'installed PWA Home fixed viewport':css.includes('position:fixed!important')&&css.includes('height:100dvh!important'),

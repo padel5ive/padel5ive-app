@@ -1,0 +1,15 @@
+name: v5.8.5 Source Audit
+on:
+  push:
+    branches: [feature/v5.8.5-visual-navigation-review]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/qa-v585-source-audit.cjs

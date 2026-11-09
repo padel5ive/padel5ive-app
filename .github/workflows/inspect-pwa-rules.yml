@@ -1,0 +1,46 @@
+name: Inspect PWA Layout Rules
+on:
+  push:
+    branches: [feature/pwa-preview-v5.6]
+    paths: ['.github/workflows/inspect-pwa-rules.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: feature/pwa-preview-v5.6}
+      - name: Print relevant original CSS excerpts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          landing=Path('public/index.html').read_text()
+          for id in ['p543-full-hero-only','p546-official-wordmark-home-only','p545','p541']:
+            k=landing.find('id="'+id)
+            if k>=0:
+              e=landing.find('</style>',k)
+              print('\nSTYLE ID',id,'LEN',e-k,'CONTENT',landing[k:min(e+8,k+8000)])
+          print('\nLANDING MORE CSS')
+          for sel in ['#portal .masthead','#portal .signature','#portal .p541-home-actions','#portal .p541-venue','#portal .p541-entry','.p54-workspace','.p54-shell','#portal .page-title']:
+            matches=list(re.finditer(re.escape(sel),landing))
+            print('\nLANDING SELECTOR',sel,'count',len(matches))
+            for m in matches[-7:]:
+              print(repr(landing[max(0,m.start()-75):m.start()+400]))
+          uni=Path('public/modes/unified/index.html').read_text()
+          print('\nUNIFIED TARGET CSS')
+          for sel in ['.p54-app-nav','.wrap{','main.wrap','.header{','.p5-v24-setup-shell','.p5-v24-setup-header','body{margin:0','@media (max-width:600px)','@media(max-width:650px)']:
+            matches=list(re.finditer(re.escape(sel),uni))
+            print('\nUNIFIED SELECTOR',sel,'count',len(matches))
+            for m in matches[:4]+matches[-5:]:
+              print(repr(uni[max(0,m.start()-85):m.start()+480]))
+          club=Path('public/modes/club-match/index.html').read_text()
+          print('\nTEAM SHOWDOWN TARGET CSS')
+          for sel in ['.p54-app-nav','.wrap{','main.wrap','.header{','.setup-card','body{margin:0']:
+            matches=list(re.finditer(re.escape(sel),club))
+            print('\nSHOWDOWN SELECTOR',sel,'count',len(matches))
+            for m in matches[:2]+matches[-3:]:
+              print(repr(club[max(0,m.start()-70):m.start()+440]))
+          PY

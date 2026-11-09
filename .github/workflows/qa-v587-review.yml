@@ -1,0 +1,26 @@
+name: PADEL 5IVE v5.8.7 iPhone Home QA
+on:
+  push:
+    branches: [fix/v5.8.7-iphone-pwa-home-finish]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: |
+          node scripts/qa-v587-home.cjs
+          node scripts/qa-v585-ui.cjs
+          node scripts/qa-v583-ui.cjs
+          node scripts/qa-phase574.cjs
+          node scripts/qa-pwa.cjs
+          git diff --check

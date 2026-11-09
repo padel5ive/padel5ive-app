@@ -1,0 +1,117 @@
+/* PADEL 5IVE v5.8.7 — iPhone installed-PWA Home finishing.
+ * Genuine approved venue photograph stays UNCHANGED. One full-screen fixed
+ * image covers the area beneath the portal, including iOS's lower viewport
+ * extension, instead of ending at the portal's 100svh box.
+ * Initial Setup, dashboard engines and in-browser Safari are not affected.
+ */
+@media screen and (display-mode:standalone) and (max-width:760px){
+  /* Only Home: source image is painted ONCE in a viewport-anchored layer,
+     rather than a second picture below the cropped original. */
+  html body:not(.p54-active){
+    background-color:#061422!important;
+    isolation:isolate!important;
+    overflow-x:hidden!important;
+  }
+  html body:not(.p54-active)::before{
+    content:""!important;
+    display:block!important;
+    position:fixed!important;
+    top:0!important;
+    left:0!important;
+    right:0!important;
+    bottom:-150px!important;
+    width:100%!important;
+    height:calc(100vh + 150px)!important;
+    height:calc(100dvh + 150px)!important;
+    z-index:0!important;
+    pointer-events:none!important;
+    background-color:#061422!important;
+    background-image:
+      linear-gradient(180deg,
+        rgba(3,12,25,.21) 0%,
+        rgba(3,12,25,.06) 22%,
+        transparent 35%,
+        transparent 71%,
+        rgba(3,12,25,.08) 84%,
+        rgba(3,12,25,.23) 100%),
+      url('/phase585/home-venue-user-refined-hd.webp')!important;
+    background-size:cover!important;
+    background-position:50% 50%!important;
+    background-repeat:no-repeat!important;
+    background-attachment:scroll!important;
+    transform:translate3d(0,0,0)!important;
+    -webkit-transform:translate3d(0,0,0)!important;
+    -webkit-backface-visibility:hidden;
+    backface-visibility:hidden;
+  }
+  /* Existing Photo & overlay must not paint a second, shorter layer. */
+  html body:not(.p54-active) #portal.portal{
+    position:fixed!important;
+    inset:0!important;
+    width:100%!important;
+    background:transparent!important;
+    z-index:1!important;
+  }
+  html body:not(.p54-active) #portal .p541-venue{
+    background:none!important;
+    background-color:transparent!important;
+    background-image:none!important;
+  }
+  html body:not(.p54-active) #portal .p541-venue::after{
+    content:none!important;
+    display:none!important;
+  }
+  /* Resume is an understated editorial text action, not translucent glass. */
+  html body:not(.p54-active) #portal .p541-home-actions > #p54-resume,
+  html body:not(.p54-active) #portal #p54-resume.p54-resume {
+    position:relative!important;
+    box-sizing:border-box!important;
+    min-height:42px!important;
+    margin:3px 0 0!important;
+    padding:0!important;
+    background:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    filter:none!important;
+    isolation:auto!important;
+  }
+  html body:not(.p54-active) #portal #p54-resume::before,
+  html body:not(.p54-active) #portal #p54-resume::after {
+    content:none!important;
+    display:none!important;
+  }
+  html body:not(.p54-active) #portal #p54-resume .p54-resume-btn{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-height:42px!important;
+    width:100%!important;
+    padding:7px 8px!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    background-image:none!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    filter:none!important;
+    color:#e7d6bc!important;
+    font-weight:500!important;
+    text-align:center!important;
+    text-shadow:0 1px 7px rgba(2,11,22,.55)!important;
+  }
+  html body:not(.p54-active) #portal #p54-resume .p54-resume-btn:hover,
+  html body:not(.p54-active) #portal #p54-resume .p54-resume-btn:active{
+    background:transparent!important;
+    border:0!important;
+  }
+  /* Keep hidden Resume completely collapsed when no active session. */
+  html body:not(.p54-active) #portal #p54-resume[hidden]{
+    display:none!important;
+  }
+}

@@ -1,0 +1,16 @@
+name: PADEL 5IVE v5.8.7 PWA Home Audit
+on:
+  push:
+    branches: [fix/v5.8.7-iphone-pwa-home-finish]
+    paths: ['scripts/qa-v587-source-audit.cjs','.github/workflows/qa-v587-home.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/qa-v587-source-audit.cjs

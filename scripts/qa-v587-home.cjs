@@ -1,0 +1,26 @@
+/* v5.8.7: validate one continuous Home photo and no Resume glass. */
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{execFileSync}=require('node:child_process');
+const read=p=>fs.readFileSync(p,'utf8');
+const css=read('public/phase587/pwa-home-finish-v587.css');
+const home=read('public/index.html');
+const sw=read('public/sw.js');
+assert(css.includes('(display-mode:standalone)'), 'Must affect installed PWA only');
+assert(css.includes('(max-width:760px)'), 'Only phone size');
+assert(css.includes('body:not(.p54-active)'), 'Never modify setup');
+assert(css.includes('position:fixed!important'), 'Viewport wallpaper must be fixed');
+assert(css.includes('height:calc(100dvh + 150px)!important'), 'Extend wallpaper beneath iOS bottom viewport');
+assert(css.includes("url('/phase585/home-venue-user-refined-hd.webp')"), 'Use same approved photo');
+assert(css.includes('#portal .p541-venue::after'), 'Disable duplicate gradient');
+assert(css.includes('background-image:none!important'), 'Disable extra venue background');
+assert(css.includes('#p54-resume .p54-resume-btn'),'Resume text target required');
+assert(css.includes('-webkit-backdrop-filter:none!important')&&css.includes('backdrop-filter:none!important'), 'Remove Resume blur');
+assert(css.includes('#p54-resume[hidden]'), 'No phantom grid row');
+assert(home.includes('/phase587/pwa-home-finish-v587.css'), 'Stylesheet is installed');
+assert(sw.includes("'/phase587/pwa-home-finish-v587.css'"), 'PWA stylesheet is cached');
+assert(home.includes('id="portal"')||home.includes('id="portal"'), 'Original Home remains');
+const before=['public/index.html','public/sw.js'].map(p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'));
+execFileSync(process.execPath,['scripts/phase587-integrate.cjs']);
+const after=['public/index.html','public/sw.js'].map(p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'));
+assert.deepEqual(after,before,'Build step must be idempotent');
+console.log('PASS v5.8.7: full-screen genuine venue, transparent Resume, PWA-only layout and repeat-safe build.');

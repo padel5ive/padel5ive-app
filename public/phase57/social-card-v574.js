@@ -29,7 +29,19 @@ function project(data){
     pairing:fixed?'FIXED PARTNER':String(data.mode||'').startsWith('structured-')?'STRUCTURED PAIRING':'FLEXIBLE PAIRING',
     session:String(data.session||'Signature Game'),date:String(data.date||''),time:String(data.time||'')};
 }
-function render(data){
+async function originalFive(){
+  // Use the ORIGINAL approved PADEL 5IVE PNG; crop off all wordmark pixels.
+  // Source 260×338: numeral occupies approx x=40..218, y=28..271.
+  return await new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>img.naturalWidth>=250&&img.naturalHeight>=330
+      ?resolve(img):reject(new Error('Original PADEL 5IVE mark has unexpected dimensions.'));
+    img.onerror=()=>reject(new Error('Original PADEL 5IVE logo did not load.'));
+    img.src='/assets/p5-master-logo-original.png';
+  });
+}
+async function render(data){
+  const five=await originalFive();
   if(!document.createElement('canvas').getContext)throw Error('Canvas is not supported on this browser.');
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const g=c.getContext('2d');if(!g)throw Error('Unable to render WhatsApp preview on this device.');
@@ -52,15 +64,15 @@ function render(data){
   };
   rect(0,0,W,H,col.bg);
   const glow=g.createLinearGradient(0,0,W,H);glow.addColorStop(0,'#192d3d');glow.addColorStop(.65,'#101e2c');glow.addColorStop(1,'#0e1b29');rect(0,0,W,H,glow);
-  // Phase 5.7.6 — embossed numeral 5 only, NO original numeral logo/signage.
-  // Offset relief strokes create quiet depth with no neon glow or busy photo.
-  // Canvas layers stay translucent to protect result text and the Top 5.
+  // 5.7.7 — TRUE original embossed numeral (not the font glyph "5").
+  // 9-argument drawImage crops the original PNG before the PADEL5IVE letters:
+  // original dimensions 260×338; the wordmark begins below y=280.
+  // Low-contrast offset silhouettes produce a matte engraved relief, no glow.
   g.save();
-  g.font='900 540px Arial, sans-serif';g.textAlign='center';
-  g.globalAlpha=.085;g.fillStyle='#05111d';g.fillText('5',619,520);
-  g.globalAlpha=.045;g.fillStyle='#9fb1bb';g.fillText('5',613,514);
-  g.globalAlpha=.033;g.fillStyle='#bb986b';g.fillText('5',615,517);
-  g.restore();g.textAlign='left';
+  g.globalAlpha=.095;g.drawImage(five,39,27,180,245,396,103,320,436);
+  g.globalAlpha=.068;g.drawImage(five,39,27,180,245,392,99,320,436);
+  g.globalAlpha=.032;g.drawImage(five,39,27,180,245,394,101,320,436);
+  g.restore();
   rect(0,0,W,6,'#b99b72');
   rect(58,92,1084,1,col.line);
   text('PADEL 5IVE  ·  MATCH CONTROL',64,67,19,col.gold,650,2);

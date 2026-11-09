@@ -25,6 +25,12 @@ for(const page of ['public/modes/unified/index.html','public/modes/club-match/in
  inject(page,'</head>','<link rel="stylesheet" href="/phase58/cloud-session.css">');
  inject(page,'</body>','<script defer src="/phase58/cloud-dashboard.js"></script>','last');
 }
+// Club Match has a static native Advanced Settings panel. Keep the existing panel,
+// and insert a matching Session Management section directly above it.
+patch('public/modes/club-match/index.html',
+ '<details class="mc32-advanced"><summary>Advanced Settings</summary>',
+ '<details class="mc32-advanced"><summary>Session Management</summary><div class="mc32-advanced-body"><button type="button" data-p58-cloud class="p58-menu-action">CLOUD SESSION</button></div></details>\n<details class="mc32-advanced"><summary>Advanced Settings</summary>',
+ 'Club Match native Session Management');
 // Unified native Menu & Settings includes Session Management. Insert a real action
 // into that SAME native menu; fixed mini-button remains a fallback on Club Match.
 patch('public/modes/unified/index.html',

@@ -21,7 +21,8 @@ export default async function handler(request,context){
  let summary;try{summary=projectResults(entry.data);}catch{return notFound();}
  const base=url.origin;
  const rel='/u/'+id;
- const image=entry.previewReady?base+'/social/u/'+id+'.png?v='+encodeURIComponent(entry.previewRevision||1):base+'/og-cover.jpg?v=573';
+ const kind=entry.previewReady?(entry.previewType==='jpg'?'jpg':'png'):'jpg';
+ const image=entry.previewReady?base+'/social/u/'+id+'.'+kind+'?v='+encodeURIComponent(entry.previewRevision||1):base+'/og-cover.jpg?v=573';
  const eventName=clean(summary.session).slice(0,100);
  const title='PADEL 5IVE · '+eventName+' · Official Results';
  const details=[summary.mode,summary.pairing,summary.date,summary.time].filter(Boolean).join(' · ');
@@ -36,7 +37,7 @@ export default async function handler(request,context){
  '<meta property="og:description" content="'+esc(description)+'">'+
  '<meta property="og:image" content="'+esc(image)+'">'+
  '<meta property="og:image:secure_url" content="'+esc(image)+'">'+
- '<meta property="og:image:type" content="'+(entry.previewReady?'image/png':'image/jpeg')+'">'+
+ '<meta property="og:image:type" content="'+(kind==='png'?'image/png':'image/jpeg')+'">'+
  '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'+
  '<meta property="og:image:alt" content="PADEL 5IVE Official Results · Top 5 leaderboard">'+
  '<meta name="twitter:card" content="summary_large_image">'+

@@ -174,20 +174,25 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if(role(entry,id,ts)==='controller')return json(metadata(entry,id,ts,false));
     if(entry.moderatorPinHash){
      const device=entry.devices.find(d=>d.id===id);
-     if((device?.pinLockedUntil||0)>ts)return error('Too many incorrect PIN attempts. Try again later.',429);
+     if((entry.failures?.until||0)>ts||(device?.pinLockedUntil||0)>ts)
+      return error('Too many incorrect PIN attempts. Try again later.',429);
      const supplied=String(input.moderatorPin||'');
      const correct=MOD_PIN.test(supplied)&&eq(pinHash(supplied,entry.salt),entry.moderatorPinHash);
      if(!correct){
       const attempts=(device?.pinAttempts||0)+1;
-      const next={...entry,devices:entry.devices.map(d=>d.id===id
+      const globalAttempts=(entry.failures?.count||0)+1;
+      const next={...entry,
+       failures:{count:globalAttempts>=8?0:globalAttempts,until:globalAttempts>=8?ts+LOCK_MS:0},
+       devices:entry.devices.map(d=>d.id===id
        ?{...d,pinAttempts:attempts>=5?0:attempts,pinLockedUntil:attempts>=5?ts+LOCK_MS:0}:d)};
       const saved=await write(store,code,next,etag);
       if(!changed(saved))return error('PIN check conflicted. Please retry.',409);
       return error('Incorrect Moderator PIN',401);
      }
      // Atomic single-writer transfer: old device immediately loses save permission.
-     const next={...entry,devices:entry.devices.map(d=>d.id===id
-      ?{...d,pinAttempts:0,pinLockedUntil:0}:d),
+     const next={...entry,failures:{count:0,until:0},
+      devices:entry.devices.map(d=>d.id===id
+       ?{...d,pinAttempts:0,pinLockedUntil:0}:d),
       controller:{id,expires:ts+LEASE_MS},request:null};
      const saved=await write(store,code,next,etag);
      if(!changed(saved))return error('Another device updated control. Refresh and retry.',409);

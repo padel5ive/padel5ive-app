@@ -84,7 +84,7 @@ function render(){
  mark();body.replaceChildren();
  if(!meta){
   const state=get(KEY);
-  body.append(info('Save your current session to open it on another device. Session Code and PIN are generated automatically.'));
+  body.append(info('Save this session to use it across devices. Viewer Code and private Moderator PIN are generated automatically.'));
   const b=btn('SAVE TO CLOUD',async()=>{
    if(!isSession(state))throw Error('Complete session registration before saving to cloud.');
    if(!navigator.onLine)throw Error('Connect to the internet to create a Cloud Session.');
@@ -99,14 +99,16 @@ function render(){
  }
  const cr=e('div','p58-credentials');
  cr.append(card('SESSION CODE',meta.code));
- if(meta.moderatorPin)cr.append(card('MODERATOR PIN · PRIVATE',meta.moderatorPin));
+ if(meta.role==='controller'&&meta.moderatorPin)cr.append(card('MODERATOR PIN · PRIVATE',meta.moderatorPin));
  else if(meta.pin)cr.append(card('LEGACY ACCESS PIN',meta.pin));
+ else if(meta.role==='controller'&&meta.moderatorPinRequired)
+  cr.append(card('MODERATOR PIN · PRIVATE','Unlock below'));
  body.append(cr);
  const s=meta.summary||{};
  body.append(e('p','p58-session',s.session||'Cloud Session'));
  body.append(e('p','p58-date',[formatDate(s.date),s.time].filter(Boolean).join(' · ')));
- if(meta.viewerKey||meta.pin){
-  if(meta.moderatorPin)body.append(info('Moderator PIN is private and never included in Viewer WhatsApp shares. Share separately with trusted moderators.'));
+ if(meta.role==='controller'&&(meta.viewerKey||meta.pin)){
+  if(meta.moderatorPin)body.append(info('Moderator PIN stays private and is never included in Viewer WhatsApp shares. Share it separately with trusted moderators.'));
   body.append(btn('SHARE VIEWER ACCESS · WHATSAPP',async()=>{
    const text=message(meta);window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');
   }));
@@ -133,7 +135,9 @@ function render(){
     working=true;take.disabled=true;
     try{
      const response=await api('take-control',{code:meta.code,token:meta.token,moderatorPin:pin});
-     if(!response.data)throw Error('Cloud snapshot unavailable. Refresh and try again.');
+     if(!response.data||!response.viewerKey)throw Error('Secure moderator access could not be activated. Refresh and retry.');
+     // PIN-authenticated takeover receives a fresh Viewer Link and preserves existing shares.
+     meta.moderatorPin=pin;meta.viewerKey=response.viewerKey;
      applyRemote(response,true);
     }catch(err){field.value='';alert(err.message||'Unable to take control.');}
     finally{working=false;take.disabled=false;}
@@ -149,6 +153,33 @@ function render(){
    },true));
   }
  }else{
+  // A takeover completed before access-recovery support could have missing
+  // viewer credentials on this device. PIN verification restores the identical
+  // moderator sharing UI without exposing credentials to anonymous viewers.
+  if(meta.moderatorPinRequired&&(!meta.moderatorPin||!meta.viewerKey)){
+   controls.append(info('Enter your Moderator PIN once to unlock the complete Cloud Session controls on this device.'));
+   const form=e('form','p58-moderator-form');
+   const title=e('label','p58-moderator-label','MODERATOR PIN');
+   const field=e('input','p58-moderator-input');
+   field.type='password';field.inputMode='numeric';field.autocomplete='one-time-code';
+   field.maxLength=6;field.pattern='[0-9]{6}';field.required=true;
+   field.placeholder='Enter private 6-digit PIN';
+   title.append(field);form.append(title);
+   const unlock=e('button','p58-action','UNLOCK ACCESS DETAILS');unlock.type='submit';form.append(unlock);
+   form.addEventListener('submit',async event=>{
+    event.preventDefault();const pin=field.value.trim();
+    if(!/^\d{6}$/.test(pin)||working)return;
+    working=true;unlock.disabled=true;
+    try{
+     const recovered=await api('recover-access',{code:meta.code,token:meta.token,moderatorPin:pin});
+     if(!recovered.viewerKey)throw Error('Viewer Link could not be restored.');
+     meta.moderatorPin=pin;meta.viewerKey=recovered.viewerKey;
+     persist();render();
+    }catch(err){field.value='';alert(err.message||'Unable to unlock access details.');}
+    finally{working=false;unlock.disabled=false;}
+   });
+   controls.append(form);
+  }
   if(meta.takeoverRequested)controls.append(btn('APPROVE CONTROL TRANSFER',async()=>{
    if(dirty())await push();if(dirty())throw Error('Unsynced changes must be resolved before transferring control.');
    const r=await api('approve-control',{code:meta.code,token:meta.token});

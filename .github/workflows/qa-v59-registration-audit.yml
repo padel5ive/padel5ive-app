@@ -1,0 +1,15 @@
+name: PADEL 5IVE v5.9 Registration Source Audit
+on:
+  push:
+    branches: [feature/v5.9-registration-import-preview]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/qa-v59-registration-audit.cjs

@@ -4,7 +4,7 @@ for(const p of paths){
  console.log('===FILE '+p+' BYTES='+Buffer.byteLength(s)+'===');
  const needles=p==='public/index.html'
   ?['window.P5PreviewLaunch=function','P5PreviewLaunch','p54-workspace','p54-mode','p54-form','p54-start','mode-choice','game-mode','mode-card','selectMode','location.assign','location.href','NEW SESSION','START NEW SESSION','Continue','continue','INITIAL SETUP','showWorkspace','sessionStorage','prefetch']
-  :['<head>','<script','<style','DOMContentLoaded','window.onload','function setup','function init','function render','localStorage.getItem','stage===\\'setup\\'','stage=== "setup"','location.assign','<body','defer','Intent='];
+  :['<head>','<script','<style','DOMContentLoaded','window.onload','function setup','function init','function render','localStorage.getItem',"stage===\u0027setup\u0027",'stage=== "setup"','location.assign','<body','defer','Intent='];
  for(const term of needles){
   const found=[];let at=-1;while((at=s.indexOf(term,at+1))!==-1&&found.length<300)found.push(at);
   console.log('TERM '+JSON.stringify(term)+' COUNT<= '+found.length+' POS '+found.slice(0,16));

@@ -21,6 +21,7 @@ jobs:
       - name: Verify viewer UI and Cloud regressions
         run: |
           node scripts/qa-v5814-view-only.cjs
+          node scripts/qa-phase58.mjs
           node scripts/qa-v5813-pairing-ui.cjs
           node scripts/qa-v5812-smart-paste.cjs
           node scripts/qa-v5812-fixed-pair-review.cjs

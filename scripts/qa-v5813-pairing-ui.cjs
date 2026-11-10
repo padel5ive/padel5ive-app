@@ -15,7 +15,7 @@ assert(html.includes("s.groupConfig={labels:['','']};"),'Fresh group labels must
 assert(html.includes('l[0].toLocaleLowerCase()===l[1].toLocaleLowerCase()'),'Existing unique-label engine validation preserved');
 assert(html.includes("alertModal(P5Structured.is(s)?'Pairing Groups':'Advanced Player Rules'"));
 assert(html.includes("e.g. ${id==='A'?'Left':'Right'} /"),'Visible hint displays the correct example per group');
-assert(html.includes('class="p5813-input-wrap"')&&html.includes('class="p5813-visible-example"'),'Group hints use glyph-safe overlay');
+assert(html.includes('class="p5813-input-wrap"')&&html.includes('class="p5813-visible-example"'),'Examples stay in each Group Name field');
 assert(html.includes('p5813-setup-style'));
 function sourceBetween(a,b){
  const x=html.indexOf('function '+a+'('),y=html.indexOf('function '+b+'(',x);
@@ -52,8 +52,8 @@ let doc=d.window.document,a=doc.querySelector('#p5-51-label-a'),b=doc.querySelec
 assert(a&&b);
 assert.equal(a.value,'');assert.equal(b.value,'');
 assert(a.required&&b.required);
-assert.equal(a.placeholder,' ','Real input is empty and uses placeholder-shown to control visual hint');
-assert.equal(b.placeholder,' ');
+assert.equal(a.placeholder,'Enter group name','Group name starts empty with clear prompt');
+assert.equal(b.placeholder,'Enter group name');
 assert.equal(a.value,'');assert.equal(b.value,'');
 for(const [id,caption,symbol,expectedPath] of [['a','e.g. Left /','male','M12.25 11.75 19 5'],['b','e.g. Right /','female','M12 12.5V21']]){
  const input=doc.querySelector('#p5-51-label-'+id);
@@ -69,6 +69,8 @@ for(const [id,caption,symbol,expectedPath] of [['a','e.g. Left /','male','M12.25
  assert.equal(input.required,true);
 }
 assert.equal(doc.querySelectorAll('.p5813-required').length,2);
+assert.deepEqual(Array.from(doc.querySelectorAll('.p5813-required')).map(el=>el.textContent),['*','*'],'Subtle inline required asterisk replaces separate REQUIRED row');
+assert.equal(doc.querySelectorAll('.p5813-visible-example').length,2,'One restrained below-input example per group');
 assert(doc.querySelector('.p5-51-summary').textContent.includes('Group A · 2 players'));
 assert(doc.querySelector('.p5-51-summary').textContent.includes('Group B · 2 players'));
 assert(doc.querySelector('.p5-52-rule').textContent.includes('Both group names are required'));
@@ -123,7 +125,8 @@ assert(!home.includes("'Normal / Flexible Pairing',false"));
 assert(!home.includes("['fixed','Fixed Partner',false"));
 assert(!home.includes("['structured','Structured Pairing',false"));
 assert(html.includes('.p5813-gender-male')&&html.includes('.p5813-gender-female'),'Full symbols rendered with SVG');
-assert(html.includes('input:not(:placeholder-shown)+.p5813-visible-example,')&&html.includes('input:focus+.p5813-visible-example{display:none}'),'Examples hide on filled input or active focus');
-assert(html.includes('pointer-events:none'),'Example overlay must not block tapping input');
+assert(html.includes('input:not(:placeholder-shown)+.p5813-visible-example{display:none}'),'Below-input examples hide when group is named');
+assert(html.includes('margin:8px 0 0 2px'),'Example rests below input instead of overlaying an empty field');
+assert(!html.includes('position:absolute;left:16px;right:10px;top:50%'),'No fake filled input appearance');
 assert(html.includes('data-p5813-group="A"')&&html.includes('data-p5813-group="B"')?true:html.includes('data-p5813-group="${id}"'),'Group styling is data-attribute driven');
 console.log('PASS v5.8.13: pairing styles and descriptions, blank required unique labels, restored labels, Structured Smart Input group destination.');

@@ -15,7 +15,7 @@ for(const page of pages){
  const built=fs.readFileSync(page,'utf8');
  assert(built.includes('view-only-v5814.css?v=5814.15'),'Safari must receive newly versioned stylesheet');
  assert(built.includes('view-only-v5814.js?v=5814.15'),'Safari must receive newly versioned viewer script');
- assert.equal((built.match(/view-only-v5814\\.css\\?v=/g)||[]).length,1,'Only one viewer stylesheet reference');
+ assert.equal(built.split('view-only-v5814.css?v=').length-1,1,'Only one viewer stylesheet reference');
 }
 const sw=fs.readFileSync('public/sw.js','utf8');
 assert(sw.includes("'/phase5814/view-only-v5814.js'")&&sw.includes("'/phase5814/view-only-v5814.css'"));

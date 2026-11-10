@@ -1,21 +1,12 @@
-/* PADEL 5IVE v5.8.14 · View Only: native layout, restricted controls.
- * All styling is strictly scoped to the Cloud viewer role.
- * iPad split layout, scorecard dimensions, and master editor remain unchanged.
+/* PADEL 5IVE v5.8.14 · Native Menu Parity
+ * Cloud Session uses the SAME actual master <details>/<summary> structure
+ * as Manage Players, Match Management and Session & Results.
+ * Viewer actions use independent full-width rows, never legacy BUTTON styles.
+ * Match cards and gameplay layout remain unchanged.
  */
 body.p58-view-only .p5814-master-menu-hidden,
 body.p58-view-only .p5814-hide-action{display:none!important}
-body.p58-view-only .p5814-view-menu{display:block}
-body.p58-view-only .p5814-view-menu .p5814-menu-body{padding:5px 14px 12px!important}
-body.p58-view-only .p5814-view-menu .p585-heading{margin:2px 0 4px!important}
-body.p58-view-only .p5814-view-menu .p5814-session-heading{margin-top:13px!important;border-top:1px solid rgba(206,184,153,.17)!important;padding-top:16px!important}
-body.p58-view-only .p5814-connection{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 6px;color:#e9e9e5;font-size:12px;border-top:1px solid rgba(206,184,153,.16)}
-body.p58-view-only .p5814-cloud-state{font-size:10px;letter-spacing:.06em;color:#bcd8c4;font-weight:700;text-align:right}
-body.p58-view-only .p5814-cloud-state[data-state=offline],
-body.p58-view-only .p5814-cloud-state[data-state=conflict]{color:#f0c99a}
-body.p58-view-only .p5814-view-action{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:45px;padding:12px 6px;margin:0;border:0!important;border-top:1px solid rgba(206,184,153,.17)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#eee9e1;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer;text-align:left}
-body.p58-view-only .p5814-view-action small{display:block;margin-top:3px;color:#aeb9bf;font-size:10px;font-weight:400;line-height:1.5}
-body.p58-view-only .p5814-view-action:focus-visible{outline:2px solid #d4b48c;outline-offset:-2px}
-body.p58-view-only .p5814-view-action:disabled{opacity:.65;cursor:wait}
+body.p58-view-only .p5814-view-menu{display:block!important}
 /* Unified Stage 1: preserve native game identity, round picker, score cards and right-hand leaderboard. */
 body.p58-view-only #americano .stats,
 body.p58-view-only #americano .bars,
@@ -58,173 +49,102 @@ body.p58-view-only #app .court-footer .scorehint{font-size:11px}
  body.p58-view-only .p5814-view-menu .p5814-menu-body{padding:5px 10px 10px!important}
 }
 
-/* Cloud Session stays a fourth, NORMAL master row for the controller.
-   No highlighted CTA, secondary taglines, borders or elevated surface. */
-html body #americano .p5-4852-menu > button.p5814-cloud-primary,
-html body #mainMenu .p5-4852-menu > button.p5814-cloud-primary {
- box-sizing:border-box!important;
- display:flex!important;
- flex-flow:row nowrap!important;
- align-items:center!important;
- justify-content:flex-start!important;
- width:100%!important;
- min-height:48px!important;
- height:auto!important;
- margin:0!important;
- padding:11px 14px!important;
- gap:13px!important;
- border:0!important;
- border-top:1px solid rgba(206,184,153,.14)!important;
- border-radius:0!important;
- background:transparent!important;
- background-image:none!important;
- box-shadow:none!important;
- color:#eeeae2!important;
- font:600 14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
- text-transform:none!important;
- letter-spacing:normal!important;
- text-align:left!important;
- white-space:normal!important;
- appearance:none!important;
- -webkit-appearance:none!important;
- cursor:pointer!important;
-}
-html body #americano .p5-4852-menu > button.p5814-cloud-primary::before,
-html body #americano .p5-4852-menu > button.p5814-cloud-primary::after,
-html body #mainMenu .p5-4852-menu > button.p5814-cloud-primary::before,
-html body #mainMenu .p5-4852-menu > button.p5814-cloud-primary::after {
- display:none!important;content:none!important;
-}
-html body .p5-4852-menu > button.p5814-cloud-primary .p5-4852-icon {
- box-sizing:border-box!important;
- display:grid!important;
- place-items:center!important;
- flex:0 0 34px!important;
- width:34px!important;height:34px!important;
- margin:0!important;padding:0!important;
- border-radius:8px!important;
- background:rgba(222,190,151,.07)!important;
- color:#d0ae81!important;
-}
-html body .p5-4852-menu > button.p5814-cloud-primary .p5-4852-icon svg {
- display:block!important;width:19px!important;height:19px!important;
- stroke:currentColor!important;
-}
-html body .p5-4852-menu > button.p5814-cloud-primary .p5-4852-label {
+/* Cloud Session: native accordion row. No special call-to-action surface. */
+html body #americano .p5-4852-menu > details.p5814-cloud-section,
+html body #mainMenu .p5-4852-menu > details.p5814-cloud-section {
  display:block!important;
- flex:1 1 0%!important;
- min-width:0!important;
- width:auto!important;
- margin:0!important;padding:0!important;
- color:#f0e9e1!important;
- font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
- letter-spacing:normal!important;
- white-space:normal!important;
+ width:100%!important;box-sizing:border-box!important;min-width:0!important;
+ border-radius:0!important;background:transparent!important;
+ box-shadow:none!important;
 }
-html body .p5-4852-menu > button.p5814-cloud-primary .p5-4852-chevron {
- display:block!important;position:static!important;
- flex:0 0 16px!important;
- width:16px!important;height:auto!important;
- margin:0 0 0 auto!important;padding:0!important;
- color:#b5bcc3!important;font-size:19px!important;
- line-height:1!important;text-align:right!important;
- transform:none!important;
+html body #americano .p5-4852-menu > details.p5814-cloud-section > summary,
+html body #mainMenu .p5-4852-menu > details.p5814-cloud-section > summary {
+ display:flex!important;
+ flex-flow:row nowrap!important;align-items:center!important;
+ justify-content:flex-start!important;gap:13px!important;
+ width:100%!important;box-sizing:border-box!important;
+ min-height:48px!important;cursor:pointer!important;
+ margin:0!important;padding:11px 14px!important;
+ color:inherit!important;
+ text-align:left!important;white-space:normal!important;
+ background:transparent!important;background-image:none!important;
+ box-shadow:none!important;
 }
-html body .p5-4852-menu > button.p5814-cloud-primary:focus-visible {
- outline:2px solid rgba(211,182,144,.75)!important;
- outline-offset:-3px!important;
+html body .p5-4852-menu > details.p5814-cloud-section > summary .p5-4852-label {
+ flex:1 1 auto!important;min-width:0!important;
+ text-align:left!important;margin:0!important;
 }
+html body .p5-4852-menu > details.p5814-cloud-section > summary .p5-4852-chevron {
+ margin-left:auto!important;flex:0 0 auto!important;
+}
+html body .p5-4852-menu > details.p5814-cloud-section > summary .p5-4852-icon svg {
+ width:19px!important;height:19px!important;stroke:currentColor!important;
+}
+html body .p5-4852-menu .p5814-cloud-native-handler,
+html body .p5-4852-menu .p5814-cloud-native-handler[hidden] {
+ display:none!important;
+}
+/* The old share button is still mounted as a hidden native handler;
+   this native summary is the ONLY visible Cloud action. */
 
-/* Viewer gets only ONE native accordion and two regular menu actions.
-   Crucially, these controls no longer use the legacy .p5-4852-content
-   class, so nested master button overrides cannot stack labels and blurbs. */
+/* Viewer Settings: one master accordion containing THREE separate menu rows. */
 html body.p58-view-only #americano .p5-4852-menu > details.p5814-view-menu,
 html body.p58-view-only #mainMenu .p5-4852-menu > details.p5814-view-menu {
- display:block!important;
- min-width:0!important;
+ display:block!important;box-sizing:border-box!important;
+ width:100%!important;min-width:0!important;
 }
 html body.p58-view-only .p5814-view-menu > .p5814-menu-body {
- display:block!important;
- box-sizing:border-box!important;
- width:100%!important;
- padding:7px 14px 10px!important;
- min-width:0!important;
- margin:0!important;
+ display:block!important;box-sizing:border-box!important;
+ width:100%!important;margin:0!important;
+ padding:5px 14px 11px!important;
  background:transparent!important;
 }
-html body.p58-view-only #americano .p5814-view-menu .p5814-menu-body > button.p5814-view-action,
-html body.p58-view-only #mainMenu .p5814-view-menu .p5814-menu-body > button.p5814-view-action,
-html body.p58-view-only #americano .p5814-view-menu .p5814-menu-footer > button.p5814-view-action,
-html body.p58-view-only #mainMenu .p5814-view-menu .p5814-menu-footer > button.p5814-view-action {
- display:flex!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-row {
  box-sizing:border-box!important;
- flex-flow:row nowrap!important;
- align-items:center!important;
- justify-content:space-between!important;
- width:100%!important;
- height:auto!important;
- min-height:49px!important;
+ display:flex!important;flex-flow:row nowrap!important;
+ align-items:center!important;justify-content:space-between!important;
+ width:100%!important;min-width:0!important;
+ min-height:51px!important;height:auto!important;
+ margin:0!important;padding:13px 6px!important;
  gap:12px!important;
- margin:0!important;
- padding:11px 6px!important;
- border:0!important;
- border-bottom:1px solid rgba(206,184,153,.16)!important;
+ border:0!important;border-top:1px solid rgba(206,184,153,.17)!important;
  border-radius:0!important;
- background:transparent!important;
- background-image:none!important;
- box-shadow:none!important;
- color:#ece9e4!important;
- font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
- text-align:left!important;
- text-transform:none!important;
- letter-spacing:normal!important;
- white-space:normal!important;
- float:none!important;
- transform:none!important;
- -webkit-appearance:none!important;
- appearance:none!important;
- cursor:pointer!important;
+ background:transparent!important;background-image:none!important;
+ box-shadow:none!important;outline-offset:-2px!important;
+ text-align:left!important;white-space:normal!important;
+ cursor:pointer!important;color:#e9ebeb!important;
+ font:600 13px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+ letter-spacing:normal!important;text-transform:none!important;
 }
-html body.p58-view-only .p5814-view-menu .p5814-view-action-label {
- display:block!important;position:static!important;
- flex:1 1 auto!important;min-width:0!important;
- width:auto!important;margin:0!important;padding:0!important;
- color:inherit!important;
- font:inherit!important;
- line-height:1.4!important;white-space:normal!important;text-align:left!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-row-label {
+ display:block!important;flex:1 1 auto!important;min-width:0!important;
+ text-align:left!important;margin:0!important;padding:0!important;
+ white-space:normal!important;font:inherit!important;
+ color:inherit!important;letter-spacing:normal!important;
 }
-html body.p58-view-only .p5814-view-menu .p5814-view-action-chevron {
- display:block!important;position:static!important;
- flex:0 0 16px!important;width:16px!important;
- min-width:16px!important;
- margin:0!important;padding:0!important;
- color:#c7a880!important;
- font:400 20px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
- text-align:right!important;transform:none!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-row-chevron {
+ display:block!important;flex:0 0 16px!important;
+ width:16px!important;height:auto!important;
+ text-align:right!important;margin:0 0 0 auto!important;padding:0!important;
+ font:400 20px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;
+ color:#c8a882!important;
 }
-html body.p58-view-only .p5814-view-menu .p5814-view-action::before,
-html body.p58-view-only .p5814-view-menu .p5814-view-action::after {
- content:none!important;display:none!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-footer {
+ box-sizing:border-box!important;display:block!important;
+ width:100%!important;margin:8px 0 0!important;
+ padding:8px 0 0!important;border-top:1px solid rgba(206,184,153,.16)!important;
 }
-html body.p58-view-only .p5814-view-menu .p5814-view-action:disabled {
- opacity:.58!important;cursor:wait!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-footer > .p5814-view-row {
+ font-weight:500!important;color:#aeb9c1!important;border-top:0!important;
 }
-html body.p58-view-only .p5814-view-menu .p5814-menu-footer {
- display:block!important;
- margin:8px 0 0!important;
- padding:7px 0 0!important;
- border-top:1px solid rgba(206,184,153,.16)!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-row[aria-disabled=true]{
+ cursor:wait!important;opacity:.55!important;
 }
-html body.p58-view-only .p5814-view-menu .p5814-menu-footer > .p5814-view-action {
- color:#b9bfc3!important;border-bottom:0!important;
- font-weight:500!important;
+html body.p58-view-only .p5814-view-menu .p5814-view-row:focus-visible,
+html body .p5-4852-menu > details.p5814-cloud-section > summary:focus-visible {
+ outline:2px solid rgba(217,181,139,.8)!important;
 }
 @media(max-width:600px){
- html body.p58-view-only .p5814-view-menu > .p5814-menu-body {
-  padding:5px 14px 9px!important;
- }
- html body.p58-view-only .p5814-view-menu .p5814-menu-body > button.p5814-view-action,
- html body.p58-view-only .p5814-view-menu .p5814-menu-footer > button.p5814-view-action {
-  min-height:48px!important;
- }
+ html body.p58-view-only .p5814-view-menu > .p5814-menu-body{padding:5px 13px 10px!important}
+ html body.p58-view-only .p5814-view-menu .p5814-view-row{min-height:49px!important}
 }

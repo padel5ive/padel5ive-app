@@ -5,7 +5,6 @@ on:
       - 'public/phase5815/**'
       - 'scripts/phase5815-integrate.cjs'
       - 'scripts/qa-v5815-pwa.cjs'
-      - 'scripts/pwa-source-inspect-v5815.cjs'
       - 'package.json'
       - '.github/workflows/qa-v5815-pwa.yml'
 jobs:
@@ -18,5 +17,4 @@ jobs:
           node-version: '22'
       - run: npm ci
       - run: npm run build
-      - run: node scripts/pwa-source-inspect-v5815.cjs
       - run: node scripts/qa-v5815-pwa.cjs

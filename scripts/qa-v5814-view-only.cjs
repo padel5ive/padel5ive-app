@@ -166,7 +166,7 @@ async function moderatorParity(){
  const end=cloud.indexOf('function applyRemote(r,force=false){',start);
  assert(start>=0&&end>start,'Cloud moderator renderer can be independently tested');
  const script=cloud.slice(start,end);
- const PIN='513966',KEY='p58-test-viewer-token';
+ const PIN='513966',KEY='p58-test-viewer-token',SHORT='ABCDEF1234567890';
  const base={kind:'unified',code:'T2NXA49VXT',token:'local-token',pin:null,
   moderatorPinRequired:true,summary:{session:'QA Match',date:'2026-11-10',time:'09:00'},
   revision:1,waiting:false,takeoverRequested:false};
@@ -175,8 +175,10 @@ async function moderatorParity(){
    runScripts:'outside-only',url:'https://deploy-preview-17--padel5ive.netlify.app'});
   const doc=dom.window.document,ctx={
    document:doc,meta:{...base,role,
-    moderatorPin:hasAccess?PIN:null,viewerKey:hasAccess?KEY:null},
+    moderatorPin:hasAccess?PIN:null,viewerKey:hasAccess?KEY:null,
+     shortToken:hasAccess?SHORT:null},
    body:doc.querySelector('#cloud-root'),conflict:false,offline:false,working:false,
+    shortLinkError:'',preparingShort:false,
    e:(tag,cls,text)=>{const el=doc.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el},
    btn:(label)=>{const b=doc.createElement('button');b.textContent=label;return b},
    info:(text)=>{const p=doc.createElement('p');p.textContent=text;return p},
@@ -185,8 +187,8 @@ async function moderatorParity(){
    alert:()=>{},persist:()=>{ctx.persisted=true},
    api:async action=>{
     ctx.lastAction=action;
-    if(action==='take-control')return {data:{},viewerKey:KEY};
-    if(action==='recover-access')return {viewerKey:KEY};
+    if(action==='take-control')return {data:{},viewerKey:KEY,shortToken:SHORT};
+    if(action==='recover-access')return {viewerKey:KEY,shortToken:SHORT};
     throw Error('Unexpected Cloud action '+action);
    },
    applyRemote:()=>{ctx.applied=true}

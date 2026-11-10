@@ -41,7 +41,7 @@ async function one(kind){
  assert.equal(cloudRow.previousElementSibling?.getAttribute('data-submenu'),'share','Cloud Session directly follows Session & Results');
  assert.equal(cloudRow.querySelector('.p5814-cloud-copy .p5-4852-label')?.textContent,'Cloud Session');
  assert.equal(cloudRow.style.getPropertyValue('display'),'','Cloud action must NOT be hidden from viewer');
- for(const label of ['Connection Status','Take Control','Refresh Data','Back to Home','Leave Cloud Session'])
+ for(const label of ['CONNECTION STATUS','Take Control','Refresh Data','Back to Home','Leave Cloud Session'])
   assert(viewer.textContent.includes(label),'Viewer menu item '+label);
  assert(doc.querySelector('.p5-stage-head').textContent.includes('GAME MODE'));
  assert(doc.querySelector(isU?'.p5-b41-leaderboard':'.leaderboard-card'));

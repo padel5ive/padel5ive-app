@@ -6,9 +6,10 @@
  * retain their existing viewport settings, Cloud and match engines unchanged.
  */
 @media screen and (display-mode:standalone) and (max-width:760px){
- :root{--p5816-status-offset:59px}
- html,html body{background-color:#071624!important}
- html body:not(.p54-active){background-color:#071624!important}
+ :root{--p5816-status-offset:59px;--p5-native-chrome:#11171d}
+ /* Match the existing dashboard's native PWA top bar, not Home's old blue. */
+ html,html body{background-color:var(--p5-native-chrome)!important}
+ html body:not(.p54-active){background-color:var(--p5-native-chrome)!important}
  /* Remove the attempted 90/150px overscan; it was clipped by WebKit's
     compositor. The photo now covers ONE actual PWA document viewport. */
  html body:not(.p54-active)::before{display:none!important;content:none!important}
@@ -31,6 +32,8 @@
   overflow:hidden!important;
   background-color:#092448!important;
   background-image:
+   /* Gentle 64px seam-fade at the photo's TOP; no overlay over logo. */
+   linear-gradient(180deg,#11171d 0px,rgba(17,23,29,.68) 18px,transparent 64px),
    linear-gradient(180deg,
     rgba(3,12,25,.21) 0%,
     rgba(3,12,25,.06) 22%,
@@ -79,5 +82,20 @@
  html body.p54-active #p54-workspace>.p54-shell{
   padding-top:17px!important;
   padding-bottom:max(40px,env(safe-area-inset-bottom,0px))!important;
+  position:relative!important;z-index:1!important;
+ }
+ /* Initial Setup gets the same subtle transition below the native iOS bar.
+    Overlay occupies only the top 60px and does not change layout or scrolling. */
+ html body.p54-active #p54-workspace.p54-workspace::before{
+  content:""!important;
+  position:sticky!important;
+  top:0!important;
+  display:block!important;
+  width:100%!important;
+  height:60px!important;
+  margin-bottom:-60px!important;
+  background:linear-gradient(180deg,#11171d,rgba(17,23,29,0))!important;
+  pointer-events:none!important;
+  z-index:0!important;
  }
 }

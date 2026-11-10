@@ -1,0 +1,59 @@
+/* PADEL 5IVE v5.8.14 · View Only: native layout, restricted controls.
+ * All styling is strictly scoped to the Cloud viewer role.
+ * iPad split layout, scorecard dimensions, and master editor remain unchanged.
+ */
+body.p58-view-only .p5814-master-menu-hidden,
+body.p58-view-only .p5814-hide-action{display:none!important}
+body.p58-view-only .p5814-view-menu{display:block}
+body.p58-view-only .p5814-view-menu .p5814-menu-body{padding:5px 14px 12px!important}
+body.p58-view-only .p5814-view-menu .p585-heading{margin:2px 0 4px!important}
+body.p58-view-only .p5814-view-menu .p5814-session-heading{margin-top:13px!important;border-top:1px solid rgba(206,184,153,.17)!important;padding-top:16px!important}
+body.p58-view-only .p5814-connection{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 6px;color:#e9e9e5;font-size:12px;border-top:1px solid rgba(206,184,153,.16)}
+body.p58-view-only .p5814-cloud-state{font-size:10px;letter-spacing:.06em;color:#bcd8c4;font-weight:700;text-align:right}
+body.p58-view-only .p5814-cloud-state[data-state=offline],
+body.p58-view-only .p5814-cloud-state[data-state=conflict]{color:#f0c99a}
+body.p58-view-only .p5814-view-action{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:45px;padding:12px 6px;margin:0;border:0!important;border-top:1px solid rgba(206,184,153,.17)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#eee9e1;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer;text-align:left}
+body.p58-view-only .p5814-view-action small{display:block;margin-top:3px;color:#aeb9bf;font-size:10px;font-weight:400;line-height:1.5}
+body.p58-view-only .p5814-view-action:focus-visible{outline:2px solid #d4b48c;outline-offset:-2px}
+body.p58-view-only .p5814-view-action:disabled{opacity:.65;cursor:wait}
+/* Unified Stage 1: preserve native game identity, round picker, score cards and right-hand leaderboard. */
+body.p58-view-only #americano .stats,
+body.p58-view-only #americano .bars,
+body.p58-view-only #americano .p5-v26-utilization,
+body.p58-view-only #americano .p5-v26-flow-combo,
+body.p58-view-only #americano .prematch-setup,
+body.p58-view-only #americano .p5-v26-session-control,
+body.p58-view-only #americano .p5-v26-round-card > .tools,
+body.p58-view-only #americano .p5-b2-fairness-warning,
+body.p58-view-only #americano .p5-b2-fairness-ok,
+body.p58-view-only #americano .p5-b44-balance-note,
+body.p58-view-only #americano .p5-v24-extra-note,
+body.p58-view-only #americano .p5-b3-ko-seeds{display:none!important}
+body.p58-view-only #americano .p5sm-open-score{pointer-events:none!important;cursor:default!important}
+body.p58-view-only #americano .p5sm-card{cursor:default!important}
+body.p58-view-only #americano .p5-v26-round-card{margin-bottom:0}
+/* Club Match: preserve native Stage 1 / Stage 2 two-column layout and standings. */
+body.p58-view-only #app .master-stats,
+body.p58-view-only #app .stage1-rules,
+body.p58-view-only #app .prepare-next,
+body.p58-view-only #app .arrival-panel,
+body.p58-view-only #app .stage1-finish-actions,
+body.p58-view-only #app .showdown-lineup-actions,
+body.p58-view-only #app .duel-lineup-details,
+body.p58-view-only #app .duel-score-bottom,
+body.p58-view-only #app .locked-stage-note,
+body.p58-view-only #app .showdown-stage-setup form,
+body.p58-view-only #app .form-actions{display:none!important}
+body.p58-view-only #app .court-score-input,
+body.p58-view-only #app input[data-custom-score]{display:none!important}
+body.p58-view-only #app .p5814-read-score{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-width:36px;min-height:35px;padding:4px 7px;
+ border:1px solid rgba(193,176,148,.25);border-radius:6px;
+ color:#f0eadf;font:700 19px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ font-variant-numeric:tabular-nums;background:rgba(5,14,23,.15)
+}
+body.p58-view-only #app .court-footer .scorehint{font-size:11px}
+@media(max-width:779px){
+ body.p58-view-only .p5814-view-menu .p5814-menu-body{padding:5px 10px 10px!important}
+}

@@ -14,7 +14,7 @@ assert.equal(html.split('id="p5813-style-help"').length-1,1);
 assert(html.includes("s.groupConfig={labels:['','']};"),'Fresh group labels must start blank');
 assert(html.includes('l[0].toLocaleLowerCase()===l[1].toLocaleLowerCase()'),'Existing unique-label engine validation preserved');
 assert(html.includes("alertModal(P5Structured.is(s)?'Pairing Groups':'Advanced Player Rules'"));
-assert(html.includes('e.g. Left')&&html.includes('e.g. Right'));
+assert(html.includes("e.g. ${id==='A'?'Left':'Right'} /"),'Visible hint displays the correct example per group');
 assert(html.includes('class="p5813-input-wrap"')&&html.includes('class="p5813-visible-example"'),'Group hints use glyph-safe overlay');
 assert(html.includes('p5813-setup-style'));
 function sourceBetween(a,b){

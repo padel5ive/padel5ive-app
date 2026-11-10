@@ -26,3 +26,5 @@
 #americano .p5812-group{display:grid;gap:6px;font-size:10px;letter-spacing:.09em;color:#c8ac85}
 #americano .p5812-group select{min-height:40px;border:1px solid #6c8190;background:#132b3b;color:#eee1cf;border-radius:7px;padding:8px 12px}
 @media(max-width:560px){#americano .p5812-smart>summary{padding:14px}#americano .p5812-title{flex-wrap:wrap}#americano .p5812-title span{font-size:8px}#americano .p5812-body{padding:14px}#americano .p5812-names{grid-template-columns:1fr;max-height:230px}}
+
+#americano .p5812-warning{margin:0;color:#e8c18b;font-size:12px;line-height:1.55}

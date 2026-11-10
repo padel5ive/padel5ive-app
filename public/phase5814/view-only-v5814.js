@@ -221,7 +221,19 @@ document.addEventListener('click',event=>{
  if(!button)return;
  const action=kind==='club'?button.dataset.action:button.dataset.act;
  const cloud=window.P5CloudSession;
- if(action==='round'||action==='view-round'){cloud?.setFollowLive?.(false);schedule();}
+ if(action==='round'){
+  // Evaluate after the native round handler saves the chosen viewRound.
+  // Returning to the most recent round automatically resumes Follow Live.
+  requestAnimationFrame(()=>{
+   try{
+    const state=JSON.parse(localStorage.getItem('padel5ive-shared-foundation-v2.4-parity-lab')||'null');
+    const latest=Number(state?.currentRound),selected=Number(state?.viewRound);
+    if(Number.isInteger(latest)&&Number.isInteger(selected))
+     cloud?.setFollowLive?.(latest===selected);
+   }catch{}
+   schedule();
+  });
+ }else if(action==='view-round'){cloud?.setFollowLive?.(false);schedule();}
  else if(action==='latest-round'){cloud?.setFollowLive?.(true);schedule();}
 },true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();

@@ -10,6 +10,13 @@ for(const page of ['public/modes/unified/index.html','public/modes/club-match/in
  assert(content.includes('/phase5814/view-only-v5814.js'));
  assert(content.includes('/phase5814/view-only-v5814.css'));
 }
+const pages=['public/modes/unified/index.html','public/modes/club-match/index.html'];
+for(const page of pages){
+ const built=fs.readFileSync(page,'utf8');
+ assert(built.includes('view-only-v5814.css?v=5814.15'),'Safari must receive newly versioned stylesheet');
+ assert(built.includes('view-only-v5814.js?v=5814.15'),'Safari must receive newly versioned viewer script');
+ assert.equal((built.match(/view-only-v5814\\.css\\?v=/g)||[]).length,1,'Only one viewer stylesheet reference');
+}
 const sw=fs.readFileSync('public/sw.js','utf8');
 assert(sw.includes("'/phase5814/view-only-v5814.js'")&&sw.includes("'/phase5814/view-only-v5814.css'"));
 assert(css.includes('body.p58-view-only'));
@@ -45,6 +52,15 @@ async function one(kind){
  assert.equal(rowStyle.display,'flex','Viewer action must be a full-width flex ROW');
  assert.equal(rowStyle.flexFlow,'row nowrap','Viewer action must not stack or float into inline pills');
  assert.equal(rowStyle.width,'100%','Viewer action fills accordion width');
+ const actualRow=viewer.querySelector('.p5814-view-row');
+ assert.equal(actualRow.style.getPropertyValue('display'),'flex','iOS intrinsic layout remains flex even if stylesheet is cached');
+ assert.equal(actualRow.style.getPropertyPriority('display'),'important','Critical row display has inline override');
+ assert.equal(actualRow.style.getPropertyValue('justify-content'),'space-between','Chevron is aligned to the right');
+ assert.equal(actualRow.style.getPropertyValue('border-top'),'1px solid rgba(206,184,153,.17)','Viewer actions have dividers');
+ assert.equal(actualRow.style.getPropertyValue('min-height'),'55px','Rows keep native touch-friendly height');
+ assert.equal(actualRow.querySelector('.p5814-view-row-chevron').style.getPropertyValue('margin-left'),'auto','Chevron stays at far right');
+ assert.equal(doc.querySelectorAll('.p5814-view-row').length,3,'Exactly three viewer actions');
+
  assert.equal(menu.querySelectorAll('.p5814-view-menu').length,1);
  assert.equal(menu.querySelectorAll('.p5814-master-menu-hidden').length,4,'All four moderator menus hidden');
  const cloudRow=menu.querySelector(':scope > details.p5814-cloud-section');

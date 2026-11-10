@@ -84,10 +84,14 @@ assert(src.includes("r.data={...r.data,viewRound:Math.max(0,Math.min(selected,r.
 
 const existing={version:24,session:'TEST',stage:'stage1',rounds:[{matches:[]},{matches:[]},{matches:[]}],viewRound:2};
 let written=null,refreshed=0,meta={localId:'test',revision:4,role:'viewer',summary:null};
-const ctx={kind:'unified',meta,view:()=>true,get:()=>existing,set:(k,v)=>{written=v},KEY:'fake',isSession:()=>true,identity:()=> 'test',dirty:()=>false,stable:s=>JSON.stringify(s),persist:()=>{},location:{reload:()=>{refreshed++}},last:'',offline:false,conflict:false};
+const ctx={kind:'unified',meta,view:()=>true,get:()=>existing,set:(k,v)=>{written=v},KEY:'fake',isSession:()=>true,identity:()=> 'test',dirty:()=>false,stable:s=>JSON.stringify(s),persist:()=>{},location:{reload:()=>{refreshed++}},last:'',offline:false,conflict:false,isFollowingLive:()=>false,latestRound:()=>1};
 vm.runInNewContext(src.slice(applyBegin,applyEnd)+'\nthis.applyRemote=applyRemote;',ctx);
 ctx.applyRemote({data:{...existing,viewRound:0},revision:5,role:'viewer',summary:{}});
 assert.equal(written.viewRound,2,'Viewer round should survive cloud score update');
 assert.equal(refreshed,1);
 assert.equal(ctx.meta.revision,5);
+ctx.isFollowingLive=()=>true;
+ctx.applyRemote({data:{...existing,currentRound:1,viewRound:0},revision:6,role:'viewer',summary:{}});
+assert.equal(written.viewRound,1,'Following Live must use latest active round');
+assert.equal(refreshed,2);
 console.log('PASS v5.8.10: view-only round browsing in both engines, no score/stage edits, iOS touch, keyboard, cloud transfer, round preference sync.');

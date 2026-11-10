@@ -88,3 +88,40 @@ body:not(.p58-cloud-connected) .p58-status{display:none!important}
  display:block;width:17px;height:17px;
  margin:0;flex:none;transform:none;
 }
+
+/* v5.8.14 · one-tap viewer + private moderator access refinements */
+.p58-home-form label[hidden]{display:none!important}
+.p58-home-form #p58-session-code{text-transform:uppercase;letter-spacing:.105em;font-size:clamp(15px,3.7vw,19px)}
+.p58-moderator-form{display:grid;gap:13px;margin:4px 0 0}
+.p58-moderator-label{display:grid!important;gap:9px!important;color:#d3b995!important;font-size:10px!important;font-weight:700!important;letter-spacing:.14em!important}
+.p58-moderator-input{box-sizing:border-box!important;display:block!important;width:100%!important;min-height:49px!important;padding:12px 14px!important;margin:0!important;border:1px solid rgba(210,185,149,.45)!important;border-radius:7px!important;background:#122637!important;color:#f1e9df!important;font-size:19px!important;font-weight:650!important;letter-spacing:.22em!important;-webkit-appearance:none!important;appearance:none!important}
+.p58-moderator-input::placeholder{font-size:12px!important;font-weight:450!important;letter-spacing:.02em!important;color:#9eadb6!important}
+.p58-moderator-input:focus-visible{outline:2px solid rgba(211,183,147,.86)!important;outline-offset:2px!important}
+.p58-credential strong{font-variant-numeric:tabular-nums!important;overflow-wrap:anywhere}
+.p58-panel .p58-credentials:has(.p58-credential:nth-child(2)) .p58-credential:first-child strong{font-size:clamp(12px,3.5vw,18px)}
+@media(max-width:440px){.p58-credentials{grid-template-columns:1fr!important}.p58-credential{min-height:70px}.p58-credential strong{font-size:18px!important}}
+
+/* v5.8.14 · identical full Cloud Session layout for any active moderator.
+   No new button height in the modal: tap/click the existing private PIN card. */
+.p58-panel .p58-private-pin-copy{
+ cursor:pointer!important;
+ min-height:86px!important;
+ transition:border-color .15s ease!important;
+}
+.p58-panel .p58-private-pin-copy .p58-copy-hint{
+ font-size:8px!important;
+ line-height:1.2!important;
+ letter-spacing:.08em!important;
+ color:#b7c1c8!important;
+ font-weight:550!important;
+ text-align:center!important;
+}
+.p58-panel .p58-private-pin-copy:focus-visible{
+ outline:2px solid #d1b287!important;outline-offset:3px!important;
+}
+.p58-panel .p58-private-pin-copy:active{border-color:#d1b287!important}
+.p58-panel .p58-credentials{align-items:stretch!important}
+.p58-panel .p58-credentials .p58-credential{
+ width:100%!important;
+ box-sizing:border-box!important;
+}

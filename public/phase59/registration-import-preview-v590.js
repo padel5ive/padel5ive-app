@@ -112,6 +112,6 @@ function run(){
 let scheduled=false;
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;run()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
-const ob=new MutationObserver(()=>{if(document.querySelector(sel))schedule()});
+const ob=new MutationObserver(()=>{if(!document.defaultView||!document.body)return;if(document.querySelector(sel))schedule()});
 ob.observe(document.body,{subtree:true,childList:true});
 })();

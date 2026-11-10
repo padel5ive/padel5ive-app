@@ -1,12 +1,8 @@
-'use strict';
-const fs=require('node:fs');
-for(const [path,needles] of [
- ['public/modes/unified/index.html',["case 'round':","case 'tab-stage1':","case 'tab-stage2':","case 'bracket-nav':","case 'view-schedule':","case 'jump-ko-courts':","case 'next-round':","case 'score':","case 'toggle-menu':","case 'open-menu':"]],
- ['public/modes/club-match/index.html',["case 'view-round':","case 'toggle-rounds':","case 'latest-round':","case 'jump-stage':","case 'filter-leaderboard':","case 'view-final-verdict':","case 'jump-leaderboard':","case 'back-stage1':","case 'reopen-stage1':","case 'edit-stage1-result':"]]]){
+'use strict';const fs=require('node:fs');
+for(const path of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
  const s=fs.readFileSync(path,'utf8');console.log('==FILE '+path+'==');
- for(const needle of needles){
-  const positions=[];let at=-1;while((at=s.indexOf(needle,at+1))!==-1){positions.push(at);}
-  console.log('TERM '+needle+' COUNT '+positions.length);
-  for(const i of positions.slice(-2)){console.log('CONTEXT '+needle+' @ '+i+'\n'+s.slice(Math.max(0,i-280),Math.min(s.length,i+1800))+'\nENDCONTEXT');}
+ for(const needle of ['menu-toggle','openMenu','closeMenu','toggleMenu','menu-open','menu-close','settings-toggle','toggle-settings','id="mainMenu"','id="menu','data-act="menu','data-action="menu','Menu & Settings','menu-btn','data-p58-cloud']){
+  const pos=[];let at=-1;while((at=s.indexOf(needle,at+1))>=0){if(pos.length<10)pos.push(at)}
+  console.log('TERM '+needle+' '+pos.join(','));for(const i of pos.slice(-3)){const v=s.slice(Math.max(0,i-350),Math.min(s.length,i+500));console.log('CONTEXT '+needle+' '+i+' '+v.replace(/data:image\\/\\w+;base64,[A-Za-z0-9+/=]+/g,'[image]'))}
  }
 }

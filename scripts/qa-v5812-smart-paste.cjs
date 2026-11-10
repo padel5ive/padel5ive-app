@@ -66,6 +66,7 @@ assert.equal(duplicate.saved,0,'Existing player duplicate must not be imported')
 const {JSDOM}=require('jsdom');
 const doc=new JSDOM('<!doctype html><html><body><main id="americano"><div class="card p5-b32-registration"><h1>Player Registration</h1><div class="p5-v2-reg p5-b32-reg-list"><input data-person="1" data-slot="0" value=""></div></div></main></body></html>',{runScripts:'outside-only',url:'https://padel5ive.netlify.app/modes/unified/'});
 doc.window.eval(js);
+doc.window.document.dispatchEvent(new doc.window.Event('DOMContentLoaded'));
 const box=doc.window.document.getElementById('p5812-smart');
 assert(box,'Smart Input must mount within native Registration');
 const area=box.querySelector('textarea');area.value=message;area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));

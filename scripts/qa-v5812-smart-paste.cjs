@@ -134,6 +134,14 @@ const odd=run('fp-americano',{mode:'fixed',names:expected,pairs:[]},[{id:1,names
 assert.equal(odd.saved,0);assert.equal(odd.renders,0);assert.equal(odd.s.roster[0].names[0],'');
 const notConfirmed=run('fp-americano',{mode:'fixed',names:['A','B']},[{id:1,names:['','']}]);
 assert.equal(notConfirmed.saved,0,'Fixed pairing requires manually chosen pairs');
+const partial=run('fp-americano',{mode:'fixed',names:['A','B','C','D'],pairs:[['A','B']]},[{id:1,names:['','']}]);
+assert.equal(partial.saved,0,'Partial pair assignment cannot import the unmatched names');
+const duplicatePair=run('fp-americano',{mode:'fixed',names:['A','B','B','C'],pairs:[['A','B'],['B','C']]},[{id:1,names:['','']}]);
+assert.equal(duplicatePair.saved,0,'Fixed import denies duplicate players in multiple pairs');
+const selectedTwo=run('fp-americano',{mode:'fixed',names:['C','A'],pairs:[['C','A']]},[{id:1,names:['','']},{id:2,names:['Existing','Teo']}]);
+assert.equal(selectedTwo.saved,1);
+assert.deepEqual(selectedTwo.s.roster[0].names,['C','A']);
+assert.deepEqual(selectedTwo.s.roster[1].names,['Existing','Teo'],'Existing registration remains unchanged');
 const structured=run('structured-mexicano',{mode:'structured',names:['A1','A2','A3'],group:'B',paired:false},[
  {id:1,names:['Existing'],group:'A'},{id:2,names:[''],group:'A'},{id:3,names:[''],group:'B'}]);
 assert.deepEqual(structured.s.roster.filter(p=>p.group==='B').map(p=>p.names[0]),['A1','A2','A3']);

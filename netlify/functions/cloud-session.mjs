@@ -7,12 +7,21 @@ import { getStore } from '@netlify/blobs';
 import { randomBytes, randomInt, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 
 const STORE='padel5ive-cloud-sessions-v58';
-const CODE=/^(?:\d{6}|[2-9A-HJ-NP-Z]{10})$/;
-const NEW_CODE=/^[2-9A-HJ-NP-Z]{10}$/;
+// New six-character viewer codes start with a letter to distinguish old
+// six-digit legacy sessions; old ten-character codes remain valid.
+const CODE=/^(?:\d{6}|[2-9A-HJ-NP-Z]{10}|[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5})$/;
+const NEW_CODE=/^(?:[2-9A-HJ-NP-Z]{10}|[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5})$/;
 const CODE_ALPHABET='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-const MOD_PIN=/^\d{6}$/;
+const CODE_LETTERS='ABCDEFGHJKLMNPQRSTUVWXYZ';
 const VIEW_TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
-const createViewerCode=()=>Array.from({length:10},()=>CODE_ALPHABET[randomInt(0,CODE_ALPHABET.length)]).join('');
+const createViewerCode=()=>CODE_LETTERS[randomInt(0,CODE_LETTERS.length)]+
+ Array.from({length:5},()=>CODE_ALPHABET[randomInt(0,CODE_ALPHABET.length)]).join('');
+// PIN length is persisted for new sessions, existing sessions default to six.
+const pinLength=entry=>entry.moderatorPinDigits===4?4:6;
+const validModeratorPin=(entry,pin)=>/^\d+$/.test(pin)&&pin.length===pinLength(entry);
+const pinSecurity=entry=>entry.moderatorPinDigits===4
+ ?{deviceMax:3,globalMax:5,lockMs:30*60_000}
+ :{deviceMax:5,globalMax:8,lockMs:LOCK_MS};
 const PIN=/^\d{4}$/;
 const TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
 const LEASE_MS=90_000;
@@ -66,7 +75,8 @@ function role(entry,id,ts){
 }
 function metadata(entry,id,ts,includeData){
  const r={ok:true,code:entry.code,kind:entry.kind,summary:entry.summary,revision:entry.revision,
-  role:role(entry,id,ts),moderatorPinRequired:!!entry.moderatorPinHash,controllerOnline:!!(entry.controller&&entry.controller.expires>ts),
+  role:role(entry,id,ts),moderatorPinRequired:!!entry.moderatorPinHash,
+  moderatorPinDigits:entry.moderatorPinHash?pinLength(entry):null,controllerOnline:!!(entry.controller&&entry.controller.expires>ts),
   controllerExpires:entry.controller?.expires||null,
   pendingControl:entry.request?.id===id,
   takeoverRequested:entry.controller?.id===id&&!!entry.request&&entry.request.expires>ts,
@@ -103,13 +113,13 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     const kind=input.kind, data=input.data;
     if(!validState(data,kind))return error('Save a registered session before enabling cloud access',422);
     if(Buffer.byteLength(JSON.stringify(data),'utf8')>1_450_000)return error('Session exceeds cloud size limit',413);
-    const moderatorPin=String(randomInt(0,1_000_000)).padStart(6,'0');
+    const moderatorPin=String(randomInt(0,10_000)).padStart(4,'0');
     const viewerKey=deviceToken();
     const salt=randomBytes(16).toString('hex'),token=deviceToken(),id=uid();
     for(let attempt=0;attempt<20;attempt++){
      const code=createViewerCode();
      const entry={v:58,code,kind,summary:summary(data,kind),data,revision:1,updatedAt:ts,
-      salt,viewerKeyHash:hash(viewerKey),moderatorPinHash:pinHash(moderatorPin,salt),
+      salt,viewerKeyHash:hash(viewerKey),moderatorPinHash:pinHash(moderatorPin,salt),moderatorPinDigits:4,
       failures:{count:0,until:0},
       devices:[{id,hash:hash(token),label:safe(input.label)||'Primary device',joinedAt:ts}],
       controller:{id,expires:ts+LEASE_MS},request:null};
@@ -128,7 +138,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
    if(entry.v!==58||!Array.isArray(entry.devices))return error('Unsupported session version',409);
    if(action==='join'){
     if(entry.viewerKeyHash){
-     // New sessions: 50-bit manual code or one-tap token grants VIEW ONLY.
+     // Current six-character and original ten-character manual codes grant VIEW ONLY.
      if(input.viewerKey){
       if(!VIEW_TOKEN.test(String(input.viewerKey))||!(eq(hash(input.viewerKey),entry.viewerKeyHash)||(entry.viewerKeyHashes||[]).some(h=>eq(hash(input.viewerKey),h))))
        return error('Invalid Viewer Link',401);
@@ -187,11 +197,12 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if((entry.failures?.until||0)>ts||(d?.pinLockedUntil||0)>ts)
      return error('Too many incorrect PIN attempts. Try again later.',429);
     const supplied=String(input.moderatorPin||'');
-    if(!MOD_PIN.test(supplied)||!eq(pinHash(supplied,entry.salt),entry.moderatorPinHash)){
+    if(!validModeratorPin(entry,supplied)||!eq(pinHash(supplied,entry.salt),entry.moderatorPinHash)){
+     const {deviceMax,globalMax,lockMs}=pinSecurity(entry);
      const attempts=(d?.pinAttempts||0)+1,global=(entry.failures?.count||0)+1;
-     const next={...entry,failures:{count:global>=8?0:global,until:global>=8?ts+LOCK_MS:0},
-      devices:entry.devices.map(x=>x.id===id?{...x,pinAttempts:attempts>=5?0:attempts,
-       pinLockedUntil:attempts>=5?ts+LOCK_MS:0}:x)};
+     const next={...entry,failures:{count:global>=globalMax?0:global,until:global>=globalMax?ts+lockMs:0},
+      devices:entry.devices.map(x=>x.id===id?{...x,pinAttempts:attempts>=deviceMax?0:attempts,
+       pinLockedUntil:attempts>=deviceMax?ts+lockMs:0}:x)};
      const saved=await write(store,code,next,etag);
      if(!changed(saved))return error('PIN verification conflicted. Retry.',409);
      return error('Incorrect Moderator PIN',401);
@@ -210,14 +221,15 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
      if((entry.failures?.until||0)>ts||(device?.pinLockedUntil||0)>ts)
       return error('Too many incorrect PIN attempts. Try again later.',429);
      const supplied=String(input.moderatorPin||'');
-     const correct=MOD_PIN.test(supplied)&&eq(pinHash(supplied,entry.salt),entry.moderatorPinHash);
+     const correct=validModeratorPin(entry,supplied)&&eq(pinHash(supplied,entry.salt),entry.moderatorPinHash);
      if(!correct){
       const attempts=(device?.pinAttempts||0)+1;
       const globalAttempts=(entry.failures?.count||0)+1;
+      const {deviceMax,globalMax,lockMs}=pinSecurity(entry);
       const next={...entry,
-       failures:{count:globalAttempts>=8?0:globalAttempts,until:globalAttempts>=8?ts+LOCK_MS:0},
+       failures:{count:globalAttempts>=globalMax?0:globalAttempts,until:globalAttempts>=globalMax?ts+lockMs:0},
        devices:entry.devices.map(d=>d.id===id
-       ?{...d,pinAttempts:attempts>=5?0:attempts,pinLockedUntil:attempts>=5?ts+LOCK_MS:0}:d)};
+       ?{...d,pinAttempts:attempts>=deviceMax?0:attempts,pinLockedUntil:attempts>=deviceMax?ts+lockMs:0}:d)};
       const saved=await write(store,code,next,etag);
       if(!changed(saved))return error('PIN check conflicted. Please retry.',409);
       return error('Incorrect Moderator PIN',401);

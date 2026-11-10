@@ -58,4 +58,6 @@ jobs:
         with:
           node-version: '22'
       - name: Test live Netlify Deploy Preview, not production
+        env:
+          P5_PREVIEW_BASE: https://deploy-preview-${{ github.event.pull_request.number }}--padel5ive.netlify.app
         run: node scripts/qa-phase58-preview.mjs

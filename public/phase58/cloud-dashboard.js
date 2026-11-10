@@ -110,7 +110,7 @@ function render(){
    const result=await api('create',{kind,data,label:'Primary device'});
    meta={kind,code:result.code,token:result.token,pin:result.pin||null,
     moderatorPin:result.moderatorPin||null,viewerKey:result.viewerKey||null,
-    moderatorPinRequired:!!result.moderatorPinRequired,summary:result.summary,
+    moderatorPinRequired:!!result.moderatorPinRequired,moderatorPinDigits:result.moderatorPinDigits||null,summary:result.summary,
     localId,revision:result.revision,role:result.role,waiting:false};
    last=stable(data);persist();offline=false;conflict=false;dialog.hidden=false;
   });b.disabled=!isSession(state);body.append(b);return;
@@ -137,19 +137,20 @@ function render(){
   },true));
  }
  const controls=e('div','p58-control-actions');
+ const moderatorPinDigits=meta.moderatorPinDigits===4?4:6;
  if(meta.role==='viewer'){
   if(meta.moderatorPinRequired){
    const form=e('form','p58-moderator-form');
    const title=e('label','p58-moderator-label','MODERATOR PIN');
    const field=e('input','p58-moderator-input');
    field.type='password';field.inputMode='numeric';field.autocomplete='one-time-code';
-   field.maxLength=6;field.pattern='[0-9]{6}';field.required=true;
-   field.placeholder='Enter private 6-digit PIN';
+   field.maxLength=moderatorPinDigits;field.pattern='[0-9]{'+moderatorPinDigits+'}';field.required=true;
+   field.placeholder='Enter private '+moderatorPinDigits+'-digit PIN';
    title.append(field);form.append(title);
    const take=e('button','p58-action','TAKE CONTROL');take.type='submit';form.append(take);
    form.addEventListener('submit',async ev=>{
     ev.preventDefault();const pin=field.value.trim();
-    if(!/^\d{6}$/.test(pin)||working)return;
+    if(!/^\d+$/.test(pin)||pin.length!==moderatorPinDigits||working)return;
     working=true;take.disabled=true;
     try{
      const response=await api('take-control',{code:meta.code,token:meta.token,moderatorPin:pin});
@@ -180,13 +181,13 @@ function render(){
    const title=e('label','p58-moderator-label','MODERATOR PIN');
    const field=e('input','p58-moderator-input');
    field.type='password';field.inputMode='numeric';field.autocomplete='one-time-code';
-   field.maxLength=6;field.pattern='[0-9]{6}';field.required=true;
-   field.placeholder='Enter private 6-digit PIN';
+   field.maxLength=moderatorPinDigits;field.pattern='[0-9]{'+moderatorPinDigits+'}';field.required=true;
+   field.placeholder='Enter private '+moderatorPinDigits+'-digit PIN';
    title.append(field);form.append(title);
    const unlock=e('button','p58-action','UNLOCK ACCESS DETAILS');unlock.type='submit';form.append(unlock);
    form.addEventListener('submit',async event=>{
     event.preventDefault();const pin=field.value.trim();
-    if(!/^\d{6}$/.test(pin)||working)return;
+    if(!/^\d+$/.test(pin)||pin.length!==moderatorPinDigits||working)return;
     working=true;unlock.disabled=true;
     try{
      const recovered=await api('recover-access',{code:meta.code,token:meta.token,moderatorPin:pin});
@@ -239,6 +240,7 @@ function applyRemote(r,force=false){
  meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;
  meta.waiting=!!r.pendingControl;meta.takeoverRequested=!!r.takeoverRequested;
  meta.moderatorPinRequired=!!r.moderatorPinRequired;
+ meta.moderatorPinDigits=r.moderatorPinDigits||meta.moderatorPinDigits||null;
  persist();offline=false;conflict=false;
  // Embedded engine keeps in-memory state: reload is necessary to render updated score cards.
  location.reload();
@@ -267,6 +269,7 @@ async function refresh(){
    meta.role=r.role;meta.revision=r.revision;meta.summary=r.summary;
    meta.waiting=!!r.pendingControl;meta.takeoverRequested=!!r.takeoverRequested;
    meta.moderatorPinRequired=!!r.moderatorPinRequired;
+   meta.moderatorPinDigits=r.moderatorPinDigits||meta.moderatorPinDigits||null;
    persist();
    if(localDirty&&r.role!=='controller')conflict=true;
   }else{

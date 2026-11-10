@@ -1,0 +1,66 @@
+/* PADEL 5IVE v5.8.12 · Smart Player Input: native Registration sub-section. */
+#americano .p5812-smart{margin:19px 0 20px;border:1px solid rgba(199,169,125,.36);border-radius:12px;background:rgba(13,28,39,.68);overflow:hidden;color:#e9e3d8}
+#americano .p5812-smart>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;padding:16px 17px}
+#americano .p5812-smart>summary::-webkit-details-marker{display:none}
+#americano .p5812-title strong{font-size:12px;font-weight:700;letter-spacing:.105em;color:#e7c89a}
+#americano .p5812-title span{font-size:9px;letter-spacing:.09em;color:#aebbc5}
+#americano .p5812-smart[open]>.p5812-title{border-bottom:1px solid rgba(199,169,125,.23)}
+#americano .p5812-body{display:grid;gap:12px;padding:16px 17px 18px}
+#americano .p5812-help,#americano .p5812-muted{margin:0;font-size:12px;line-height:1.55;color:#adb9c1}
+#americano .p5812-textarea{display:block;width:100%;box-sizing:border-box;min-height:112px;padding:13px 14px;background:#0c1b29;border:1px solid rgba(168,183,195,.48);border-radius:9px;color:#f2ede6;font:400 14px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;resize:vertical}
+#americano .p5812-textarea:focus-visible{outline:2px solid #d9b989;outline-offset:1px}
+#americano .p5812-buttons{display:flex;gap:10px;flex-wrap:wrap}
+#americano .p5812-buttons button,#americano .p5812-add{min-height:43px;padding:10px 15px;border:1px solid #bc9d74;border-radius:8px;background:#ccb087;color:#112432;font-size:11px;font-weight:700;letter-spacing:.045em;cursor:pointer}
+#americano .p5812-buttons .p5812-clear{background:transparent;color:#d5c0a4;border-color:#697885}
+#americano .p5812-add{width:100%}
+#americano .p5812-add:disabled,#americano .p5812-review:disabled{opacity:.42;cursor:not-allowed}
+#americano .p5812-preview{display:grid;gap:11px;padding:15px 0 3px;border-top:1px solid rgba(199,169,125,.21)}
+#americano .p5812-preview[hidden]{display:none!important}
+#americano .p5812-count{color:#eed8b9;font-size:12px;font-weight:650;margin:0}
+#americano .p5812-names{max-height:170px;overflow-y:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 22px;padding:0 0 0 24px;margin:0}
+#americano .p5812-names li{font-size:12px;line-height:1.4;color:#e4e8e8;overflow-wrap:anywhere}
+#americano .p5812-error{color:#efb6ac;font-size:12px;margin:0;line-height:1.5}
+#americano .p5812-success{margin:0;color:#c9dfd0;font-size:12px;line-height:1.5}
+#americano .p5812-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.5;color:#ecd6b7;cursor:pointer}
+#americano .p5812-confirm input{margin-top:3px;flex:none;accent-color:#d2b38a}
+#americano .p5812-group{display:grid;gap:6px;font-size:10px;letter-spacing:.09em;color:#c8ac85}
+#americano .p5812-group select{min-height:40px;border:1px solid #6c8190;background:#132b3b;color:#eee1cf;border-radius:7px;padding:8px 12px}
+@media(max-width:560px){#americano .p5812-smart>summary{padding:14px}#americano .p5812-title{flex-wrap:wrap}#americano .p5812-title span{font-size:8px}#americano .p5812-body{padding:14px}#americano .p5812-names{grid-template-columns:1fr;max-height:230px}}
+
+#americano .p5812-warning{margin:0;color:#e8c18b;font-size:12px;line-height:1.55}
+
+/* Minimal empty state: no inactive Add bar, no empty Clear action. */
+#americano .p5812-smart [hidden]{display:none!important}
+#americano .p5812-textarea::placeholder{color:#8497a6;opacity:.76}
+
+/* v5.8.12 Fixed Partner · editorial, explicit tap-to-pair review. */
+#americano .p5812-pair-board{display:grid;gap:12px;border-top:1px solid rgba(203,170,123,.20);padding-top:14px}
+#americano .p5812-pair-header,#americano .p5812-pool-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#americano .p5812-pair-header strong,#americano .p5812-pool-heading strong{font-size:11px;letter-spacing:.12em;color:#e2c397;font-weight:720}
+#americano .p5812-pair-header span,#americano .p5812-pool-heading span{font-size:10px;color:#abb9c0}
+#americano .p5812-pair-help,#americano .p5812-pair-notice{margin:0;color:#b0bcc4;font-size:11px;line-height:1.55}
+#americano .p5812-pair-notice{color:#e1bc88}
+#americano .p5812-pair-ready{display:grid;gap:8px}
+#americano .p5812-pair-empty{font-size:12px;color:#9aadb6;margin:0;padding:12px 13px;border:1px dashed rgba(181,173,156,.33);border-radius:8px}
+#americano .p5812-pair-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border:1px solid rgba(207,182,147,.32);background:rgba(26,48,63,.58);border-radius:9px}
+#americano .p5812-pair-number{font-size:9px;font-weight:750;letter-spacing:.08em;color:#bdac94;white-space:nowrap}
+#americano .p5812-pair-names{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap;font-size:12px;color:#f2e8d9}
+#americano .p5812-pair-names strong{font-size:12px;font-weight:620;overflow-wrap:anywhere}
+#americano .p5812-pair-plus{color:#b2a38e}
+#americano .p5812-pair-row .p5812-pair-edit{background:transparent;color:#dcc09a;border:1px solid rgba(203,174,133,.45);border-radius:6px;min-height:34px;padding:7px 8px;font-size:9px;letter-spacing:.07em;font-weight:700;cursor:pointer}
+#americano .p5812-player-pool{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#americano .p5812-player-item{display:flex;align-items:stretch;border:1px solid rgba(183,199,209,.28);border-radius:8px;background:rgba(15,32,44,.76);min-width:0;overflow:hidden}
+#americano .p5812-player-item .p5812-player-chip{flex:1;min-width:0;min-height:45px;border:0;border-radius:0;background:transparent;text-align:left;color:#ede9e2;font-size:12px;font-weight:570;padding:10px;overflow-wrap:anywhere;cursor:pointer}
+#americano .p5812-player-item .p5812-player-chip.is-selected{background:#ceb087;color:#132633;font-weight:700}
+#americano .p5812-player-item .p5812-player-skip{flex:none;align-self:stretch;border:0;border-left:1px solid rgba(183,199,209,.19);border-radius:0;background:transparent;color:#aeb7b9;padding:7px 8px;font-size:9px;letter-spacing:.04em;font-weight:600;cursor:pointer}
+#americano .p5812-skipped{display:flex;gap:7px;flex-wrap:wrap;align-items:center;border-top:1px solid rgba(203,170,123,.17);padding-top:11px}
+#americano .p5812-skipped span{font-size:10px;letter-spacing:.07em;color:#9faeb9}
+#americano .p5812-skipped button{min-height:31px;background:transparent;color:#d7c3a8;border:1px solid #637381;border-radius:6px;font-size:9px;padding:6px 8px;cursor:pointer}
+#americano .p5812-pair-row button:focus-visible,#americano .p5812-player-pool button:focus-visible,#americano .p5812-skipped button:focus-visible{outline:2px solid #d5b98d;outline-offset:2px}
+@media(max-width:560px){
+ #americano .p5812-player-pool{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ #americano .p5812-pair-row{grid-template-columns:1fr auto;gap:5px 8px}
+ #americano .p5812-pair-number{grid-column:1;grid-row:1}
+ #americano .p5812-pair-names{grid-column:1;grid-row:2}
+ #americano .p5812-pair-row .p5812-pair-edit{grid-column:2;grid-row:1 / span 2}
+}

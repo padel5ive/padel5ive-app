@@ -106,7 +106,7 @@ function updateStatus(root){
 }
 function scoreViewer(){
  if(kind==='unified'){
-  for(const button of $('#americano button.p5sm-open-score')){
+  for(const button of $$('#americano button.p5sm-open-score')){
    // A score card is informational, not an unclickable edit button.
    // Keep the original button untouched underneath for Controller restoration.
    let display=button.nextElementSibling;
@@ -150,7 +150,7 @@ function actions(){
  // Closed-world spectator policy: everything is hidden unless explicitly
  // identified as harmless round/bracket/leaderboard browsing.
  // This includes native buttons without data-act/data-action.
- for(const button of $('button, input[type="button"], input[type="submit"]',root)){
+ for(const button of $$('button, input[type="button"], input[type="submit"]',root)){
   if(button.closest('.p5814-view-menu, #p58-cloud-host'))continue;
   const action=button.dataset[attr];
   const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
@@ -158,7 +158,7 @@ function actions(){
  }
  // Likewise, prevent editor forms from appearing as disabled empty controls.
  // Club match inputs keep their passive numeric score displays in scoreViewer.
- for(const field of $('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
+ for(const field of $$('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
   if(field.closest('.p5814-view-menu, #p58-cloud-host'))continue;
   hideControl(field);
  }
@@ -167,8 +167,8 @@ function restore(){
  restoreText();
  $$('.p5814-view-menu').forEach(x=>x.remove());
  showAllControls();
- $('.p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-master-menu-hidden'));
- $('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
+ $$('.p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-master-menu-hidden'));
+ $$('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
  $$('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }
 function run(){

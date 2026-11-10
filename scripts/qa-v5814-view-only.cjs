@@ -161,4 +161,76 @@ async function one(kind){
  // native Safari never destroys the document mid-frame during role restoration.
  await delay(120);
 }
-(async()=>{await one('unified');await one('club');console.log('PASS v5.8.14 viewer: native UI parity, permissions, menu, scoring and role recovery.');})().catch(e=>{console.error(e);process.exitCode=1});
+async function moderatorParity(){
+ const start=cloud.indexOf('function card(label,value){');
+ const end=cloud.indexOf('function applyRemote(r,force=false){',start);
+ assert(start>=0&&end>start,'Cloud moderator renderer can be independently tested');
+ const script=cloud.slice(start,end);
+ const PIN='513966',KEY='p58-test-viewer-token';
+ const base={kind:'unified',code:'T2NXA49VXT',token:'local-token',pin:null,
+  moderatorPinRequired:true,summary:{session:'QA Match',date:'2026-11-10',time:'09:00'},
+  revision:1,waiting:false,takeoverRequested:false};
+ const testModal=(role,hasAccess)=>{
+  const dom=new JSDOM('<!doctype html><body><section id="cloud-root"></section></body>',{
+   runScripts:'outside-only',url:'https://deploy-preview-17--padel5ive.netlify.app'});
+  const doc=dom.window.document,ctx={
+   document:doc,meta:{...base,role,
+    moderatorPin:hasAccess?PIN:null,viewerKey:hasAccess?KEY:null},
+   body:doc.querySelector('#cloud-root'),conflict:false,offline:false,working:false,
+   e:(tag,cls,text)=>{const el=doc.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el},
+   btn:(label)=>{const b=doc.createElement('button');b.textContent=label;return b},
+   info:(text)=>{const p=doc.createElement('p');p.textContent=text;return p},
+   mark:()=>{},formatDate:s=>s,get:()=>null,isSession:()=>true,
+   navigator:{clipboard:{writeText:async v=>{ctx.copied=v}}},
+   alert:()=>{},persist:()=>{ctx.persisted=true},
+   api:async action=>{
+    ctx.lastAction=action;
+    if(action==='take-control')return {data:{},viewerKey:KEY};
+    if(action==='recover-access')return {viewerKey:KEY};
+    throw Error('Unexpected Cloud action '+action);
+   },
+   applyRemote:()=>{ctx.applied=true}
+  };
+  vm.runInNewContext(script+'\nthis.renderForTest=render;',ctx);
+  ctx.renderForTest();
+  return {dom,ctx,doc,root:ctx.body};
+ };
+ const original=testModal('controller',true);
+ const controls=root=>Array.from(root.querySelectorAll('button')).map(x=>x.textContent);
+ assert(original.root.querySelector('.p58-private-pin-copy'),'Original controller shows private PIN');
+ assert(controls(original.root).includes('SHARE VIEWER ACCESS · WHATSAPP'));
+ assert(controls(original.root).includes('COPY ACCESS DETAILS'));
+ assert(controls(original.root).includes('SYNC NOW'));
+ original.root.querySelector('.p58-private-pin-copy').click();
+ await delay(15);assert.equal(original.ctx.copied,PIN,'PIN copy action copies only the private PIN');
+ const migrating=testModal('controller',false);
+ assert(controls(migrating.root).includes('UNLOCK ACCESS DETAILS'));
+ assert(!controls(migrating.root).includes('SHARE VIEWER ACCESS · WHATSAPP'));
+ const unlock=migrating.root.querySelector('.p58-moderator-form');
+ unlock.querySelector('input').value=PIN;
+ unlock.dispatchEvent(new migrating.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+ await delay(25);
+ assert.equal(migrating.ctx.lastAction,'recover-access');
+ assert.equal(migrating.ctx.meta.viewerKey,KEY);
+ assert.equal(migrating.ctx.meta.moderatorPin,PIN);
+ assert(controls(migrating.root).includes('SHARE VIEWER ACCESS · WHATSAPP'));
+ assert(controls(migrating.root).includes('COPY ACCESS DETAILS'));
+ assert(controls(migrating.root).includes('SYNC NOW'));
+ const spectator=testModal('viewer',false);
+ const takeover=spectator.root.querySelector('.p58-moderator-form');
+ takeover.querySelector('input').value=PIN;
+ takeover.dispatchEvent(new spectator.dom.window.Event('submit',{bubbles:true,cancelable:true}));
+ await delay(25);
+ assert.equal(spectator.ctx.lastAction,'take-control');
+ assert.equal(spectator.ctx.meta.moderatorPin,PIN,'Takeover retains entered private Moderator PIN');
+ assert.equal(spectator.ctx.meta.viewerKey,KEY,'Takeover retains new Viewer Link');
+ assert(spectator.ctx.applied,'Takeover applies server-authoritative cloud snapshot');
+ spectator.ctx.meta.role='controller';spectator.ctx.renderForTest();
+ assert.deepEqual(controls(spectator.root),controls(original.root),
+  'Transferred and originating moderators have identical share, copy and sync controls');
+ assert.equal(spectator.root.querySelectorAll('.p58-credential').length,
+  original.root.querySelectorAll('.p58-credential').length,
+  'Transferred and original moderator credential card layouts match');
+ console.log('PASS v5.8.14 Cloud modal parity: creator / new moderator / recovery, PIN copy and share.');
+}
+(async()=>{await one('unified');await one('club');await moderatorParity();console.log('PASS v5.8.14 viewer: native UI parity, permissions, menu, scoring and role recovery.');})().catch(e=>{console.error(e);process.exitCode=1});

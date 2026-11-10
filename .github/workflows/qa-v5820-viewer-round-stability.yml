@@ -6,6 +6,7 @@ on:
       - 'scripts/phase5814-integrate.cjs'
       - 'scripts/qa-v5814-view-only.cjs'
       - 'scripts/qa-v5820-viewer-round-stability.cjs'
+      - 'scripts/qa-v5820-viewer-notice-visibility.cjs'
       - '.github/workflows/qa-v5820-viewer-round-stability.yml'
 jobs:
   viewer-round-stability:
@@ -19,5 +20,6 @@ jobs:
       - run: npm run build
       - run: npm install --no-save jsdom@26
       - run: node scripts/qa-v5820-viewer-round-stability.cjs
+      - run: node scripts/qa-v5820-viewer-notice-visibility.cjs
       - run: node scripts/qa-v5810-viewer.cjs
       - run: node scripts/qa-v5814-view-only.cjs

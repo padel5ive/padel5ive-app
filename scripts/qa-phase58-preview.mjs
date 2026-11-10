@@ -38,6 +38,15 @@ assert.equal(create.status,201,'Netlify create endpoint');
 assert.match(create.code,/^[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5}$/,'New Session Code is 6 characters');
 assert.match(create.moderatorPin,/^\d{4}$/,'New Moderator PIN is 4 digits');
 assert.equal(create.moderatorPinDigits,4);assert.ok(create.token?.length>=40);passed++;
+assert.match(create.shortToken,/^[A-Za-z0-9_-]{16}$/,'New short Viewer token is 96-bit');passed++;
+const shortUrl='/v/'+create.code+'.'+create.shortToken;
+const shortLanding=await readPage(shortUrl,'/phase58/cloud-home.js');
+assert(shortLanding.includes('LOAD SESSION'),'Short Viewer URL routes into the native landing screen');passed++;
+const shortJoin=await api('join-short',{code:create.code,shortToken:create.shortToken,label:'QA short-link viewer'});
+assert.equal(shortJoin.status,200);assert.equal(shortJoin.role,'viewer');passed++;
+const shortDenied=await api('join-short',{code:create.code,shortToken:'ABCDEF1234567890'});
+assert.equal(shortDenied.status,401,'Incorrect short token cannot join');passed++;
+
 const join=await api('join',{code:create.code,label:'QA disposable iPad'});
 assert.equal(join.status,200,'Short manual code opens viewer');
 assert.equal(join.role,'viewer');assert.equal(join.moderatorPinDigits,4);passed++;
@@ -54,6 +63,8 @@ const poll=await api('sync',{code:create.code,token:join.token,afterRevision:1})
 assert.equal(poll.status,200);assert.equal(poll.revision,2);assert.deepEqual(poll.data,scored);passed++;
 const transfer=await api('take-control',{code:create.code,token:join.token,moderatorPin:create.moderatorPin});
 assert.equal(transfer.status,200);assert.equal(transfer.role,'controller');assert.equal(transfer.transferred,true);
+assert.match(transfer.shortToken,/^[A-Za-z0-9_-]{16}$/,'New moderator automatically receives short share');passed++;
+
 assert.match(transfer.viewerKey,/^[A-Za-z0-9_-]{40,90}$/);passed++;
 const originalDenied=await api('save',{code:create.code,token:create.token,revision:2,data:sample});
 assert.equal(originalDenied.status,423,'Former controller cannot edit');passed++;
@@ -63,4 +74,9 @@ const oldLinkStillValid=await api('join',{code:create.code,viewerKey:create.view
 assert.equal(oldLinkStillValid.status,200);passed++;
 const recovered=await api('recover-access',{code:create.code,token:join.token,moderatorPin:create.moderatorPin});
 assert.equal(recovered.status,200);assert.match(recovered.viewerKey,/^[A-Za-z0-9_-]{40,90}$/);passed++;
-console.log('PASS real Netlify Deploy Preview cloud smoke:',passed,'checks incl 6-char code, 4-digit PIN, role transfer, viewer links, revision and recovery.');
+const mint=await api('share-short',{code:create.code,token:join.token});
+assert.equal(mint.status,200);assert.match(mint.shortToken,/^[A-Za-z0-9_-]{16}$/);passed++;
+const rejoin=await api('join-short',{code:create.code,shortToken:mint.shortToken});
+assert.equal(rejoin.status,200);assert.equal(rejoin.role,'viewer');passed++;
+
+console.log('PASS real Netlify Deploy Preview cloud smoke:',passed,'checks incl short /v/ route, hashed 96-bit token join, PIN security, old links, role transfer and revision.');

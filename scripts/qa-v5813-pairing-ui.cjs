@@ -123,7 +123,7 @@ assert(!home.includes("'Normal / Flexible Pairing',false"));
 assert(!home.includes("['fixed','Fixed Partner',false"));
 assert(!home.includes("['structured','Structured Pairing',false"));
 assert(html.includes('.p5813-gender-male')&&html.includes('.p5813-gender-female'),'Full symbols rendered with SVG');
-assert(html.includes('input:not(:placeholder-shown)+.p5813-visible-example{display:none}'),'Examples hide automatically when user enters a label');
+assert(html.includes('input:not(:placeholder-shown)+.p5813-visible-example,')&&html.includes('input:focus+.p5813-visible-example{display:none}'),'Examples hide on filled input or active focus');
 assert(html.includes('pointer-events:none'),'Example overlay must not block tapping input');
 assert(html.includes('data-p5813-group="A"')&&html.includes('data-p5813-group="B"')?true:html.includes('data-p5813-group="${id}"'),'Group styling is data-attribute driven');
 console.log('PASS v5.8.13: pairing styles and descriptions, blank required unique labels, restored labels, Structured Smart Input group destination.');

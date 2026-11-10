@@ -1,4 +1,4 @@
 'use strict'; const fs=require('node:fs');const x=fs.readFileSync('public/modes/unified/index.html','utf8');
 for(const term of ['function reg(s)','function structuredReg(s)','function collectRegistration()','function addRoster','function addPlayer','function addPair','function collectReg','function syncReg',"case 'registration-add':","case 'registration-remove':","case 'registration-start':","case 'reg-add':","case 'structured-add-player':", "case 'registration-back':",'p5-v2-regrow','p5-b32-reg-fields']){
 let at=-1,loc=[];while((at=x.indexOf(term,at+1))>=0)loc.push(at);console.log('TERM '+JSON.stringify(term)+' '+loc.join(','));
-for(const i of loc.slice(0,2)){console.log('CTX '+term+' AT '+i+'\n'+x.slice(Math.max(0,i-400),i+9500).replace(/data:image\\/[^ ]+/g,'[embedded image]')+'\nENDCTX');}}
+for(const i of loc.slice(0,2)){console.log('CTX '+term+' AT '+i+'\n'+x.slice(Math.max(0,i-400),i+9500)+'\nENDCTX');}}

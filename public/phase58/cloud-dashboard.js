@@ -262,7 +262,7 @@ function viewerNavigation(target){
  // Explicitly allow only v5.8.14 spectator menu actions; no tournament mutation.
  const viewerButton=target?.closest?.('button[data-p5814-viewer-action]');
  if(viewerButton&&!viewerButton.disabled)
-  return ['cloud','refresh','home','leave','live'].includes(viewerButton.dataset.p5814ViewerAction);
+  return ['cloud','refresh','leave'].includes(viewerButton.dataset.p5814ViewerAction);
  const cloud=target?.closest?.('button[data-p58-cloud]');
  if(cloud&&!cloud.disabled)return true;
  const button=target?.closest?.('button[data-act],button[data-action]');

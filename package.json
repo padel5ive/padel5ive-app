@@ -6,7 +6,7 @@
     "@netlify/blobs": "^10.0.0"
   },
   "scripts": {
-    "build": "node scripts/phase57-transform.cjs && node scripts/phase58-transform.cjs && node scripts/phase583-transform.cjs && node scripts/phase585-integrate.cjs && node scripts/phase586-integrate.cjs && node scripts/phase587-integrate.cjs && node scripts/phase588-integrate.cjs && node scripts/phase5812-integrate.cjs && node scripts/verify-deploy.mjs",
+    "build": "node scripts/phase57-transform.cjs && node scripts/phase58-transform.cjs && node scripts/phase583-transform.cjs && node scripts/phase585-integrate.cjs && node scripts/phase586-integrate.cjs && node scripts/phase587-integrate.cjs && node scripts/phase588-integrate.cjs && node scripts/phase5812-integrate.cjs && node scripts/phase5813-integrate.cjs && node scripts/verify-deploy.mjs",
     "verify": "node scripts/verify-deploy.mjs"
   }
 }

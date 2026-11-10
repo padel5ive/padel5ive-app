@@ -1,117 +1,93 @@
-/* PADEL 5IVE v5.9 LAB — Registration import UX only.
- * No writes to roster, sessions, game states, or API. All native registration
- * and advanced Coach / Flexible pairing handlers remain intact.
+/* PADEL 5IVE v5.9.1 — Registration Reclub share auto-detect preview.
+ * Recognizes a direct event URL OR the entire WhatsApp share message.
+ * Never fabricates attendee names, hits undocumented endpoints, or writes
+ * to native tournament state. An approved Reclub integration is required
+ * before attendance can be imported.
  */
 (()=>{'use strict';
-const sel='.p5-b32-registration';
-const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
-const sample={fixed:"Andry & Mario\nBilly & Dylan\nEdgar & Felix",individual:"Andry\nMario\nBilly\nDylan\nEdgar\nFelix"};
+const regSelector='.p5-b32-registration';
+const create=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
+const sharedExample='🟤 PADEL 5IVE • FIXED PARTNER • BRONZE SERIES • 3H 🔶 222,5K\n⏰ Tue, Nov 10 7:00 PM\n📍 PADEL 5IVE\n\nRSVP: https://reclub.co/id/m/T3H3TL';
 let modal=null;
-let inFlight=false;
-function isFixed(card){const title=card.querySelector('h1')?.textContent||'';return /fixed partner/i.test(title)}
-function parseNames(source,fixed){
- const lines=source.split(/\r?\n|[,;]+/).map(s=>s.trim().replace(/^[-•*\u2022]\s*/,'').replace(/^\d+[.)]\s*/,'').trim()).filter(Boolean);
- const result=[],seen=new Set(),warnings=[];
- for(const raw of lines){
-  const values=fixed?raw.split(/\s+(?:&|\+|\/|\band\b)\s+/i).map(s=>s.trim()):[raw];
-  if(fixed&&values.length!==2){warnings.push('Pair requires two names: '+raw.slice(0,100));continue;}
-  if(!fixed&&values.length===1&&/(\s+&\s+|\s+\+\s+)/.test(raw)){warnings.push('Check individual entry: '+raw.slice(0,100));continue;}
-  if(values.some(v=>v.length<2||v.length>75)){warnings.push('Invalid name: '+raw.slice(0,100));continue;}
-  const lower=values.map(v=>v.toLocaleLowerCase());
-  if(lower.some(v=>seen.has(v))||new Set(lower).size!==lower.length){warnings.push('Duplicate name: '+raw.slice(0,100));continue;}
-  lower.forEach(v=>seen.add(v));
-  result.push(values);
- }
- return {entries:result,warnings};
+const urlPattern=/https?:\/\/(?:www\.)?reclub\.co\/(?:[a-z]{2}\/)?m\/[a-z0-9]+(?:[/?#][^\s<>]*)?/ig;
+function parseSharedMessage(text){
+ const value=String(text||'').trim();
+ const candidate=value.match(urlPattern)?.[0]?.replace(/[),.;!?]+$/g,'');
+ if(!candidate)return {valid:false,error:'Reclub event link not found. Paste a Reclub RSVP message or event URL.'};
+ let url;
+ try{url=new URL(candidate);}catch{return {valid:false,error:'This Reclub URL is not valid.'};}
+ if(!['reclub.co','www.reclub.co'].includes(url.hostname.toLowerCase()))return {valid:false,error:'Only links from reclub.co are accepted.'};
+ const found=url.pathname.match(/^\/(?:[a-z]{2}\/)?m\/([a-z0-9]{4,16})\/?$/i);
+ if(!found)return {valid:false,error:'Reclub event link format not recognized.'};
+ const lines=value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+ const nameLine=lines.find(s=>!s.includes('reclub.co')&&!/^(?:RSVP|⏰|📍|Date:|Time:|Location:)/i.test(s))||'';
+ const title=nameLine.replace(/^[🟤🔴🟠🟡🟢🔵🟣⚪⚫•\s]+/u,'').trim().slice(0,130);
+ const when=lines.find(s=>/^⏰|^(?:Date|Time):/i.test(s))?.replace(/^⏰\s*|^(?:Date|Time):\s*/i,'').trim().slice(0,100)||'';
+ const venue=lines.find(s=>/^📍|^Location:/i.test(s))?.replace(/^📍\s*|^Location:\s*/i,'').trim().slice(0,100)||'';
+ const eventCode=found[1].toUpperCase();
+ return {valid:true,eventCode,url:'https://reclub.co/id/m/'+eventCode,title,when,venue};
 }
-function getRoster(card){
- return [...card.querySelectorAll('.p5-b32-regrow')].map(row=>
-  [...row.querySelectorAll('input[data-slot]')].map(n=>n.value.trim()).filter(Boolean)
- ).filter(a=>a.length);
+function showDetected(container,raw){
+ container.replaceChildren();
+ const info=parseSharedMessage(raw);
+ if(!raw.trim()){container.hidden=true;return}
+ container.hidden=false;
+ if(!info.valid){container.append(create('p','p59-warning',info.error));return}
+ const head=create('div','p59-detected-header');
+ head.append(create('span','p59-detected-status','EVENT DETECTED'));
+ head.append(create('strong','',info.eventCode));
+ container.append(head);
+ if(info.title)container.append(create('p','p59-event-name',info.title));
+ if(info.when)container.append(create('p','p59-event-meta','⏰ '+info.when));
+ if(info.venue)container.append(create('p','p59-event-meta','📍 '+info.venue));
+ const visit=create('a','p59-event-link','View Reclub Event ↗');
+ visit.href=info.url;visit.target='_blank';visit.rel='noopener noreferrer';
+ container.append(visit);
+ const explain=create('div','p59-connection-note');
+ explain.append(create('b','','PARTICIPANT IMPORT NOT CONNECTED'));
+ explain.append(create('p','',
+  'This event was detected from your message. Player names have not been retrieved. Authorized Reclub attendance access must be connected before automatic import can be enabled.'));
+ container.append(explain);
 }
-function markupModal(card){
- const fixed=isFixed(card);
- const layer=make('div','p59-layer');
- layer.dataset.p59Modal='';
+function openModal(){
+ if(modal){modal.remove();modal=null}
+ const layer=create('div','p59-layer');layer.dataset.p59Modal='';
  layer.innerHTML='<section class="p59-dialog" role="dialog" aria-modal="true" aria-labelledby="p59-modal-title">'+
- '<header class="p59-modal-head"><div><small>PADEL 5IVE · REGISTRATION</small><h2 id="p59-modal-title">Import Players</h2></div><button class="p59-close" type="button" aria-label="Close Import Players">×</button></header>'+
- '<nav class="p59-tabs" role="tablist" aria-label="Import method"><button type="button" class="is-active" data-p59-method="paste" role="tab" aria-selected="true">Paste Player List</button><button type="button" data-p59-method="reclub" role="tab" aria-selected="false">Reclub Link</button></nav>'+
- '<div class="p59-content"><div data-p59-pane="paste"><label for="p59-names">PASTE '+(fixed?'FIXED PAIRS':'PLAYER NAMES')+'</label><textarea id="p59-names" rows="6" spellcheck="false" placeholder="'+(fixed?'Andry & Mario&#10;Billy & Dylan':'Andry&#10;Mario&#10;Billy')+'"></textarea><p class="p59-help">'+(fixed?'One pair per line · Use “&” between partners.':'One player per line, or separate names with commas.')+'</p><button type="button" data-p59-action="preview" class="p59-primary">Preview Registration</button></div>'+
- '<div data-p59-pane="reclub" hidden><label for="p59-url">RECLUB EVENT LINK</label><input id="p59-url" type="url" inputmode="url" placeholder="https://reclub.co/id/m/T3H3TL"><p class="p59-help">Paste a Reclub event link. Automatic attendee retrieval requires authorized access and is not enabled in this preview.</p><button type="button" data-p59-action="inspect" class="p59-primary">Check Link Format</button></div>'+
- '<div class="p59-preview" id="p59-preview" aria-live="polite" hidden></div></div>'+
- '<footer class="p59-modal-foot"><span>DESIGN PREVIEW · ROSTER UNCHANGED</span><button type="button" class="p59-commit" disabled>Confirm & Import</button></footer></section>';
- const close=()=>{layer.remove();modal=null;document.removeEventListener('keydown',onKey);};
- const onKey=e=>{if(e.key==='Escape'){e.preventDefault();close();}};
+  '<header class="p59-modal-head"><div><small>PADEL 5IVE · REGISTRATION</small><h2 id="p59-modal-title">Import from Reclub</h2></div><button type="button" class="p59-close" aria-label="Close">×</button></header>'+
+  '<div class="p59-content"><label for="p59-share">RECLUB EVENT LINK OR SHARED MESSAGE</label>'+
+  '<textarea id="p59-share" rows="6" spellcheck="false" placeholder="Paste the Reclub invitation or RSVP URL here"></textarea>'+
+  '<p class="p59-help">Paste the entire message from Reclub or WhatsApp. The event link is detected automatically.</p>'+
+  '<div class="p59-preview" id="p59-preview" aria-live="polite" hidden></div></div>'+
+  '<footer class="p59-modal-foot"><span>EVENT DETECTION PREVIEW · NO ROSTER CHANGES</span><button type="button" class="p59-commit" disabled title="Requires approved Reclub attendance access">Import Participants</button></footer></section>';
+ const close=()=>{layer.remove();modal=null;document.removeEventListener('keydown',keydown)};
+ const keydown=e=>{if(e.key==='Escape'){e.preventDefault();close()}};
  layer.querySelector('.p59-close').addEventListener('click',close);
- layer.addEventListener('click',e=>{if(e.target===layer)close();});
- document.addEventListener('keydown',onKey);
- const out=layer.querySelector('#p59-preview');
- const methods=layer.querySelectorAll('[data-p59-method]');
- const switchTo=method=>{
-  methods.forEach(b=>{const active=b.dataset.p59Method===method;b.classList.toggle('is-active',active);b.setAttribute('aria-selected',String(active));});
-  layer.querySelectorAll('[data-p59-pane]').forEach(p=>p.hidden=p.dataset.p59Pane!==method);
-  out.hidden=true;out.replaceChildren();
- };
- methods.forEach(b=>b.addEventListener('click',()=>switchTo(b.dataset.p59Method)));
- layer.querySelector('[data-p59-action="inspect"]').addEventListener('click',()=>{
-  const val=layer.querySelector('#p59-url').value.trim();
-  out.hidden=false;out.replaceChildren();
-  let url;
-  try{url=new URL(val)}catch{out.append(make('p','p59-warning','Please enter a valid Reclub event URL.'));return}
-  if(!/(^|\.)reclub\.co$/i.test(url.hostname)||!/^\/(?:id\/)?m\/[a-zA-Z0-9]+\/?$/.test(url.pathname)){
-   out.append(make('p','p59-warning','Link format not recognized. Use an event URL such as https://reclub.co/id/m/T3H3TL.'));return;
-  }
-  out.append(make('b','p59-preview-title','RECLUB EVENT LINK RECOGNIZED'));
-  out.append(make('p','p59-help','Event code: '+url.pathname.split('/').filter(Boolean).at(-1).toUpperCase()));
-  out.append(make('p','p59-warning','Participant data cannot be fetched in this preview. Please use Paste Player List to test the registration flow.'));
- });
- layer.querySelector('[data-p59-action="preview"]').addEventListener('click',()=>{
-  const data=parseNames(layer.querySelector('#p59-names').value,fixed);
-  const existing=new Set(getRoster(card).flat().map(n=>n.toLocaleLowerCase()));
-  const duplicates=data.entries.filter(entry=>entry.some(name=>existing.has(name.toLocaleLowerCase())));
-  const ready=data.entries.filter(entry=>!entry.some(name=>existing.has(name.toLocaleLowerCase())));
-  out.hidden=false;out.replaceChildren();
-  out.append(make('b','p59-preview-title',ready.length+' '+(fixed?'PAIRS':'PLAYERS')+' READY FOR REVIEW'));
-  if(ready.length){
-   const list=make('ol','p59-name-list');
-   ready.forEach(entry=>list.append(make('li','',entry.join('  +  '))));
-   out.append(list);
-  }else out.append(make('p','p59-help','No new entries to preview.'));
-  if(duplicates.length)out.append(make('p','p59-warning',duplicates.length+' entries already exist in registration.'));
-  if(data.warnings.length){
-   const box=make('div','p59-warning');box.append(make('b','','CHECK THESE ENTRIES'));
-   data.warnings.forEach(w=>box.append(make('p','',w)));
-   out.append(box);
-  }
-  out.append(make('p','p59-notice','Preview only — Confirm & Import is intentionally disabled until the full import workflow is approved.'));
- });
- document.body.append(layer);modal=layer;layer.querySelector('#p59-names').focus();
+ layer.addEventListener('click',e=>{if(e.target===layer)close()});
+ document.addEventListener('keydown',keydown);
+ const textarea=layer.querySelector('#p59-share'),preview=layer.querySelector('#p59-preview');
+ textarea.addEventListener('input',()=>showDetected(preview,textarea.value));
+ document.body.append(layer);modal=layer;textarea.focus();
 }
-function importCard(card){
+function insertImport(card){
  if(card.querySelector('[data-p59-import]'))return;
  const anchor=card.querySelector('.p5-50-rules, .p5-b42-reg-footer, .p5-52-footer');
  if(!anchor)return;
- const details=make('details','p59-import');details.dataset.p59Import='';
- details.innerHTML='<summary><span class="p59-import-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 18v3h14v-3" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Import Players</span><span class="p59-chevron" aria-hidden="true">⌄</span></summary>'+
- '<div class="p59-import-body"><p>Register multiple '+(isFixed(card)?'pairs':'players')+' from a list or Reclub event.</p>'+
- '<button type="button" data-p59-open="reclub"><span>Import from Reclub</span><span aria-hidden="true">›</span></button>'+
- '<button type="button" data-p59-open="paste"><span>Paste Player List</span><span aria-hidden="true">›</span></button></div>';
- details.querySelectorAll('[data-p59-open]').forEach(button=>button.addEventListener('click',()=>{
-  if(modal)modal.remove();
-  markupModal(card);
-  if(button.dataset.p59Open==='reclub')modal.querySelector('[data-p59-method="reclub"]').click();
- }));
- anchor.parentNode.insertBefore(details,anchor);
+ const section=create('details','p59-import');section.dataset.p59Import='';
+ section.innerHTML='<summary><span class="p59-import-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 18v3h14v-3" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Import from Reclub</span><span class="p59-chevron" aria-hidden="true">⌄</span></summary>'+
+ '<div class="p59-import-body"><p>Paste a Reclub event URL or the complete RSVP message.</p><button type="button" data-p59-open><span>Paste Reclub Invitation</span><span aria-hidden="true">›</span></button></div>';
+ section.querySelector('[data-p59-open]').addEventListener('click',openModal);
+ anchor.parentNode.insertBefore(section,anchor);
 }
 function run(){
- if(inFlight)return;inFlight=true;
- try{
-  document.querySelectorAll(sel).forEach(importCard);
- }finally{inFlight=false}
+ document.querySelectorAll(regSelector).forEach(insertImport);
 }
-let scheduled=false;
-function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;run()})}
+let pending=false;
+function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
-const ob=new MutationObserver(()=>{if(!document.defaultView||!document.body)return;if(document.querySelector(sel))schedule()});
-ob.observe(document.body,{subtree:true,childList:true});
+const observer=new MutationObserver(()=>{
+ if(document.defaultView&&document.body&&document.querySelector(regSelector))schedule();
+});
+observer.observe(document.body,{subtree:true,childList:true});
+// Expose only the pure share-message parser for test automation (never roster).
+window.P5ReclubSharePreview=Object.freeze({parseSharedMessage});
 })();

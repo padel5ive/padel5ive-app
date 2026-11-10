@@ -18,12 +18,19 @@ const TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
 const LEASE_MS=90_000;
 const LOCK_MS=15*60_000;
 const MAX_BYTES=1_700_000;
-const allowed=new Set(['create','join','sync','save','heartbeat','take-control','approve-control','release-control']);
+const allowed=new Set(['create','join','sync','save','heartbeat','take-control','approve-control','release-control','recover-access']);
 const hash=v=>createHash('sha256').update(String(v)).digest('hex');
 const safe=v=>String(v??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,90);
 const now=()=>Date.now();
 const uid=()=>randomBytes(12).toString('base64url');
 const deviceToken=()=>randomBytes(32).toString('base64url');
+/* Every authenticated moderator can mint a separate viewer invite without
+ * invalidating existing WhatsApp links. Persist hashes ONLY, never raw links. */
+function mintInvite(entry){
+ const viewerKey=deviceToken();
+ const prev=Array.isArray(entry.viewerKeyHashes)?entry.viewerKeyHashes:[];
+ return {viewerKey,viewerKeyHashes:[...prev.slice(-255),hash(viewerKey)]};
+}
 const pinHash=(pin,salt)=>scryptSync(pin,salt,32).toString('hex');
 const eq=(a,b)=>{const x=Buffer.from(String(a||''),'hex'),y=Buffer.from(String(b||''),'hex');return x.length===32&&y.length===32&&timingSafeEqual(x,y)};
 function storeFor(request){
@@ -123,7 +130,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if(entry.viewerKeyHash){
      // New sessions: 50-bit manual code or one-tap token grants VIEW ONLY.
      if(input.viewerKey){
-      if(!VIEW_TOKEN.test(String(input.viewerKey))||!eq(hash(input.viewerKey),entry.viewerKeyHash))
+      if(!VIEW_TOKEN.test(String(input.viewerKey))||!(eq(hash(input.viewerKey),entry.viewerKeyHash)||(entry.viewerKeyHashes||[]).some(h=>eq(hash(input.viewerKey),h))))
        return error('Invalid Viewer Link',401);
      }else if(!NEW_CODE.test(code))return error('Invalid Session Code',401);
     }else{
@@ -141,7 +148,8 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if(entry.devices.length>=128)return error('Device limit reached. Contact session owner.',403);
     const token=deviceToken(),id=uid();
     const next={...entry,devices:[...entry.devices,{id,hash:hash(token),
-     label:safe(input.label)||'Connected device',joinedAt:ts}],failures:{count:0,until:0}};
+     label:safe(input.label)||'Connected device',joinedAt:ts}],
+     failures:entry.viewerKeyHash?entry.failures:{count:0,until:0}};
     const saved=await write(store,code,next,etag);
     if(!changed(saved))return error('Session changed or cloud write could not be verified. Please retry.',409);
     return json({...metadata(next,id,ts,true),token});
@@ -170,6 +178,31 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if(!changed(saved))return error('Session changed; retry sync',409);
     return json(metadata(next,id,ts,false));
    }
+   if(action==='recover-access'){
+    // A moderator who transferred control before credentials recovery was added
+    // can unlock the SAME full Cloud UI by re-entering the private PIN.
+    if(role(entry,id,ts)!=='controller')return error('Only the active moderator can recover access details',423);
+    if(!entry.moderatorPinHash)return error('Legacy sessions use their original Access PIN',409);
+    const d=entry.devices.find(d=>d.id===id);
+    if((entry.failures?.until||0)>ts||(d?.pinLockedUntil||0)>ts)
+     return error('Too many incorrect PIN attempts. Try again later.',429);
+    const supplied=String(input.moderatorPin||'');
+    if(!MOD_PIN.test(supplied)||!eq(pinHash(supplied,entry.salt),entry.moderatorPinHash)){
+     const attempts=(d?.pinAttempts||0)+1,global=(entry.failures?.count||0)+1;
+     const next={...entry,failures:{count:global>=8?0:global,until:global>=8?ts+LOCK_MS:0},
+      devices:entry.devices.map(x=>x.id===id?{...x,pinAttempts:attempts>=5?0:attempts,
+       pinLockedUntil:attempts>=5?ts+LOCK_MS:0}:x)};
+     const saved=await write(store,code,next,etag);
+     if(!changed(saved))return error('PIN verification conflicted. Retry.',409);
+     return error('Incorrect Moderator PIN',401);
+    }
+    const invite=mintInvite(entry);
+    const next={...entry,failures:{count:0,until:0},viewerKeyHashes:invite.viewerKeyHashes,
+     devices:entry.devices.map(x=>x.id===id?{...x,pinAttempts:0,pinLockedUntil:0}:x)};
+    const saved=await write(store,code,next,etag);
+    if(!changed(saved))return error('Session changed. Retry access recovery.',409);
+    return json({...metadata(next,id,ts,false),viewerKey:invite.viewerKey});
+   }
    if(action==='take-control'){
     if(role(entry,id,ts)==='controller')return json(metadata(entry,id,ts,false));
     if(entry.moderatorPinHash){
@@ -189,14 +222,15 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
       if(!changed(saved))return error('PIN check conflicted. Please retry.',409);
       return error('Incorrect Moderator PIN',401);
      }
-     // Atomic single-writer transfer: old device immediately loses save permission.
-     const next={...entry,failures:{count:0,until:0},
+     // Atomic single-writer transfer, with a fresh viewer invitation for the new moderator.
+     const invite=mintInvite(entry);
+     const next={...entry,failures:{count:0,until:0},viewerKeyHashes:invite.viewerKeyHashes,
       devices:entry.devices.map(d=>d.id===id
        ?{...d,pinAttempts:0,pinLockedUntil:0}:d),
       controller:{id,expires:ts+LEASE_MS},request:null};
      const saved=await write(store,code,next,etag);
      if(!changed(saved))return error('Another device updated control. Refresh and retry.',409);
-     return json({...metadata(next,id,ts,true),transferred:true});
+     return json({...metadata(next,id,ts,true),viewerKey:invite.viewerKey,transferred:true});
     }
     // Legacy sessions retain their request/approval/lease flow.
     const active=entry.controller&&entry.controller.expires>ts;

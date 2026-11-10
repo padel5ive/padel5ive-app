@@ -29,7 +29,8 @@ const style=`<style id="p5813-setup-style">
 #americano .p5813-visible-example .p5813-gender{display:block;flex:0 0 20px;width:20px;height:20px;margin-left:8px;overflow:visible;color:inherit;stroke-width:2.1}
 #americano .p5813-input-wrap[data-p5813-group="A"] .p5813-gender-female,
 #americano .p5813-input-wrap[data-p5813-group="B"] .p5813-gender-male{display:none}
-#americano .p5813-input-wrap>input:not(:placeholder-shown)+.p5813-visible-example{display:none}
+#americano .p5813-input-wrap>input:not(:placeholder-shown)+.p5813-visible-example,
+#americano .p5813-input-wrap>input:focus+.p5813-visible-example{display:none}
 </style>`;
 const closing=html.indexOf('</head>');
 if(closing<0)throw Error('Missing HTML head closing');

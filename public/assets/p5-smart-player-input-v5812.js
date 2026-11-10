@@ -147,8 +147,8 @@
   const anchor=c.card.querySelector('.p5-v2-reg.p5-b32-reg-list, .p5-52-columns');
   if(!anchor)return;
   const root=node('details','p5812-smart');root.id='p5812-smart';
-  const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','WHATSAPP / RECLUB'));root.append(title);
-  const box=node('div','p5812-body');box.append(node('p','p5812-help','Supports WhatsApp, Reclub & simple name lists. Separate full names with commas or new lines.'));
+  const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','3 LIST FORMATS'));root.append(title);
+  const box=node('div','p5812-body');box.append(node('p','p5812-help','Supports WhatsApp List, Reclub Participants List & Simple Name List. For full names, use commas or new lines.'));
   const field=node('textarea','p5812-textarea');field.rows=4;field.maxLength=16000;field.setAttribute('aria-label','Paste player list');field.placeholder='Paste player list here…';field.value=state.text;
   field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;state.flash='';clear.hidden=!state.text;review.disabled=!state.text.trim();preview(root);});box.append(field);
   const actions=node('div','p5812-buttons');

@@ -69,11 +69,23 @@ function promoteCloud(){
   const nativeSummary=summary?.cloneNode(true);
   if(nativeSummary){
    const icon=$('.p5-4852-icon',nativeSummary),label=$('.p5-4852-label',nativeSummary);
-   if(icon)icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
-   if(label)label.textContent='Cloud Session';
-   cloud.replaceChildren(...Array.from(nativeSummary.childNodes));
+   const svg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
+   if(icon&&label){
+    icon.innerHTML=svg;
+    label.textContent='Cloud Session';
+    cloud.replaceChildren(...Array.from(nativeSummary.childNodes));
+   }else{
+    // A legacy master may render plain <summary> text instead of label spans.
+    const fallbackIcon=make('span','p5-4852-icon');
+    fallbackIcon.innerHTML=svg;
+    cloud.replaceChildren(fallbackIcon,make('span','p5-4852-label','Cloud Session'),
+     make('span','p5-4852-chevron','›'));
+   }
   }else{
-   cloud.replaceChildren(make('span','p5-4852-label','Cloud Session'));
+   const icon=make('span','p5-4852-icon');
+   icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
+   cloud.replaceChildren(icon,make('span','p5-4852-label','Cloud Session'),
+    make('span','p5-4852-chevron','›'));
   }
  }
  if(cloud.parentElement!==root||cloud.previousElementSibling!==share)

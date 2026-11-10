@@ -51,6 +51,15 @@ if(meta&&(!isSession(get(KEY))||identity(get(KEY))!==meta.localId))meta=null;
 function persist(){if(meta){if(last)meta.lastHash=stringHash(last);set(META,meta)}else localStorage.removeItem(META)}
 function role(){return meta?.role||'none'}
 function view(){return role()==='viewer'}
+const liveKey=()=> 'p5814-follow-live-'+kind+'-'+(meta?.code||'');
+function isFollowingLive(){try{return sessionStorage.getItem(liveKey())!=='off'}catch{return true}}
+function setFollowingLive(value){try{sessionStorage.setItem(liveKey(),value?'on':'off')}catch{}}
+function latestRound(state){
+ const max=Math.max(0,(state?.rounds?.length||1)-1);
+ const current=Number(state?.currentRound);
+ const selected=Number(state?.viewRound);
+ return Math.max(0,Math.min(Number.isInteger(current)?current:Number.isInteger(selected)?selected:0,max));
+}
 function dirty(){const s=get(KEY);return isSession(s)&&stable(s)!==last}
 function mark(){
  if(!status)return;
@@ -172,12 +181,14 @@ function applyRemote(r,force=false){
  if(dirty()&&!force){
   conflict=true;throw Error('Local changes have not been uploaded. Cloud data was not applied.');
  }
- // A viewer browsing an older round should not be forced back to the
- // controller's round whenever a new score is synced from Cloud.
+ // Default: follow the latest active round. Browsing history pauses Live Follow.
  if(view()&&kind==='unified'){
-  const selected=Number(get(KEY)?.viewRound);
-  if(Number.isInteger(selected)&&Array.isArray(r.data.rounds)&&r.data.rounds.length)
-   r.data={...r.data,viewRound:Math.max(0,Math.min(selected,r.data.rounds.length-1))};
+  if(isFollowingLive())r.data={...r.data,viewRound:latestRound(r.data)};
+  else{
+   const selected=Number(get(KEY)?.viewRound);
+   if(Number.isInteger(selected)&&Array.isArray(r.data.rounds)&&r.data.rounds.length)
+    r.data={...r.data,viewRound:Math.max(0,Math.min(selected,r.data.rounds.length-1))};
+  }
  }
  set(KEY,r.data);last=stable(r.data);
  meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;
@@ -250,7 +261,7 @@ function viewerNavigation(target){
  // Explicitly allow only v5.8.14 spectator menu actions; no tournament mutation.
  const viewerButton=target?.closest?.('button[data-p5814-viewer-action]');
  if(viewerButton&&!viewerButton.disabled)
-  return ['cloud','refresh','home','leave'].includes(viewerButton.dataset.p5814ViewerAction);
+  return ['cloud','refresh','home','leave','live'].includes(viewerButton.dataset.p5814ViewerAction);
  const cloud=target?.closest?.('button[data-p58-cloud]');
  if(cloud&&!cloud.disabled)return true;
  const button=target?.closest?.('button[data-act],button[data-action]');
@@ -326,11 +337,23 @@ window.addEventListener('visibilitychange',()=>{if(document.hidden)safeTick()});
 window.addEventListener('beforeunload',localPersistHash);
 window.P5CloudSession=Object.freeze({
  version:'5.8-lab',
- getStatus:()=>({connected:!!meta,role:role(),revision:meta?.revision||null,
+ getStatus:()=>({connected:!!meta,code:meta?.code||null,role:role(),revision:meta?.revision||null,
+  followingLive:isFollowingLive(),
   status:conflict?'CONFLICT':offline?'OFFLINE':busy?'SYNCING':view()?'VIEW ONLY':meta?'SYNCED':'LOCAL ONLY',
   waiting:!!meta?.waiting}),
  open:()=>{if(!meta||!dialog)return false;dialog.hidden=false;render();return true},
  refreshNow:async()=>{if(!meta)return false;await refresh();return !offline&&!conflict},
+ setFollowLive:(enabled)=>{
+  if(!view())return false;
+  setFollowingLive(!!enabled);
+  if(enabled&&kind==='unified'){
+   const local=get(KEY);
+   if(local&&Array.isArray(local.rounds)){
+    local.viewRound=latestRound(local);set(KEY,local);location.reload();
+   }
+  }
+  return true;
+ },
  leaveViewer:()=>{
   if(!meta||!view())return false;
   if(!confirm('Leave this Cloud Session on this device? Your local View Only copy will be cleared. The online session and other devices will not be affected.'))return false;

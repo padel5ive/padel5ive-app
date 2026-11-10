@@ -1,0 +1,22 @@
+name: PADEL 5IVE v5.8.18 Home CTA Vertical Balance QA
+on:
+  pull_request:
+    paths:
+      - 'public/phase5818/**'
+      - 'scripts/phase5818-integrate.cjs'
+      - 'scripts/qa-v5818-pwa.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-v5818-pwa.yml'
+jobs:
+  home-cta-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-v5818-pwa.cjs
+      - run: node scripts/qa-v5817-pwa.cjs
+      - run: node scripts/qa-v5816-pwa.cjs

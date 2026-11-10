@@ -1,0 +1,54 @@
+/* PADEL 5IVE v5.8.17 · iPhone PWA top chrome parity
+ * Match the DASHBOARD status-bar color (#11171d) on the Home and Initial
+ * Setup routes, without changing v5.8.16's fixed bottom viewport geometry.
+ * Independent style layer so WebKit caches a new asset URL.
+ */
+@media screen and (display-mode:standalone) and (max-width:760px) {
+ :root { --p5817-dashboard-chrome: #11171d; }
+ html,
+ html body,
+ html body:not(.p54-active),
+ html body.p54-active {
+  background-color:var(--p5817-dashboard-chrome)!important;
+ }
+ /* The only physical top strip is controlled by iOS itself when
+    viewport-fit=auto. The photo starts flush beneath it, softly fading
+    into the exact same dashboard charcoal, without displacing the logo. */
+ html body:not(.p54-active) #portal .p541-venue {
+  background-color:#11171d!important;
+  background-image:
+   linear-gradient(180deg,
+     #11171d 0px,
+     rgba(17,23,29,.85) 18px,
+     rgba(17,23,29,.3) 52px,
+     rgba(17,23,29,0) 82px),
+   linear-gradient(180deg,
+     rgba(3,12,25,.21) 0%,
+     rgba(3,12,25,.06) 22%,
+     transparent 35%,
+     transparent 71%,
+     rgba(3,12,25,.08) 84%,
+     rgba(3,12,25,.23) 100%),
+   url('/phase585/home-venue-user-refined-hd.webp')!important;
+  background-repeat:no-repeat!important;
+  background-size:cover!important;
+  background-position:center!important;
+ }
+ /* Initial Setup uses the same dark chrome without modifying its
+    scrollable form, height, padding, or touch targets. */
+ html body.p54-active #p54-workspace.p54-workspace {
+  background-color:#11171d!important;
+ }
+ html body.p54-active #p54-workspace.p54-workspace::before {
+  content:""!important;
+  display:block!important;
+  position:sticky!important;
+  top:0!important;
+  width:100%!important;
+  height:60px!important;
+  margin-bottom:-60px!important;
+  background:linear-gradient(180deg,#11171d 0%,rgba(17,23,29,0) 100%)!important;
+  pointer-events:none!important;
+  z-index:0!important;
+ }
+}

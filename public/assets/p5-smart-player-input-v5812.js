@@ -7,20 +7,63 @@
  const empty=s=>!s||/^(?:[.\-–—_*•?]+|tba|tbd|kosong|empty|vacant)$/i.test(s);
  function parse(text){
   const lines=String(text||'').replace(/\r/g,'').split('\n');
-  const numbered=lines.map(x=>x.match(/^\s*(?:[-•*]\s*)?(\d{1,3})\s*[.)\-:]\s*(.*)$/u)).filter(Boolean);
-  const candidates=numbered.length?numbered.map(x=>x[2]):lines.filter(x=>/^[\p{L}][\p{L}\p{M} .'’\-]{1,68}$/u.test(x.trim()));
-  const names=[],seen=new Set();let skipped=0,marked=0,duplicates=0;
+  const numberedPattern=/^\s*(?:[-•*]\s*)?(\d{1,3})\s*[.)\-:]\s*(.*)$/u;
+  // Reclub shares contain several independently numbered groups. Only the
+  // explicit Participants section is the default confirmed registration list.
+  // Unlabelled (N) groups and On Hold are NOT assumed to be participants.
+  const sectionPattern=/^\s*([^()\d]{0,55}?)\s*\(\s*(\d{1,3})\s*\)\s*:?\s*$/u;
+  const isParticipants=x=>/^\s*participants\s*$/i.test(x);
+  const reclub=lines.some(line=>{
+   const m=line.match(sectionPattern);return !!m&&isParticipants(m[1]);
+  });
+  let candidates=[],excludedOnHold=0,excludedOther=0,declared=0;
+  if(reclub){
+   let inParticipants=false;
+   for(const line of lines){
+    const heading=line.match(sectionPattern);
+    if(heading){
+     const label=heading[1].trim().toLowerCase(),count=Number(heading[2]);
+     inParticipants=isParticipants(label);
+     if(inParticipants)declared+=count;
+     else if(/^(?:on hold|on-hold|waitlist|waiting list|pending)$/i.test(label))excludedOnHold+=count;
+     else excludedOther+=count;
+     continue;
+    }
+    if(inParticipants){
+     const numbered=line.match(numberedPattern);
+     if(numbered)candidates.push(numbered[2]);
+    }
+   }
+  }else{
+   const numbered=lines.map(line=>line.match(numberedPattern)).filter(Boolean);
+   candidates=numbered.length?numbered.map(m=>m[2]):
+    lines.filter(line=>/^[\p{L}][\p{L}\p{M} .'’\-]{1,68}$/u.test(line.trim()));
+  }
+  const names=[],seen=new Set();
+  let skipped=0,marked=0,duplicates=0,guests=0;
   for(let name of candidates){
    name=String(name||'').trim();
    if(empty(name)){skipped++;continue;}
-   const cleaned=name.replace(/(?:\s*[*✱⭐★☆])+\s*$/u,'').trim().replace(/\s+/g,' ');
+   let cleaned=name.replace(/(?:\s*[*✱⭐★☆])+\s*$/u,'').trim().replace(/\s+/g,' ');
    if(name!==cleaned)marked++;
+   // Reclub's "Ian +1 (Ian's +1)" is a guest SLOT, not a real guest name.
+   // Keep it separate from Ian and visibly flag it for organizer review.
+   const guest=cleaned.match(/^(.+?)\s+\+([1-9]\d*)\s+\(([^()]*)\)$/u);
+   if(guest&&/\+\d+\s*$/u.test(guest[3]))cleaned=guest[1].trim()+' +'+guest[2];
    if(empty(cleaned)||!/\p{L}/u.test(cleaned)){skipped++;continue;}
    if(cleaned.length>70)continue;
-   const k=norm(cleaned);if(seen.has(k)){duplicates++;continue;}
-   seen.add(k);names.push(cleaned);
+   const k=norm(cleaned);
+   if(seen.has(k)){duplicates++;continue;}
+   seen.add(k);
+   if(/\s\+[1-9]\d*\s*$/u.test(cleaned))guests++;
+   names.push(cleaned);
   }
-  return {names,skipped,marked,duplicates,slots:numbered.length,numbered:!!numbered.length,overflow:names.length>MAX};
+  return {
+   names,skipped,marked,duplicates,guests,
+   slots:candidates.length,numbered:reclub||candidates.length>0,
+   overflow:names.length>MAX,source:reclub?'reclub':'whatsapp',
+   declared,excludedOnHold,excludedOther
+  };
  }
  const node=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;};
  function context(){
@@ -34,7 +77,7 @@
  }
  function pending(){
   const c=context(),p=state.parsed;
-  if(!c||!p||p.raw!==state.text||p.overflow)return null;
+  if(!c||!p||p.raw!==state.text||p.overflow||(p.source==='reclub'&&p.declared!==p.slots))return null;
   const names=p.names.filter(n=>!c.existing.has(norm(n)));
   if(!names.length)return null;
   if(c.mode==='fixed'&&(!state.confirmPairs||names.length%2))return null;
@@ -49,7 +92,12 @@
   out.replaceChildren();out.hidden=!p;button.disabled=true;button.textContent='ADD TO REGISTRATION';
   if(!p||!c)return;
   const fresh=p.names.filter(x=>!c.existing.has(norm(x)));
-  out.append(node('p','p5812-count',p.names.length+' detected · '+fresh.length+' new · '+p.skipped+' empty slots skipped'));
+  out.append(node('p','p5812-count',(p.source==='reclub'?'Reclub Participants':'WhatsApp list')+' · '+p.names.length+' detected · '+fresh.length+' new'+(p.skipped?' · '+p.skipped+' empty slots skipped':'')));
+  if(p.source==='reclub'){
+   out.append(node('p','p5812-muted',p.excludedOnHold+' On Hold excluded · '+p.excludedOther+' other-list entries excluded'));
+   if(p.declared!==p.slots)out.append(node('p','p5812-error','Reclub Participants count differs from numbered entries. Review before importing.'));
+  }
+  if(p.guests)out.append(node('p','p5812-warning',p.guests+' guest placeholder'+(p.guests===1?'':'s')+' (e.g. Ian +1). Replace with actual name when available.'));
   if(p.marked)out.append(node('p','p5812-muted',p.marked+' trailing * markers removed; no meaning assumed.'));
   if(p.duplicates||fresh.length!==p.names.length)out.append(node('p','p5812-muted',(p.duplicates+p.names.length-fresh.length)+' duplicate name(s) skipped.'));
   if(!p.numbered)out.append(node('p','p5812-muted','No numbered slots detected. Check the names carefully.'));
@@ -78,8 +126,8 @@
   const anchor=c.card.querySelector('.p5-v2-reg.p5-b32-reg-list, .p5-52-columns');
   if(!anchor)return;
   const root=node('details','p5812-smart');root.id='p5812-smart';
-  const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','PASTE FROM WHATSAPP'));root.append(title);
-  const box=node('div','p5812-body');box.append(node('p','p5812-help','Paste the full WhatsApp list. Titles, dates, court times and empty slots are ignored.'));
+  const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','WHATSAPP / RECLUB'));root.append(title);
+  const box=node('div','p5812-body');box.append(node('p','p5812-help','Paste a full WhatsApp roster or Reclub Participants share. Only Reclub Participants are selected; On Hold is excluded.'));
   const field=node('textarea','p5812-textarea');field.rows=6;field.maxLength=16000;field.setAttribute('aria-label','WhatsApp player list');field.placeholder='1. Edwin\n2. Teo\n3.\n4. Febrian\n5. Chris*';field.value=state.text;
   field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;state.flash='';preview(root);});box.append(field);
   const actions=node('div','p5812-buttons');

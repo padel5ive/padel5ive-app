@@ -66,7 +66,7 @@ assert(!shortMessage.includes('MODERATOR PIN')&&!shortMessage.includes('ACCESS P
  'Short link must never reveal private Moderator PIN');
 assert(source.includes('const text=message(meta);')&&source.includes("window.open('https://wa.me/?text='"),
  'WhatsApp action still uses message builder and opens wa.me on user tap');
-assert(source.includes('const str=message(meta);')&&source.includes('navigator.clipboard?.writeText(str)'),
+assert(source.includes('const str=message(meta);')&&source.includes('navigator.clipboard?.writeText')&&source.includes('navigator.clipboard.writeText(str)'),
  'Copy details uses identical approved message');
 assert(source.includes("btn(meta.waiting?'REQUEST SENT · CHECK STATUS':'TAKE CONTROL'"),'Take Control action preserved');
 assert(source.includes("btn('APPROVE CONTROL TRANSFER'"),'Approve Transfer action preserved');

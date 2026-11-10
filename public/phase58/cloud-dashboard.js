@@ -79,6 +79,24 @@ function btn(label,fn,secondary=false){
  return b;
 }
 function card(label,value){const w=e('div','p58-credential');w.append(e('small','',label),e('strong','',value));return w}
+function pinCard(pin){
+ const box=card('MODERATOR PIN · PRIVATE',pin);
+ box.classList.add('p58-private-pin-copy');box.setAttribute('role','button');
+ box.setAttribute('tabindex','0');box.setAttribute('aria-label','Copy Moderator PIN privately');
+ box.append(e('small','p58-copy-hint','TAP TO COPY · SHARE PRIVATELY'));
+ const copy=async()=>{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(pin);
+  else{
+   const a=e('textarea');a.value=pin;document.body.append(a);a.select();
+   const ok=document.execCommand('copy');a.remove();
+   if(!ok)throw Error('Copy is unavailable on this device.');
+  }
+  alert('Moderator PIN copied. Share only via private message.');
+ };
+ box.addEventListener('click',()=>void copy().catch(err=>alert(err.message)));
+ box.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();void copy().catch(err=>alert(err.message))}});
+ return box;
+}
 function render(){
  if(!body)return;
  mark();body.replaceChildren();
@@ -99,7 +117,7 @@ function render(){
  }
  const cr=e('div','p58-credentials');
  cr.append(card('SESSION CODE',meta.code));
- if(meta.role==='controller'&&meta.moderatorPin)cr.append(card('MODERATOR PIN · PRIVATE',meta.moderatorPin));
+ if(meta.role==='controller'&&meta.moderatorPin)cr.append(pinCard(meta.moderatorPin));
  else if(meta.pin)cr.append(card('LEGACY ACCESS PIN',meta.pin));
  else if(meta.role==='controller'&&meta.moderatorPinRequired)
   cr.append(card('MODERATOR PIN · PRIVATE','Unlock below'));

@@ -17,6 +17,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Install DOM test dependency
+        run: npm install --no-save jsdom@26
       - name: Validate selected mode prewarming and native engine safety
         run: |
           node --check public/phase588/setup-prewarm-v588.js

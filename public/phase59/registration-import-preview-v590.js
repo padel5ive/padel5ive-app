@@ -6,8 +6,8 @@
  */
 (()=>{'use strict';
 const regSelector='.p5-b32-registration';
+const rootDocument=document; // stable reference after test teardown
 const create=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
-const sharedExample='🟤 PADEL 5IVE • FIXED PARTNER • BRONZE SERIES • 3H 🔶 222,5K\n⏰ Tue, Nov 10 7:00 PM\n📍 PADEL 5IVE\n\nRSVP: https://reclub.co/id/m/T3H3TL';
 let modal=null;
 const urlPattern=/https?:\/\/(?:www\.)?reclub\.co\/(?:[a-z]{2}\/)?m\/[a-z0-9]+(?:[/?#][^\s<>]*)?/ig;
 function parseSharedMessage(text){
@@ -85,7 +85,7 @@ let pending=false;
 function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 const observer=new MutationObserver(()=>{
- if(document.defaultView&&document.body&&document.querySelector(regSelector))schedule();
+ if(rootDocument.defaultView&&rootDocument.body&&rootDocument.querySelector(regSelector))schedule();
 });
 observer.observe(document.body,{subtree:true,childList:true});
 // Expose only the pure share-message parser for test automation (never roster).

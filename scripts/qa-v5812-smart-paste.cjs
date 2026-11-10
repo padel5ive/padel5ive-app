@@ -127,13 +127,13 @@ const ind=run('individual-americano',{mode:'individual',names:expected,group:'A'
 assert.deepEqual(ind.s.roster.map(p=>p.names[0]),expected);
 assert.equal(ind.s.nextId,14);
 assert.equal(ind.saved,1);assert.equal(ind.renders,1);assert.equal(ind.ctx.count,13);
-const fixed=run('fp-americano',{mode:'fixed',names:['A','B','C','D'],group:'A',paired:true},
+const fixed=run('fp-americano',{mode:'fixed',names:['D','B','A','C'],pairs:[['D','B'],['A','C']]},
  Array.from({length:6},(_,i)=>({id:i+1,names:['','']})));
-assert.deepEqual(fixed.s.roster.slice(0,2).map(p=>p.names),[['A','B'],['C','D']]);
-const odd=run('fp-americano',{mode:'fixed',names:expected,paired:true},[{id:1,names:['','']}]);
+assert.deepEqual(fixed.s.roster.slice(0,2).map(p=>p.names),[['D','B'],['A','C']]);
+const odd=run('fp-americano',{mode:'fixed',names:expected,pairs:[]},[{id:1,names:['','']}]);
 assert.equal(odd.saved,0);assert.equal(odd.renders,0);assert.equal(odd.s.roster[0].names[0],'');
-const notConfirmed=run('fp-americano',{mode:'fixed',names:['A','B'],paired:false},[{id:1,names:['','']}]);
-assert.equal(notConfirmed.saved,0,'Fixed pairing requires explicit confirmation');
+const notConfirmed=run('fp-americano',{mode:'fixed',names:['A','B']},[{id:1,names:['','']}]);
+assert.equal(notConfirmed.saved,0,'Fixed pairing requires manually chosen pairs');
 const structured=run('structured-mexicano',{mode:'structured',names:['A1','A2','A3'],group:'B',paired:false},[
  {id:1,names:['Existing'],group:'A'},{id:2,names:[''],group:'A'},{id:3,names:[''],group:'B'}]);
 assert.deepEqual(structured.s.roster.filter(p=>p.group==='B').map(p=>p.names[0]),['A1','A2','A3']);
@@ -147,7 +147,7 @@ doc.window.eval(js);
 doc.window.document.dispatchEvent(new doc.window.Event('DOMContentLoaded'));
 const box=doc.window.document.getElementById('p5812-smart');
 assert(box,'Smart Input must mount within native Registration');
-assert.equal(box.querySelector('.p5812-title span')?.textContent,'3 LIST FORMATS');
+assert.equal(box.querySelector('.p5812-title span'),null,'Redundant 3 LIST FORMATS label removed');
 assert.equal(box.querySelector('.p5812-help')?.textContent,'Supports WhatsApp List, Reclub Participants List & Simple Name List. For full names, use commas or new lines.');
 assert.equal(box.open,false,'Default Smart Input must be collapsed');
 const area=box.querySelector('textarea');

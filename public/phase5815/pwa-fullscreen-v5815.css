@@ -1,0 +1,111 @@
+/* PADEL 5IVE · v5.8.15 — iPhone installed PWA finish
+ * One approved venue photograph, editorial subtitle, overscan paint beneath
+ * the iOS home indicator. Do NOT change navigation, engines, scoring or CTA positions.
+ * This layer affects only installed PWA at phone widths.
+ */
+@media screen and (display-mode:standalone) and (max-width:760px){
+ :root { --p5815-bleed: 90px; }
+ html {
+  background-color:#071827!important;
+  min-height:100%!important;
+ }
+ html body { min-height:100vh!important;min-height:100dvh!important; }
+ /* The previous pseudo-photo was viewport-tall, but the clipped portal
+    could terminate above iOS's bottom composition area. Paint the genuine
+    venue photo once on the venue canvas and allow it to overdraw the tail.
+    All foreground elements retain their original 100dvh reference box. */
+ html body:not(.p54-active){
+  background-color:#0a2649!important;
+  isolation:isolate!important;
+ }
+ html body:not(.p54-active)::before{
+  content:none!important;
+  display:none!important;
+ }
+ html body:not(.p54-active) #portal.portal{
+  height:100dvh!important;
+  min-height:100dvh!important;
+  max-height:100dvh!important;
+  overflow:visible!important;
+  background:transparent!important;
+ }
+ html body:not(.p54-active) #portal .p541-venue{
+  position:absolute!important;
+  top:0!important;left:0!important;right:0!important;
+  bottom:calc(-1 * var(--p5815-bleed))!important;
+  height:calc(100% + var(--p5815-bleed))!important;
+  min-height:calc(100% + var(--p5815-bleed))!important;
+  overflow:hidden!important;
+  background-color:#0b2a51!important;
+  background-image:
+   linear-gradient(180deg,
+    rgba(3,12,25,.21) 0%,
+    rgba(3,12,25,.06) 22%,
+    transparent 35%,transparent 71%,
+    rgba(3,12,25,.08) 84%,
+    rgba(3,12,25,.23) 100%),
+   url('/phase585/home-venue-user-refined-hd.webp')!important;
+  background-size:cover!important;
+  background-position:50% 50%!important;
+  background-repeat:no-repeat!important;
+  pointer-events:none!important;
+ }
+ /* No duplicate overpaint from the legacy venue photo or old overlay. */
+ html body:not(.p54-active) #portal .p541-venue::after{
+  display:none!important;content:none!important;
+ }
+ /* Main logo is untouched. Only subtitle gains deliberate hierarchy and
+    moves clear of the roof's patterned hexagonal strip. */
+ html body:not(.p54-active) #portal .page-title{
+  position:relative!important;
+  margin-top:-9px!important;
+  isolation:isolate!important;
+  line-height:1.25!important;
+ }
+ html body:not(.p54-active) #portal .page-title::before{
+  content:""!important;
+  position:absolute!important;
+  z-index:-1!important;
+  inset:-7px 0!important;
+  width:min(78vw,330px)!important;
+  margin:0 auto!important;
+  background:linear-gradient(90deg,
+   transparent,rgba(5,15,25,.32) 22%,
+   rgba(5,15,25,.37) 78%,transparent)!important;
+  pointer-events:none!important;
+ }
+ html body:not(.p54-active) #portal .p545-brand-sub{
+  display:block!important;
+  margin:0 auto!important;
+  padding:3px 0 5px .18em!important;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:clamp(11px,2.7vw,13px)!important;
+  font-weight:500!important;
+  font-style:normal!important;
+  letter-spacing:.18em!important;
+  line-height:1.4!important;
+  color:#e9d2b2!important;
+  opacity:1!important;
+  text-shadow:0 1px 4px rgba(0,6,16,.75),0 2px 11px rgba(0,6,16,.55)!important;
+ }
+ /* Initial Setup: extend ONLY the stationary backdrop through the iOS tail;
+    its existing shell and independent scroll navigation remain unchanged. */
+ html body.p54-active{background-color:#081624!important;}
+ html body.p54-active #p54-workspace.p54-workspace{
+  height:calc(100dvh + var(--p5815-bleed))!important;
+  min-height:calc(100dvh + var(--p5815-bleed))!important;
+  max-height:none!important;
+  bottom:calc(-1 * var(--p5815-bleed))!important;
+  background-color:#071624!important;
+  background-repeat:no-repeat!important;
+  background-size:cover!important;
+  overscroll-behavior-y:contain!important;
+ }
+ /* The content is still laid out at its original top coordinate. */
+ html body.p54-active #p54-workspace > .p54-shell{
+  padding-bottom:max(36px,env(safe-area-inset-bottom,0px))!important;
+ }
+}
+@media screen and (display-mode:standalone) and (max-width:760px) and (max-height:700px){
+ :root { --p5815-bleed: 68px; }
+}

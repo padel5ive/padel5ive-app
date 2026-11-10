@@ -1,5 +1,4 @@
-'use strict'; const fs=require('node:fs');
-for(const path of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
-const s=fs.readFileSync(path,'utf8'); console.log('=== '+path+' '+s.length+' ===');
-for(const t of ['Player Registration','PAIR REGISTRATION','REGISTRATION','Registration','registration','register','ADD PLAYER','ADD PAIR','Add Player','Add Pair','Player Name','Pair Name','Manage Players','Coach','Fixed Partner','p5-v212-roster','name-input','nameInput','data-act="add-player"','data-act="add-pair"','setup-roster','setup-players','add-roster','rosterInput','function setup','function reg(','function roster(','function setupPage','function registration','function render(',"case 'add-roster':", "case 'add-player':", "case 'add-pair':"]){let loc=[],i=-1;while((i=s.indexOf(t,i+1))>=0&&loc.length<14)loc.push(i);if(!loc.length)continue;console.log('TERM '+JSON.stringify(t)+' '+loc.join(','));for(const n of loc.slice(-4))console.log('CTX '+JSON.stringify(t)+' @'+n+' '+s.slice(Math.max(0,n-430),n+900).replace(/\s+/g,' '));}
-}
+'use strict'; const fs=require('node:fs');const x=fs.readFileSync('public/modes/unified/index.html','utf8');
+for(const term of ['function reg(s)','function structuredReg(s)','function collectRegistration()','function addRoster','function addPlayer','function addPair','function collectReg','function syncReg',"case 'registration-add':","case 'registration-remove':","case 'registration-start':","case 'reg-add':","case 'structured-add-player':", "case 'registration-back':",'p5-v2-regrow','p5-b32-reg-fields']){
+let at=-1,loc=[];while((at=x.indexOf(term,at+1))>=0)loc.push(at);console.log('TERM '+JSON.stringify(term)+' '+loc.join(','));
+for(const i of loc.slice(0,2)){console.log('CTX '+term+' AT '+i+'\n'+x.slice(Math.max(0,i-400),i+9500).replace(/data:image\\/[^ ]+/g,'[embedded image]')+'\nENDCTX');}}

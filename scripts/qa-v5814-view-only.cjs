@@ -67,6 +67,8 @@ async function one(kind){
   assert.equal(doc.querySelectorAll('.p5814-read-score').length,0);
   assert(!doc.querySelector('input[data-stage1-score]').hasAttribute('aria-disabled'));
  }
- w.close();
+ // Keep this jsdom window alive until its pending requestAnimationFrame flushes;
+ // native Safari never destroys the document mid-frame during role restoration.
+ await delay(120);
 }
 (async()=>{await one('unified');await one('club');console.log('PASS v5.8.14 viewer: native UI parity, permissions, menu, scoring and role recovery.');})().catch(e=>{console.error(e);process.exitCode=1});

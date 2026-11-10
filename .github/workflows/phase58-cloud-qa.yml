@@ -34,6 +34,8 @@ jobs:
         run: node scripts/qa-phase581-pwa-fullscreen.cjs
       - name: Verify compact premium Home CTA hierarchy
         run: node scripts/qa-phase582-home-cta.cjs
+      - name: Verify approved WhatsApp message includes Take Control instructions
+        run: node scripts/qa-v589-cloud-whatsapp.cjs
       - name: Ensure baseline match control survives
         run: |
           node scripts/qa-v5516.cjs

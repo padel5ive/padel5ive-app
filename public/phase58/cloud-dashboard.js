@@ -22,7 +22,9 @@ function message(m){const s=m.summary||{},date=[formatDate(s.date),s.time].filte
  return '*PADEL 5IVE · CLOUD SESSION*\n_BEYOND 5IVE. BEYOND PLAY._\n\n'+
  '*'+(s.session||'Game Session')+'*\n'+(date?date+'\n\n':'\n')+
  location.origin+'\n\n*SESSION CODE:* '+m.code+'\n*ACCESS PIN:* '+m.pin+
- '\n\n*HOW TO ACCESS*\n1. Open the link.\n2. Select Load Session.\n3. Enter the Session Code & PIN.\n4. Tap Load Session.';
+ '\n\n*HOW TO ACCESS*\n1. Open the link → Load Session.\n2. Enter Code & PIN → Load Session.'+
+ '\n\n*HOW TO TAKE CONTROL*\n1. Open Menu & Settings → Cloud Session.\n2. Tap Take Control.\n3. Current controller taps Approve Control Transfer.'+
+ '\n\n*NOTE*\nOne controller at a time. Others are View Only. Offline control transfers after the lease expires.';
 }
 async function api(action,opts={}){
  const res=await fetch(API,{method:'POST',credentials:'same-origin',cache:'no-store',

@@ -14,7 +14,7 @@ assert.equal(html.split('id="p5813-style-help"').length-1,1);
 assert(html.includes("s.groupConfig={labels:['','']};"),'Fresh group labels must start blank');
 assert(html.includes('l[0].toLocaleLowerCase()===l[1].toLocaleLowerCase()'),'Existing unique-label engine validation preserved');
 assert(html.includes("alertModal(P5Structured.is(s)?'Pairing Groups':'Advanced Player Rules'"));
-assert(html.includes('e.g. Left')&&html.includes('e.g. Right'));
+assert(html.includes('e.g. Left / ♂')&&html.includes('e.g. Right / ♀'));
 assert(html.includes('p5813-setup-style'));
 function sourceBetween(a,b){
  const x=html.indexOf('function '+a+'('),y=html.indexOf('function '+b+'(',x);
@@ -51,8 +51,8 @@ let doc=d.window.document,a=doc.querySelector('#p5-51-label-a'),b=doc.querySelec
 assert(a&&b);
 assert.equal(a.value,'');assert.equal(b.value,'');
 assert(a.required&&b.required);
-assert.equal(a.placeholder,'e.g. Left');
-assert.equal(b.placeholder,'e.g. Right');
+assert.equal(a.placeholder,'e.g. Left / ♂');
+assert.equal(b.placeholder,'e.g. Right / ♀');
 assert.equal(doc.querySelectorAll('.p5813-required').length,2);
 assert(doc.querySelector('.p5-51-summary').textContent.includes('Group A · 2 players'));
 assert(doc.querySelector('.p5-51-summary').textContent.includes('Group B · 2 players'));
@@ -107,5 +107,5 @@ assert.equal((home.match(/Flexible Pairing · Fixed Partners · Structured/g)||[
 assert(!home.includes("'Normal / Flexible Pairing',false"));
 assert(!home.includes("['fixed','Fixed Partner',false"));
 assert(!home.includes("['structured','Structured Pairing',false"));
-assert(!html.includes('e.g. Left / ♂')&&!html.includes('e.g. Right / ♀'),'Structured example fields contain no gender symbols');
+assert(html.includes('e.g. Left / ♂')&&html.includes('e.g. Right / ♀'),'Structured group placeholders retain male/female symbols');
 console.log('PASS v5.8.13: pairing styles and descriptions, blank required unique labels, restored labels, Structured Smart Input group destination.');

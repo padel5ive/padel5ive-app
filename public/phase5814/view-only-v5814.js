@@ -45,95 +45,109 @@ function restoreText(){
  for(const [el,text] of changed){if(el.isConnected)el.textContent=text;}
  changed.clear();
 }
-/* Promote the EXISTING Cloud Session action, never clone the button.
- * It remains wired to the original Cloud modal/permissions and sits alongside
- * the three native master accordions. Works for Unified and Club Match.
- * p585 consolidates its menu asynchronously, so this adapter follows it.
+/* Use native <details>/<summary> rows from the actual master UI.
+ * Never style a Cloud button to pretend to be a master menu row: the native
+ * button rules have !important styles and were centering the item on iPhone.
+ * Keep the original button in a hidden host so its registered action works.
  */
-/* The controller sees Cloud Session as the FOURTH native menu row.
- * Viewers see only Viewer Settings; the existing Cloud action remains wired
- * but is hidden (never cloned), so controller restoration is lossless.
- */
-function promoteCloud(){
- const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
- if(!root)return;
- const share=kind==='unified'?$('details[data-submenu="share"]',root):$('details[data-menu-section="Share & Export"]',root);
- const cloud=$('[data-p58-cloud]',root);
- if(!share||!cloud)return;
- if(!cloud.classList.contains('p5814-cloud-primary')){
-  cloud.classList.add('p5814-cloud-primary');
-  // Remove the old highlighted-action classes, keeping the real Cloud handler.
-  cloud.classList.remove('p585-cloud-row','p58-menu-action','p5-4852-action');
-  cloud.setAttribute('aria-label','Cloud Session');
-  const summary=$(':scope > summary',share);
-  const nativeSummary=summary?.cloneNode(true);
-  if(nativeSummary){
-   const icon=$('.p5-4852-icon',nativeSummary),label=$('.p5-4852-label',nativeSummary);
-   const svg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
-   if(icon&&label){
-    icon.innerHTML=svg;
-    label.textContent='Cloud Session';
-    cloud.replaceChildren(...Array.from(nativeSummary.childNodes));
-   }else{
-    // A legacy master may render plain <summary> text instead of label spans.
-    const fallbackIcon=make('span','p5-4852-icon');
-    fallbackIcon.innerHTML=svg;
-    cloud.replaceChildren(fallbackIcon,make('span','p5-4852-label','Cloud Session'),
-     make('span','p5-4852-chevron','›'));
-   }
-  }else{
-   const icon=make('span','p5-4852-icon');
-   icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
-   cloud.replaceChildren(icon,make('span','p5-4852-label','Cloud Session'),
-    make('span','p5-4852-chevron','›'));
-  }
+const cloudGlyph='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
+const eyeGlyph='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.8-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.8 6.5-9.5 6.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>';
+function masterSummary(reference,label,glyph){
+ const native=$(':scope > summary',reference);
+ const summary=native?.cloneNode(true)||make('summary','');
+ summary.removeAttribute('aria-expanded');
+ let icon=$('.p5-4852-icon',summary),name=$('.p5-4852-label',summary);
+ if(!icon||!name){
+  summary.replaceChildren();
+  icon=make('span','p5-4852-icon');
+  name=make('span','p5-4852-label');
+  const chevron=make('span','p5-4852-chevron','›');
+  summary.append(icon,name,chevron);
  }
- if(cloud.parentElement!==root||cloud.previousElementSibling!==share)
-  root.insertBefore(cloud,share.nextSibling);
+ icon.innerHTML=glyph;
+ name.textContent=label;
+ return summary;
+}
+function nativeMenu(){
+ return $(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
+}
+function shareMenu(root){
+ return $(kind==='unified'?'details[data-submenu="share"]':'details[data-menu-section="Share & Export"]',root);
+}
+function promoteCloud(){
+ const root=nativeMenu();
+ if(!root)return;
+ const share=shareMenu(root);
+ if(!share)return;
+ const existing=$(':scope > details.p5814-cloud-section',root);
+ if(existing)return;
+ // The original Cloud Session action has a delegated click handler in p58.
+ // It is moved to the section's hidden host, not duplicated or replaced.
+ const original=$('[data-p58-cloud]',root);
+ if(!original)return;
+ const section=make('details','p5-4852-section p5814-cloud-section');
+ const summary=masterSummary(share,'Cloud Session',cloudGlyph);
+ const holder=make('div','p5814-cloud-native-handler');
+ holder.hidden=true;
+ holder.append(original);
+ section.append(summary,holder);
+ summary.addEventListener('click',event=>{
+  event.preventDefault();
+  if(document.body.classList.contains('p58-view-only'))return;
+  original.click();
+ });
+ root.insertBefore(section,share.nextSibling);
 }
 function menuView(){
- const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
- if(!root)return;
+ const root=nativeMenu(),share=root&&shareMenu(root);
+ if(!root||!share)return;
  for(const child of Array.from(root.children)){
   if(child.classList.contains('p5814-view-menu'))continue;
   if(!child.classList.contains('p5814-master-menu-hidden'))child.classList.add('p5814-master-menu-hidden');
   hideControl(child);
  }
- const existing=$('.p5814-view-menu',root);
+ const existing=$(':scope > details.p5814-view-menu',root);
  if(existing){updateStatus(existing);return;}
  const panel=make('details','p5-4852-section p5814-view-menu');
- const summary=make('summary','');
- const icon=make('span','p5-4852-icon');
- icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.8-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.8 6.5-9.5 6.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>';
- summary.append(icon,make('span','p5-4852-label','Viewer Settings'),make('span','p5-4852-chevron','›'));
+ panel.append(masterSummary(share,'Viewer Settings',eyeGlyph));
  const content=make('div','p5814-menu-body');
- const menuButton=(label,action)=>{
-  const b=make('button','p5814-view-action');
-  b.type='button';b.dataset.p5814ViewerAction=action;
-  b.append(make('span','p5814-view-action-label',label),
-   make('span','p5814-view-action-chevron','›'));
-  return b;
+ const menuRow=(label,action)=>{
+  // div[role=button] is intentional: global master BUTTON styles were causing
+  // inline grey pills, two on one line, on iPhone. It remains keyboard operable.
+  const row=make('div','p5814-view-row');
+  row.setAttribute('role','button');
+  row.setAttribute('tabindex','0');
+  row.dataset.p5814ViewerAction=action;
+  row.append(make('span','p5814-view-row-label',label),
+   make('span','p5814-view-row-chevron','›'));
+  return row;
  };
- content.append(menuButton('Take Control','cloud'));
- content.append(menuButton('Refresh Data','refresh'));
- // Keep a quiet, deliberate disconnect action for changing sessions.
- const footer=make('div','p5814-menu-footer');
- footer.append(menuButton('Leave Cloud Session','leave'));
+ content.append(menuRow('Take Control','cloud'));
+ content.append(menuRow('Refresh Data','refresh'));
+ const footer=make('div','p5814-view-footer');
+ footer.append(menuRow('Leave Cloud Session','leave'));
  content.append(footer);
- panel.append(summary,content);root.append(panel);
+ panel.append(content);root.append(panel);
+ panel.addEventListener('keydown',event=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  const row=event.target.closest('[data-p5814-viewer-action]');
+  if(!row)return;
+  event.preventDefault();
+  row.click();
+ });
  panel.addEventListener('click',async event=>{
-  const button=event.target.closest('button[data-p5814-viewer-action]');
-  if(!button)return;
+  const row=event.target.closest('[data-p5814-viewer-action]');
+  if(!row)return;
   event.preventDefault();event.stopPropagation();
-  if(button.disabled||!document.body.classList.contains('p58-view-only'))return;
-  const action=button.dataset.p5814ViewerAction,cloud=window.P5CloudSession;
+  if(row.getAttribute('aria-disabled')==='true'||!document.body.classList.contains('p58-view-only'))return;
+  const action=row.dataset.p5814ViewerAction,cloud=window.P5CloudSession;
   if(!cloud)return;
-  if(action==='leave'){cloud.leaveViewer?.();return;}
   if(action==='cloud'){cloud.open?.();return;}
+  if(action==='leave'){cloud.leaveViewer?.();return;}
   if(action==='refresh'){
-   button.disabled=true;
+   row.setAttribute('aria-disabled','true');
    try{await cloud.refreshNow?.();}
-   finally{button.disabled=false;}
+   finally{row.removeAttribute('aria-disabled');}
   }
  });
  updateStatus(panel);
@@ -142,9 +156,9 @@ function updateStatus(root){
  const cloud=window.P5CloudSession?.getStatus?.();
  const take=$('[data-p5814-viewer-action="cloud"]',root);
  if(take){
+  const label=$('.p5814-view-row-label',take);
   const desired=cloud?.waiting?'Check Control Request':'Take Control';
-  const labelNode=$('.p5814-view-action-label',take);
-  if(labelNode&&labelNode.textContent!==desired)labelNode.textContent=desired;
+  if(label&&label.textContent!==desired)label.textContent=desired;
  }
 }
 function scoreViewer(){
@@ -194,7 +208,7 @@ function actions(){
  for(const root of roots){
   if(!root)continue;
   for(const button of $$('button, input[type="button"], input[type="submit"]',root)){
-   if(button.closest('.p5814-view-menu, #p58-cloud-host')||button.matches('[data-p58-cloud].p5814-cloud-primary'))continue;
+   if(button.closest('.p5814-view-menu, .p5814-cloud-native-handler, #p58-cloud-host'))continue;
    const action=button.dataset[attr];
    const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
    if(permitted)showControl(button);else hideControl(button);

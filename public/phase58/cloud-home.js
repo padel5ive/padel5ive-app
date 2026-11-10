@@ -121,7 +121,7 @@ function init(){
  const params=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'');
  const autoCode=normalize(params.get('join')),viewerKey=params.get('v');
  if(autoCode&&viewerKey){
-  history.replaceState(history.state,'',location.pathname+location.search);
+  window.history.replaceState(window.history.state,'',location.pathname+location.search);
   code.value=autoCode;updatePin();
   overlay.hidden=false;close.disabled=true;
   void connect(autoCode,{viewerKey,auto:true}).finally(()=>{close.disabled=false});

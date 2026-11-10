@@ -259,6 +259,19 @@ function actions(){
   }
  }
 }
+/* Spectators only need match schedules and scores. Scheduling diagnostics
+ * are useful for moderators, but clutter the court cards on small screens.
+ * Hide by actual notice text and not parent ID: some engines render these
+ * outside #americano, where the old CSS rule did not apply.
+ * hideControl remembers original styles for instant Moderator restoration.
+ */
+function hideViewerDiagnostics(){
+ for(const notice of $('.p5-b2-fairness-ok, .p5-b2-fairness-warning')){
+  const title=(notice.textContent||'').trim();
+  if(/^ADVANCED PLAYER RULES\\b|^SCHEDULING FAIRNESS REVIEW\\b/i.test(title))
+   hideControl(notice);
+ }
+}
 function restore(){
  restoreText();
  $$('.p5814-view-menu').forEach(x=>x.remove());
@@ -273,7 +286,7 @@ function run(){
   if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
   return;
  }
- promoteCloud();menuView();scoreViewer();actions();
+ promoteCloud();menuView();scoreViewer();hideViewerDiagnostics();actions();
 }
 function schedule(){
  if(queued)return;

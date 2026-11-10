@@ -19,3 +19,5 @@ for(const style of match){
   for(const m of chunks.slice(0,12))console.log('CSS_RULE',JSON.stringify(m[0].replace(/\s+/g,' ')));
  }
 }
+
+for(const m of html.match(/<meta\b[^>]{0,600}>/gi)||[]){if(/viewport|theme-color|apple-mobile/i.test(m))console.log('PWA META',m)}

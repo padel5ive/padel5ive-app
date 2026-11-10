@@ -250,7 +250,9 @@ function mount(){
  const head=e('header','p58-head');
  const h=e('div');h.append(e('small','p58-eyebrow','PADEL 5IVE · MATCH CONTROL'),e('h2','','CLOUD SESSION'));
  stamp=e('small','p58-stamp','');h.append(stamp);
- const close=btn('×',async()=>{dialog.hidden=true},true);close.className='p58-close';close.setAttribute('aria-label','Close');
+ const close=btn('',async()=>{dialog.hidden=true},true);close.className='p58-close';close.setAttribute('aria-label','Close');
+ // SVG keeps the X optically centered in its circle across iOS font metrics.
+ close.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
  head.append(h,close);
  body=e('div','p58-body');panel.append(head,body);dialog.append(panel);host.append(dialog);document.body.append(host);
  openButton.addEventListener('click',()=>{dialog.hidden=false;render()});

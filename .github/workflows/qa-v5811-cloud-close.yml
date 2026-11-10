@@ -1,0 +1,25 @@
+name: PADEL 5IVE v5.8.11 Cloud Close Alignment QA
+on:
+  push:
+    branches: [fix/v5.8.11-cloud-close-icon-alignment]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: |
+          node scripts/qa-v5811-cloud-close.cjs
+          node scripts/qa-phase58-markup.cjs
+          node scripts/qa-v5810-viewer.cjs
+          node scripts/qa-v589-cloud-whatsapp.cjs
+          git diff --check

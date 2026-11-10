@@ -70,3 +70,21 @@ body:not(.p58-cloud-connected) .p58-status{display:none!important}
 .p58-status{bottom:calc(12px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right));box-shadow:0 4px 12px #0004}
 [data-p58-cloud].p58-menu-action{margin:5px 0 2px;min-height:43px;font-weight:650}
 @media(max-width:600px){.p58-status{bottom:calc(9px + env(safe-area-inset-bottom));right:10px}}
+
+/* v5.8.11 · Cloud Session close icon optical alignment (modal only). */
+.p58-panel .p58-close{
+ display:grid!important;place-items:center!important;
+ box-sizing:border-box!important;
+ width:37px!important;height:37px!important;
+ min-width:37px!important;min-height:37px!important;
+ max-width:37px!important;max-height:37px!important;
+ flex:0 0 37px!important;
+ margin:0!important;padding:0!important;
+ line-height:0!important;
+ border-radius:50%!important;
+ -webkit-appearance:none;appearance:none;
+}
+.p58-panel .p58-close svg{
+ display:block;width:17px;height:17px;
+ margin:0;flex:none;transform:none;
+}

@@ -3,11 +3,15 @@
  */
 'use strict';
 const fs=require('node:fs');
-const css='<link rel="stylesheet" href="/phase5814/view-only-v5814.css">';
-const js='<script defer src="/phase5814/view-only-v5814.js"></script>';
+const assetVersion='5814.15'; // force fresh Safari/WhatsApp viewer styling
+const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${assetVersion}">`;
+const js=`<script defer src="/phase5814/view-only-v5814.js?v=${assetVersion}"></script>`;
 function insert(path,anchor,tag){
  let s=fs.readFileSync(path,'utf8');
- if(s.includes(tag))return;
+ // Remove any earlier cache-keyed or unversioned tags before adding exactly
+ // one current adapter reference. Repeated builds remain idempotent.
+ s=s.replace(/<link\s+rel="stylesheet"\s+href="\/phase5814\/view-only-v5814\.css(?:\?[^"]*)?"\s*\/?>\s*/g,'');
+ s=s.replace(/<script\s+defer\s+src="\/phase5814\/view-only-v5814\.js(?:\?[^"]*)?"\s*><\/script>\s*/g,'');
  const i=s.lastIndexOf(anchor);
  if(i<0)throw Error('v5814 missing HTML anchor '+path);
  s=s.slice(0,i)+tag+'\n'+s.slice(i);

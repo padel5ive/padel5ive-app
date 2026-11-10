@@ -111,21 +111,60 @@ function menuView(){
  const panel=make('details','p5-4852-section p5814-view-menu');
  panel.append(masterSummary(share,'Viewer Settings',eyeGlyph));
  const content=make('div','p5814-menu-body');
+ // Safari/WhatsApp cached earlier CSS while loading the new JS. Apply the
+ // essential native row geometry directly to the elements, so an outdated
+ // stylesheet can NEVER collapse them into unstyled text again.
+ const essential=(el,properties)=>{
+  for(const [name,value] of Object.entries(properties))
+   el.style.setProperty(name,value,'important');
+ };
+ essential(content,{
+  display:'block',width:'100%','box-sizing':'border-box',
+  padding:'5px 22px 13px',margin:'0',background:'transparent'
+ });
  const menuRow=(label,action)=>{
-  // div[role=button] is intentional: global master BUTTON styles were causing
-  // inline grey pills, two on one line, on iPhone. It remains keyboard operable.
+  // Independent accessible row: master-wide BUTTON rules must not bleed in.
   const row=make('div','p5814-view-row');
   row.setAttribute('role','button');
   row.setAttribute('tabindex','0');
   row.dataset.p5814ViewerAction=action;
-  row.append(make('span','p5814-view-row-label',label),
-   make('span','p5814-view-row-chevron','›'));
+  const title=make('span','p5814-view-row-label',label);
+  const arrow=make('span','p5814-view-row-chevron','›');
+  row.append(title,arrow);
+  essential(row,{
+   display:'flex','flex-flow':'row nowrap','align-items':'center',
+   'justify-content':'space-between',width:'100%','min-width':'0',
+   'min-height':'55px',height:'auto','box-sizing':'border-box',
+   padding:'13px 5px',margin:'0',gap:'12px',
+   border:'0','border-top':'1px solid rgba(206,184,153,.17)',
+   'border-radius':'0',background:'transparent','box-shadow':'none',
+   color:'#efede8',font:'600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+   'text-align':'left','white-space':'normal',cursor:'pointer'
+  });
+  essential(title,{
+   display:'block',flex:'1 1 auto','min-width':'0',margin:'0',padding:'0',
+   color:'inherit',font:'inherit','text-align':'left','white-space':'normal'
+  });
+  essential(arrow,{
+   display:'block',flex:'0 0 17px',width:'17px',
+   'margin-left':'auto',padding:'0',color:'#c9ad87',
+   font:'400 20px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+   'text-align':'right'
+  });
   return row;
  };
  content.append(menuRow('Take Control','cloud'));
  content.append(menuRow('Refresh Data','refresh'));
  const footer=make('div','p5814-view-footer');
- footer.append(menuRow('Leave Cloud Session','leave'));
+ essential(footer,{
+  display:'block',width:'100%','box-sizing':'border-box',margin:'8px 0 0',
+  padding:'6px 0 0','border-top':'1px solid rgba(206,184,153,.15)'
+ });
+ const leave=menuRow('Leave Cloud Session','leave');
+ leave.style.setProperty('color','#b4bec5','important');
+ leave.style.setProperty('font-weight','500','important');
+ leave.style.setProperty('border-top','0','important');
+ footer.append(leave);
  content.append(footer);
  panel.append(content);root.append(panel);
  panel.addEventListener('keydown',event=>{

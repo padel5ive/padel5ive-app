@@ -21,13 +21,13 @@ function hideControl(el){
   value:el.style.getPropertyValue('display'),
   priority:el.style.getPropertyPriority('display')
  });
- el.classList.add('p5814-hide-action');
+ if(!el.classList.contains('p5814-hide-action'))el.classList.add('p5814-hide-action');
  if(el.style.getPropertyValue('display')!=='none'||el.style.getPropertyPriority('display')!=='important')
   el.style.setProperty('display','none','important');
 }
 function showControl(el){
  if(!el)return;
- el.classList.remove('p5814-hide-action');
+ if(el.classList.contains('p5814-hide-action'))el.classList.remove('p5814-hide-action');
  if(!hiddenInline.has(el))return;
  const prior=hiddenInline.get(el);hiddenInline.delete(el);
  if(prior.value)el.style.setProperty('display',prior.value,prior.priority);
@@ -50,7 +50,7 @@ function menuView(){
  if(!root)return;
  for(const child of Array.from(root.children)){
   if(child.classList.contains('p5814-view-menu'))continue;
-  child.classList.add('p5814-master-menu-hidden');
+  if(!child.classList.contains('p5814-master-menu-hidden'))child.classList.add('p5814-master-menu-hidden');
   hideControl(child);
  }
  const outer=$('.p5814-view-menu',root);

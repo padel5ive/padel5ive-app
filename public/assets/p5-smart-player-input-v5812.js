@@ -197,7 +197,7 @@
   if(c.mode==='structured'){
    const label=node('label','p5812-group','IMPORT TO GROUP');
    const select=node('select');select.setAttribute('aria-label','Import to group');
-   ['A','B'].forEach(g=>{const opt=node('option','', 'Group '+g);opt.value=g;select.append(opt);});
+   ['A','B'].forEach(g=>{const live=document.getElementById('p5-51-label-'+g.toLowerCase())?.value.trim();const opt=node('option','', 'Group '+g+(live?' · '+live:''));opt.value=g;select.append(opt);});
    select.value=state.group;select.addEventListener('change',()=>{state.group=select.value;});
    label.append(select);out.append(label);
    out.append(node('p','p5812-muted','Select a group. Balance Group A/B before starting.'));

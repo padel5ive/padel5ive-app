@@ -1,0 +1,22 @@
+name: PADEL 5IVE v5.8.15 PWA Fullscreen & Signature QA
+on:
+  pull_request:
+    paths:
+      - 'public/phase5815/**'
+      - 'scripts/phase5815-integrate.cjs'
+      - 'scripts/qa-v5815-pwa.cjs'
+      - 'scripts/pwa-source-inspect-v5815.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-v5815-pwa.yml'
+jobs:
+  pwa-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/pwa-source-inspect-v5815.cjs
+      - run: node scripts/qa-v5815-pwa.cjs

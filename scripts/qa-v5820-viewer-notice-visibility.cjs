@@ -40,7 +40,7 @@ assert(!original.classList.contains('p5814-hide-action'),'Moderator notice visib
 assert.notEqual(doc.querySelector('#fairness').style.display,'none','Moderator fairness warning visible again');
 assert(src.includes('promoteCloud();menuView();scoreViewer();hideViewerDiagnostics();actions();'),
  'Viewer run pass must reapply hiding after master round changes');
-assert(src.includes('if($('.concat("'.p5814-view-menu'").concat('||')), 'Role-restoration flow retained');
+assert(src.includes('showAllControls();'), 'Role restoration flow retained');
 for(const path of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
  const html=fs.readFileSync(path,'utf8');
  assert(html.includes('view-only-v5814.js?v=5820.2'),'iOS fresh Viewer asset after fix');

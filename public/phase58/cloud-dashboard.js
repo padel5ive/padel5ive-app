@@ -216,6 +216,10 @@ const viewerActions={
  club:new Set(['view-round','toggle-rounds','latest-round','filter-leaderboard','jump-leaderboard','replay-champion'])
 };
 function viewerNavigation(target){
+ // Explicitly allow only v5.8.14 spectator menu actions; no tournament mutation.
+ const viewerButton=target?.closest?.('button[data-p5814-viewer-action]');
+ if(viewerButton&&!viewerButton.disabled)
+  return ['cloud','refresh','home','leave'].includes(viewerButton.dataset.p5814ViewerAction);
  const cloud=target?.closest?.('button[data-p58-cloud]');
  if(cloud&&!cloud.disabled)return true;
  const button=target?.closest?.('button[data-act],button[data-action]');
@@ -289,6 +293,21 @@ function safeTick(){
 }
 window.addEventListener('visibilitychange',()=>{if(document.hidden)safeTick()});
 window.addEventListener('beforeunload',localPersistHash);
-window.P5CloudSession=Object.freeze({version:'5.8-lab',getStatus:()=>({connected:!!meta,role:role(),revision:meta?.revision||null})});
+window.P5CloudSession=Object.freeze({
+ version:'5.8-lab',
+ getStatus:()=>({connected:!!meta,role:role(),revision:meta?.revision||null,
+  status:conflict?'CONFLICT':offline?'OFFLINE':busy?'SYNCING':view()?'VIEW ONLY':meta?'SYNCED':'LOCAL ONLY',
+  waiting:!!meta?.waiting}),
+ open:()=>{if(!meta||!dialog)return false;dialog.hidden=false;render();return true},
+ refreshNow:async()=>{if(!meta)return false;await refresh();return !offline&&!conflict},
+ leaveViewer:()=>{
+  if(!meta||!view())return false;
+  if(!confirm('Leave this Cloud Session on this device? Your local View Only copy will be cleared. The online session and other devices will not be affected.'))return false;
+  const current=get(KEY);
+  // Erase only this viewer's matching cloud copy; archived local sessions remain untouched.
+  if(isSession(current)&&identity(current)===meta.localId)localStorage.removeItem(KEY);
+  localStorage.removeItem(META);meta=null;last='';location.assign('/');return true;
+ }
+});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

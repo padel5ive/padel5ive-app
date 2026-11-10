@@ -57,3 +57,189 @@ body.p58-view-only #app .court-footer .scorehint{font-size:11px}
 @media(max-width:779px){
  body.p58-view-only .p5814-view-menu .p5814-menu-body{padding:5px 10px 10px!important}
 }
+
+/* v5.8.14 editorial refinement — native Cloud Session promoted to top-level.
+   Match the existing master accordion: same typographic scale, quiet gold,
+   no glowing/saturated call-to-action. Applies to Controller AND Viewer. */
+html body #americano .p5-4852-menu > button.p5814-cloud-primary,
+html body #mainMenu .p5-4852-menu > button.p5814-cloud-primary{
+ display:flex!important;
+ position:relative!important;
+ align-items:center!important;
+ justify-content:flex-start!important;
+ flex-flow:row nowrap!important;
+ box-sizing:border-box!important;
+ width:100%!important;
+ min-height:72px!important;
+ margin:0!important;
+ padding:13px 15px!important;
+ gap:13px!important;
+ border:0!important;
+ border-top:1px solid rgba(199,183,156,.19)!important;
+ border-radius:0!important;
+ background:rgba(190,161,115,.035)!important;
+ background-image:none!important;
+ box-shadow:none!important;
+ outline-offset:-3px;
+ color:#f2e9db!important;
+ font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ text-align:left!important;
+ letter-spacing:normal!important;
+ text-transform:none!important;
+ cursor:pointer!important;
+ -webkit-appearance:none!important;
+ appearance:none!important;
+}
+html body #americano .p5-4852-menu > button.p5814-cloud-primary .p5-4852-icon,
+html body #mainMenu .p5-4852-menu > button.p5814-cloud-primary .p5-4852-icon{
+ display:grid!important;place-items:center!important;
+ width:40px!important;height:40px!important;min-width:40px!important;
+ padding:0!important;margin:0!important;flex:0 0 40px!important;
+ color:#d6b78c!important;background:rgba(209,178,132,.06)!important;
+ border-radius:9px!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary .p5-4852-icon svg{
+ width:21px!important;height:21px!important;stroke:currentColor!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary .p5814-cloud-copy{
+ display:flex!important;flex:1 1 auto!important;flex-direction:column!important;
+ align-items:flex-start!important;justify-content:center!important;min-width:0!important;
+ gap:4px!important;margin:0!important;padding:0!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary .p5814-cloud-copy .p5-4852-label{
+ display:block!important;margin:0!important;padding:0!important;
+ color:#f0e7db!important;font:600 14px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ letter-spacing:.01em!important;white-space:normal!important;text-align:left!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary .p5814-cloud-copy small{
+ display:block!important;margin:0!important;padding:0!important;
+ color:#bca88c!important;font:550 9px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ letter-spacing:.13em!important;text-transform:uppercase!important;white-space:normal!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary .p5-4852-chevron{
+ display:block!important;margin:0 1px 0 auto!important;padding:0!important;
+ width:15px!important;min-width:15px!important;flex:0 0 15px!important;
+ color:#d4b58b!important;font:400 23px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ text-align:center!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary::before,
+html body .p5-4852-menu > button.p5814-cloud-primary::after{
+ content:none!important;display:none!important;
+}
+html body .p5-4852-menu > button.p5814-cloud-primary:focus-visible{
+ outline:2px solid rgba(218,188,145,.8)!important;outline-offset:-3px!important;
+}
+
+/* Viewer Settings is the SAME native master accordion, just a simpler
+   inner menu. Restore clean row metrics regardless of old button !important. */
+html body.p58-view-only #americano .p5-4852-menu > details.p5814-view-menu,
+html body.p58-view-only #mainMenu .p5-4852-menu > details.p5814-view-menu{
+ display:block!important;min-width:0!important;
+}
+html body.p58-view-only #americano .p5814-view-menu > .p5814-menu-body,
+html body.p58-view-only #mainMenu .p5814-view-menu > .p5814-menu-body{
+ box-sizing:border-box!important;
+ display:block!important;
+ width:100%!important;
+ padding:9px 16px 13px!important;
+ min-width:0!important;
+ background:transparent!important;
+}
+html body.p58-view-only .p5814-view-menu .p585-heading{
+ box-sizing:border-box!important;display:block!important;
+ padding:12px 5px 10px!important;margin:0!important;min-height:0!important;
+ font-size:10px!important;line-height:1.4!important;font-weight:700!important;
+ color:#d2b18a!important;letter-spacing:.18em!important;
+ border:0!important;background:none!important;
+}
+html body.p58-view-only .p5814-view-menu .p585-heading.p5814-session-heading{
+ margin-top:9px!important;padding-top:18px!important;
+ border-top:1px solid rgba(211,190,160,.15)!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-connection{
+ box-sizing:border-box!important;
+ display:flex!important;flex-flow:row wrap!important;
+ align-items:center!important;justify-content:space-between!important;
+ min-height:60px!important;gap:8px 10px!important;
+ margin:0!important;padding:13px 5px!important;
+ border:0!important;border-top:1px solid rgba(211,190,160,.16)!important;
+ background:transparent!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-connection-label{
+ flex:1 1 auto!important;color:#ddd5c8!important;
+ font-size:12px!important;font-weight:550!important;line-height:1.35!important;
+ letter-spacing:.015em!important;white-space:normal!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-cloud-state{
+ display:inline-block!important;max-width:100%!important;
+ margin:0!important;padding:6px 8px!important;
+ border:1px solid rgba(151,182,157,.29)!important;border-radius:4px!important;
+ background:rgba(80,119,86,.10)!important;
+ color:#c0d5c5!important;font-size:9px!important;font-weight:750!important;
+ line-height:1.25!important;letter-spacing:.055em!important;
+ text-align:right!important;white-space:normal!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-cloud-state[data-state=offline],
+html body.p58-view-only .p5814-view-menu .p5814-cloud-state[data-state=conflict]{
+ color:#edd0a5!important;border-color:rgba(187,137,77,.4)!important;background:rgba(187,137,77,.09)!important;
+}
+html body.p58-view-only #americano .p5814-view-menu .p5814-menu-body > button.p5814-view-action,
+html body.p58-view-only #mainMenu .p5814-view-menu .p5814-menu-body > button.p5814-view-action{
+ box-sizing:border-box!important;
+ display:flex!important;flex-flow:row nowrap!important;
+ align-items:center!important;justify-content:space-between!important;
+ gap:12px!important;
+ min-width:0!important;width:100%!important;
+ min-height:64px!important;height:auto!important;
+ margin:0!important;padding:13px 5px!important;
+ border:0!important;border-top:1px solid rgba(211,190,160,.16)!important;
+ border-radius:0!important;box-shadow:none!important;
+ background:transparent!important;background-image:none!important;
+ color:#eee9e1!important;text-align:left!important;
+ text-transform:none!important;letter-spacing:normal!important;
+ white-space:normal!important;transform:none!important;
+ font:600 13px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ cursor:pointer!important;-webkit-appearance:none!important;appearance:none!important;
+}
+html body.p58-view-only .p5814-view-menu button.p5814-view-action:disabled{
+ opacity:.55!important;cursor:wait!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-view-action-copy{
+ box-sizing:border-box!important;display:flex!important;flex:1 1 auto!important;
+ flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;
+ min-width:0!important;width:auto!important;margin:0!important;padding:0!important;
+ gap:4px!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-view-action-label{
+ display:block!important;max-width:100%!important;
+ margin:0!important;padding:0!important;
+ color:#f0ebe2!important;font:600 13px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ letter-spacing:.002em!important;text-transform:none!important;
+ text-align:left!important;white-space:normal!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-view-action-desc{
+ display:block!important;max-width:100%!important;
+ margin:0!important;padding:0!important;
+ color:#aeb7bc!important;font:450 10px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+ letter-spacing:.01em!important;text-transform:none!important;
+ text-align:left!important;white-space:normal!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-view-action-chevron{
+ display:block!important;flex:0 0 16px!important;
+ margin:0 0 0 auto!important;padding:0!important;
+ color:#c9ac85!important;font-size:21px!important;font-weight:400!important;line-height:1!important;
+ text-align:center!important;
+}
+html body.p58-view-only .p5814-view-menu .p5814-view-action::before,
+html body.p58-view-only .p5814-view-menu .p5814-view-action::after{
+ content:none!important;display:none!important;
+}
+@media(max-width:600px){
+ html body.p58-view-only #americano .p5814-view-menu > .p5814-menu-body,
+ html body.p58-view-only #mainMenu .p5814-view-menu > .p5814-menu-body{
+  padding:5px 14px 11px!important;
+ }
+ html body.p58-view-only .p5814-view-menu .p5814-cloud-state{
+  font-size:8.5px!important;letter-spacing:.025em!important;
+ }
+}

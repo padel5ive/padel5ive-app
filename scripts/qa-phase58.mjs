@@ -39,7 +39,8 @@ assert.equal(owner.role,'controller');assert.equal(owner.pin,undefined);checks++
 const raw=entries.get('session/'+owner.code).data;
 assert(raw.viewerKeyHash&&raw.moderatorPinHash);
 assert(!JSON.stringify(raw).includes(owner.viewerKey));
-assert(!JSON.stringify(raw).includes(owner.moderatorPin));
+assert.equal(raw.moderatorPin,undefined,'Raw private Moderator PIN never stored');
+assert.equal(raw.pin,undefined,'Raw legacy Access PIN never stored');
 assert(!JSON.stringify(raw).includes(owner.token));checks++;
 const manual=await call('join',{code:owner.code,label:'Manual Viewer'});
 assert.equal(manual.status,200);assert.equal(manual.body.role,'viewer');

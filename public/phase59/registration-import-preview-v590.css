@@ -1,0 +1,39 @@
+/* PADEL 5IVE v5.9 — native Registration import UX preview.
+   Small quiet-luxury collapsible section between player rows & Advanced Rules.
+   No master registration or engine styling is replaced. */
+.p59-import{margin:14px 0 13px;border:1px solid rgba(205,176,134,.29);border-radius:11px;background:rgba(19,38,56,.33);overflow:hidden}
+.p59-import>summary{min-height:54px;display:flex;justify-content:space-between;align-items:center;padding:0 15px;cursor:pointer;color:#e4d2b4;list-style:none;font-weight:650;font-size:13px;letter-spacing:.02em}
+.p59-import>summary::-webkit-details-marker{display:none}
+.p59-import-title{display:flex;align-items:center;gap:11px}
+.p59-import-title svg{width:18px;height:18px;color:#d8b790}
+.p59-chevron{font-size:17px;color:#c3ac8d;transition:transform .18s}
+.p59-import[open] .p59-chevron{transform:rotate(180deg)}
+.p59-import-body{padding:2px 14px 12px}
+.p59-import-body p{color:#b5c0c9;font-size:11px;line-height:1.5;margin:2px 0 9px}
+.p59-import-body button{width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;min-height:44px;background:transparent;border:0;border-top:1px solid rgba(212,191,159,.17);color:#e6e6e3;font-weight:550;font-size:12.5px;padding:9px 5px;cursor:pointer;text-align:left}
+.p59-import-body button span:last-child{color:#d4b58e;font-size:21px;font-weight:400}
+.p59-layer{position:fixed;z-index:30000;inset:0;background:rgba(2,10,20,.81);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:max(18px,env(safe-area-inset-top)) 14px max(18px,env(safe-area-inset-bottom));box-sizing:border-box;overflow-y:auto}
+.p59-dialog{box-sizing:border-box;width:min(100%,500px);max-height:min(90dvh,780px);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(202,177,145,.35);border-radius:17px;background:linear-gradient(165deg,#183047,#0c1e30 64%,#091826);box-shadow:0 23px 65px rgba(0,0,0,.38);color:#eee7dc}
+.p59-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:21px 21px 13px}
+.p59-modal-head small{font-size:9px;letter-spacing:.19em;color:#bda17e;font-weight:650}
+.p59-modal-head h2{margin:6px 0 0;font-size:21px;letter-spacing:.005em;font-weight:650}
+.p59-close{width:32px;height:32px;flex:none;border:1px solid rgba(206,181,147,.24);border-radius:50%;background:transparent;color:#ded6c8;font-size:22px;line-height:1;cursor:pointer}
+.p59-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 18px;padding:5px;border:1px solid rgba(206,181,147,.19);border-radius:10px;background:rgba(3,14,26,.33)}
+.p59-tabs button{border:0;border-radius:7px;min-height:39px;padding:8px 6px;background:transparent;color:#aebdca;font-size:11.5px;font-weight:600;cursor:pointer}
+.p59-tabs button.is-active{color:#f0dec4;background:rgba(200,170,132,.18)}
+.p59-content{overflow:auto;padding:17px 20px 15px;-webkit-overflow-scrolling:touch}
+.p59-content label{display:block;margin:0 0 9px;font-size:10px;color:#d2b68f;letter-spacing:.12em;font-weight:700}
+.p59-content textarea,.p59-content input{display:block;box-sizing:border-box;width:100%;min-height:47px;padding:12px;resize:vertical;border-radius:9px;border:1px solid rgba(199,185,166,.32);background:rgba(2,13,26,.47);color:#f4f2ef;font:500 13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}
+.p59-content textarea:focus,.p59-content input:focus{border-color:#d8b58b}
+.p59-content [hidden],.p59-preview[hidden]{display:none!important}
+.p59-help{color:#a9b7c3;font-size:11px;line-height:1.5;margin:9px 0 14px}
+.p59-primary{width:100%;min-height:45px;border:1px solid #d8b990;border-radius:8px;background:#d2b58d;color:#142334;font-size:12px;font-weight:750;cursor:pointer}
+.p59-preview{margin-top:16px;padding-top:15px;border-top:1px solid rgba(206,181,147,.22)}
+.p59-preview-title{display:block;color:#e7cfac;font-size:11px;letter-spacing:.09em}
+.p59-name-list{margin:9px 0 0;padding:0 0 0 22px;max-height:170px;overflow:auto;font-size:12px;line-height:1.9}
+.p59-warning{color:#e2b8a8;font-size:11px;line-height:1.5}
+.p59-notice{color:#adbdc9;font-size:10px;line-height:1.5;margin:14px 0 0}
+.p59-modal-foot{display:flex;gap:13px;align-items:center;justify-content:space-between;padding:14px 20px 19px;border-top:1px solid rgba(205,185,154,.16)}
+.p59-modal-foot span{font-size:9px;color:#95a5b3;letter-spacing:.1em;max-width:190px;line-height:1.5}
+.p59-commit{min-height:38px;border:1px solid rgba(202,180,146,.28);border-radius:8px;color:#8d9ba5;background:rgba(91,106,118,.09);font-size:11px;padding:9px 12px;white-space:nowrap}
+@media(min-width:800px){.p59-import{max-width:100%}}

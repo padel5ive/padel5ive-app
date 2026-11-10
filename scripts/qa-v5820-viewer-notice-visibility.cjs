@@ -43,7 +43,7 @@ assert(src.includes('promoteCloud();menuView();scoreViewer();hideViewerDiagnosti
 assert(src.includes('showAllControls();'), 'Role restoration flow retained');
 for(const path of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
  const html=fs.readFileSync(path,'utf8');
- assert(html.includes('view-only-v5814.js?v=5820.2'),'iOS fresh Viewer asset after fix');
- assert(html.includes('cloud-dashboard.js?v=5820.2'),'iOS fresh Cloud asset after fix');
+ assert(html.includes('view-only-v5814.js?v=5823.0'),'iOS fresh Viewer asset after fix');
+ assert(html.includes('cloud-dashboard.js?v=5823.0'),'iOS fresh Cloud asset after fix');
 }
 console.log('PASS v5.8.20.2: Advanced Player Rules / Scheduling Fairness Review are View Only hidden, restored for moderator, unrelated warnings intact.');

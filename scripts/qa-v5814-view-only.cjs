@@ -14,7 +14,7 @@ const sw=fs.readFileSync('public/sw.js','utf8');
 assert(sw.includes("'/phase5814/view-only-v5814.js'")&&sw.includes("'/phase5814/view-only-v5814.css'"));
 assert(css.includes('body.p58-view-only'));
 assert(!css.includes('grid-template-columns'),'Master iPad split layout must not change');
-assert(cloud.includes("['cloud','refresh','home','leave','live'].includes(viewerButton.dataset.p5814ViewerAction)"));
+assert(cloud.includes("['cloud','refresh','leave'].includes(viewerButton.dataset.p5814ViewerAction)"));
 assert(cloud.includes("if(isSession(current)&&identity(current)===meta.localId)localStorage.removeItem(KEY)"));
 assert(cloud.includes("if(!meta||!view())return false"),'A controller cannot leave as viewer');
 assert(cloud.includes('location.reload();'),'Native Cloud state rehydrate policy preserved');
@@ -32,17 +32,22 @@ async function one(kind){
  const menu=doc.querySelector((isU?'#americano':'#mainMenu')+' .p5-4852-menu');
  const viewer=menu.querySelector('.p5814-view-menu');
  assert(viewer,'Viewer menu in native master component');
- assert(viewer.querySelector('.p5814-view-action-copy .p5814-view-action-desc'),'Editorial multiline action labels are structured, not text crammed inline');
+ assert(viewer.querySelector('.p5814-view-action-label'),'Viewer labels use standalone native-style action rows');
+ assert(!viewer.querySelector('.p5814-view-action-desc'),'No stacked descriptions or cramped menu copy');
  assert(viewer.querySelector('.p5814-view-action-chevron'),'Native-style row affordance is present');
  assert.equal(menu.querySelectorAll('.p5814-view-menu').length,1);
- assert.equal(menu.querySelectorAll('.p5814-master-menu-hidden').length,3,'Moderator menus hidden');
+ assert.equal(menu.querySelectorAll('.p5814-master-menu-hidden').length,4,'All four moderator menus hidden');
  const cloudRow=menu.querySelector(':scope > button.p5814-cloud-primary');
  assert(cloudRow,'Original cloud action is a visible top-level native menu row');
  assert.equal(cloudRow.previousElementSibling?.getAttribute('data-submenu'),'share','Cloud Session directly follows Session & Results');
- assert.equal(cloudRow.querySelector('.p5814-cloud-copy .p5-4852-label')?.textContent,'Cloud Session');
- assert.equal(cloudRow.style.getPropertyValue('display'),'','Cloud action must NOT be hidden from viewer');
- for(const label of ['CONNECTION STATUS','Take Control','Refresh Data','Follow Latest Round','Back to Home','Leave Cloud Session'])
+ assert.equal(cloudRow.querySelector('.p5-4852-label')?.textContent,'Cloud Session');
+ assert(!cloudRow.textContent.includes('LIVE SYNC & DEVICE ACCESS'),'No special Cloud promo subtitle');
+ assert.equal(cloudRow.style.getPropertyValue('display'),'none','Viewer must not see separate Cloud Session action');
+ for(const label of ['Take Control','Refresh Data','Leave Cloud Session'])
   assert(viewer.textContent.includes(label),'Viewer menu item '+label);
+ for(const label of ['CONNECTION STATUS','Follow Latest Round','Back to Home','CLOUD ACCESS'])
+  assert(!viewer.textContent.includes(label),'Removed obsolete viewer action '+label);
+ assert.equal(viewer.querySelectorAll('button.p5814-view-action').length,3,'Two primary actions plus quiet disconnect');
  assert(doc.querySelector('.p5-stage-head').textContent.includes('GAME MODE'));
  assert(doc.querySelector(isU?'.p5-b41-leaderboard':'.leaderboard-card'));
  assert(doc.querySelector('.layout'),'Master split layout retained');
@@ -82,6 +87,9 @@ async function one(kind){
  assert.equal(doc.querySelector('.p5814-hide-action'),null,'Moderator actions restored');
  const controllerCloud=menu.querySelector(':scope > button.p5814-cloud-primary');
  assert(controllerCloud,'Cloud Session stays top-level on moderator dashboard');
+ assert(!controllerCloud.classList.contains('p585-cloud-row'),'No highlighted Cloud CTA class');
+ assert(!controllerCloud.textContent.includes('LIVE SYNC'),'No special treatment for moderator Cloud menu');
+ assert.notEqual(controllerCloud.style.getPropertyValue('display'),'none','Moderator Cloud row is visible');
  assert.equal(controllerCloud.previousElementSibling?.getAttribute('data-submenu'),'share');
  if(isU){
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5 · Tap to Score');

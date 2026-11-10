@@ -34,7 +34,7 @@ for(const kind of ['unified','club']){
  const ctx={kind,meta:{role:'viewer'},view(){return this.meta.role==='viewer'}};
  // VM globals aren't bound as this when passed directly; use local view closure.
  ctx.view=()=>ctx.meta.role==='viewer';
- vm.runInNewContext(safe+'\\nthis.guard=guard;this.viewerNavigation=viewerNavigation;',ctx);
+ vm.runInNewContext(safe+'\nthis.guard=guard;this.viewerNavigation=viewerNavigation;',ctx);
  const allowed=kind==='unified'?allowedU:allowedC;
  for(const action of allowed){
   const t=stubButton(action,kind);
@@ -65,7 +65,7 @@ for(const kind of ['unified','club']){
  const own=event('click',stubButton('score',kind));
  ctx.guard(own);assert(!own.blocked,'Controller can still edit scores');
  const st={kind};
- vm.runInNewContext(stable+'\\nthis.stable=stable;this.legacyStable=legacyStable;',st);
+ vm.runInNewContext(stable+'\nthis.stable=stable;this.legacyStable=legacyStable;',st);
  const roundState={version:24,rounds:[{matches:[{confirmed:true,score:[3,2]}]}],ui:{stageTab:'stage1'},viewRound:0};
  const before=st.stable(roundState),legacy=st.legacyStable(roundState);
  roundState.viewRound=5;
@@ -85,7 +85,7 @@ assert(src.includes("r.data={...r.data,viewRound:Math.max(0,Math.min(selected,r.
 const existing={version:24,session:'TEST',stage:'stage1',rounds:[{matches:[]},{matches:[]},{matches:[]}],viewRound:2};
 let written=null,refreshed=0,meta={localId:'test',revision:4,role:'viewer',summary:null};
 const ctx={kind:'unified',meta,view:()=>true,get:()=>existing,set:(k,v)=>{written=v},KEY:'fake',isSession:()=>true,identity:()=> 'test',dirty:()=>false,stable:s=>JSON.stringify(s),persist:()=>{},location:{reload:()=>{refreshed++}},last:'',offline:false,conflict:false};
-vm.runInNewContext(src.slice(applyBegin,applyEnd)+'\\nthis.applyRemote=applyRemote;',ctx);
+vm.runInNewContext(src.slice(applyBegin,applyEnd)+'\nthis.applyRemote=applyRemote;',ctx);
 ctx.applyRemote({data:{...existing,viewRound:0},revision:5,role:'viewer',summary:{}});
 assert.equal(written.viewRound,2,'Viewer round should survive cloud score update');
 assert.equal(refreshed,1);

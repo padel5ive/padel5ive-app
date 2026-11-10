@@ -63,11 +63,26 @@ const transfer=await call('take-control',{code:owner.code,token:manual.body.toke
 assert.equal(transfer.status,200);assert.equal(transfer.body.role,'controller');
 assert.equal(transfer.body.transferred,true);assert.deepEqual(transfer.body.data,next);checks++;
 assert.equal((await call('save',{code:owner.code,token:owner.token,revision:2,data:next})).status,423);checks++;
+assert.match(transfer.body.viewerKey,/^[A-Za-z0-9_-]{40,90}$/);
+assert.notEqual(transfer.body.viewerKey,owner.viewerKey,'New moderator gets a fresh share link');
+assert.equal(transfer.body.moderatorPin,undefined,'Server never returns the private PIN');checks++;
+assert.equal((await call('join',{code:owner.code,viewerKey:owner.viewerKey})).status,200,'Existing WhatsApp links survive transfer');checks++;
+assert.equal((await call('join',{code:owner.code,viewerKey:transfer.body.viewerKey})).status,200,'New moderator can share a one-tap link');checks++;
+assert.equal((await call('recover-access',{code:owner.code,token:owner.token,moderatorPin:owner.moderatorPin})).status,423,'Former controller cannot recover details');checks++;
+assert.equal((await call('recover-access',{code:owner.code,token:link.body.token,moderatorPin:owner.moderatorPin})).status,423,'View-only device cannot recover details');checks++;
+assert.equal((await call('recover-access',{code:owner.code,token:manual.body.token,moderatorPin:wrong})).status,401,'Current controller must provide correct PIN');checks++;
+const restored=await call('recover-access',{code:owner.code,token:manual.body.token,moderatorPin:owner.moderatorPin});
+assert.equal(restored.status,200);assert.match(restored.body.viewerKey,/^[A-Za-z0-9_-]{40,90}$/);checks++;
+assert.equal((await call('join',{code:owner.code,viewerKey:restored.body.viewerKey})).status,200,'Recovered link opens viewer');checks++;
+
 const other=await call('join',{code:owner.code,label:'Second Moderator'});
 assert.equal(other.status,200);checks++;
 assert.equal((await call('take-control',{code:owner.code,token:other.body.token})).status,401);checks++;
 const transferred=await call('take-control',{code:owner.code,token:other.body.token,moderatorPin:owner.moderatorPin});
 assert.equal(transferred.status,200);assert.equal(transferred.body.role,'controller');checks++;
+assert.match(transferred.body.viewerKey,/^[A-Za-z0-9_-]{40,90}$/,'Every next moderator receives fresh viewer access');checks++;
+assert.equal((await call('join',{code:owner.code,viewerKey:transferred.body.viewerKey})).status,200,'Third moderator share link works');checks++;
+
 assert.equal((await call('save',{code:owner.code,token:manual.body.token,revision:2,data:next})).status,423);checks++;
 const s1=call('save',{code:owner.code,token:other.body.token,revision:2,data:{...next,stage:'ko'}});
 const s2=call('save',{code:owner.code,token:other.body.token,revision:2,data:{...next,stage:'champion'}});

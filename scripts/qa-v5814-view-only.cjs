@@ -13,9 +13,12 @@ for(const page of ['public/modes/unified/index.html','public/modes/club-match/in
 const pages=['public/modes/unified/index.html','public/modes/club-match/index.html'];
 for(const page of pages){
  const built=fs.readFileSync(page,'utf8');
- assert(built.includes('view-only-v5814.css?v=5814.15'),'Safari must receive newly versioned stylesheet');
- assert(built.includes('view-only-v5814.js?v=5814.15'),'Safari must receive newly versioned viewer script');
+ assert(built.includes('view-only-v5814.css?v=5814.16'),'Safari must receive newly versioned stylesheet');
+ assert(built.includes('view-only-v5814.js?v=5814.16'),'Safari must receive newly versioned viewer script');
  assert.equal(built.split('view-only-v5814.css?v=').length-1,1,'Only one viewer stylesheet reference');
+ assert(built.includes('cloud-dashboard.js?v=5814.16'),'Safari receives latest Cloud moderator controller UI');
+ assert(built.includes('cloud-session.css?v=5814.16'),'Safari receives latest Cloud Session modal sizing');
+ assert.equal(built.split('cloud-dashboard.js?v=').length-1,1,'No duplicate Cloud controller script tags');
 }
 const sw=fs.readFileSync('public/sw.js','utf8');
 assert(sw.includes("'/phase5814/view-only-v5814.js'")&&sw.includes("'/phase5814/view-only-v5814.css'"));
@@ -27,6 +30,17 @@ assert(cloud.includes("if(!meta||!view())return false"),'A controller cannot lea
 assert(cloud.includes('location.reload();'),'Native Cloud state rehydrate policy preserved');
 assert(!cloud.includes("btn('RELEASE CONTROL'"),'Moderator Cloud modal does not expose Release Control');
 assert(cloud.includes("btn('SYNC NOW'"),'Moderator retains on-demand Sync Now');
+assert(cloud.includes("meta.moderatorPin=pin;meta.viewerKey=response.viewerKey;"),
+ 'PIN takeover persists viewer sharing credentials for the newly authorized moderator');
+assert(cloud.includes("meta.moderatorPin=pin;meta.viewerKey=recovered.viewerKey;"),
+ 'Previous takeovers can unlock full moderator sharing UI with their PIN');
+assert(cloud.includes("if(meta.role==='controller'&&(meta.viewerKey||meta.pin))"),
+ 'Viewer-only devices never display moderator sharing controls');
+assert(cloud.includes("cr.append(pinCard(meta.moderatorPin))"),
+ 'All PIN-authenticated moderators receive the same tappable/copyable private PIN card');
+assert(cloud.includes("SHARE VIEWER ACCESS · WHATSAPP"),
+ 'All controllers have the same WhatsApp sharing action after authenticated takeover');
+
 
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details><details data-submenu="share" data-menu-section="Share & Export"><summary>Session & Results</summary><div class="p5-4852-content"><button type="button" data-p58-cloud>Cloud Session</button></div></details>';

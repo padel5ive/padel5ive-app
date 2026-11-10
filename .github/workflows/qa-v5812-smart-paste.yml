@@ -21,6 +21,7 @@ jobs:
       - name: Validate smart paste and unchanged core master
         run: |
           node scripts/qa-v5812-smart-paste.cjs
+          node scripts/qa-v5812-fixed-pair-review.cjs
           node scripts/qa-v5810-viewer.cjs
           node scripts/qa-v589-cloud-whatsapp.cjs
           node scripts/qa-pwa.cjs

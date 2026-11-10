@@ -14,7 +14,7 @@ const fairness='SCHEDULING FAIRNESS REVIEW · ';
 const checks={
  'No Advanced Player Rules court notice in any moderator/viewer pairing':!s.includes(rules),
  'No Scheduling Fairness Review court notice in any moderator/viewer pairing':!s.includes(fairness),
- 'Other fairness diagnostics still available':s.includes('FAIRNESS CHECK · No consecutive rest'),
+ 'Fairness Monitor engine remains active':s.includes('P5RecoveryAudit.inspect(s)'),
  'Player constraint engine retained':s.includes('P5AdvancedRules.constrained(s)'),
  'Fairness warning data kept for scheduler':s.includes('fairnessWarnings'),
  'Round/court scoring retains same native layout':s.includes('p5-stage1-score-grid')&&s.includes('p5-v26-round-card'),

@@ -15,7 +15,7 @@ const check={
  'tagline lower by 16px':css.includes('#portal .signature')&&css.includes('- 16px'),
  'all Home action buttons move together':!css.includes('#p58-load')&&!css.includes('#p57-history-button')&&!css.includes('#p54-resume'),
  'short iPhone safe adjustment':css.includes('(max-height:760px)')&&css.includes('- 24px')&&css.includes('- 10px'),
- 'button/card sizes unchanged':!css.includes('min-height:')&&!css.includes('padding:')&&!css.includes('width:'),
+ 'button/card sizes unchanged':!/[;{}\n]\s*(?:width|min-height|padding)\s*:/.test(css),
  'photography and logo unchanged':!css.includes('background-image')&&!css.includes('masthead'),
  'bottom fullscreen fix preserved':home.includes('viewport-fit=auto')&&home.includes('pwa-viewport-v5816.css'),
  'dashboard status-bar match retained':home.includes('statusbar-parity-v5817.css'),

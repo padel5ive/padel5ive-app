@@ -1,0 +1,12 @@
+name: v5.8.12 Smart Player Paste source scan
+on:
+  push:
+    branches: [feature/v5.8.12-smart-player-paste]
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/qa-v5812-source-scan.cjs

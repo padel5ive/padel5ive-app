@@ -390,13 +390,11 @@ window.P5CloudSession=Object.freeze({
  refreshNow:async()=>{if(!meta)return false;await refresh();return !offline&&!conflict},
  setFollowLive:(enabled)=>{
   if(!view())return false;
+  // Round buttons already update the native engine's in-memory viewRound and
+  // render the selected round. Only remember the viewer's Follow Live choice.
+  // Reloading here caused a full-page refresh every time the latest round
+  // was selected, even when the moderator hadn't changed any cloud revision.
   setFollowingLive(!!enabled);
-  if(enabled&&kind==='unified'){
-   const local=get(KEY);
-   if(local&&Array.isArray(local.rounds)){
-    local.viewRound=latestRound(local);set(KEY,local);location.reload();
-   }
-  }
   return true;
  },
  leaveViewer:()=>{

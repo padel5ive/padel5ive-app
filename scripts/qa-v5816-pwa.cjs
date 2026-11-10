@@ -23,7 +23,7 @@ const checks={
  'setup scroll preserved':css.includes('overflow-x:hidden!important;overflow-y:auto!important')&&css.includes('100dvh!important'),
  'single code path, no engines changed':modePages.every(p=>!fs.readFileSync(p,'utf8').includes('/phase5816/')),
  'separate master UI preserved':modePages.every(p=>fs.readFileSync(p,'utf8').includes('MATCH CONTROL')),
- 'service worker cache version bump':sw.includes("const VERSION = 'p5-pwa-lab-v5816-ios-origin'"),
+ 'original PWA cache version compatible':sw.includes("const VERSION = 'p5-pwa-setup-prewarm-v588-1'"),
  'standalone assets precached':sw.includes("'/phase5816/pwa-viewport-v5816.css'")&&sw.includes("'/phase5816/viewport-calibrate-v5816.js'"),
  'iOS launch remains standalone':JSON.parse(fs.readFileSync('public/manifest.webmanifest','utf8')).display==='standalone'
 };

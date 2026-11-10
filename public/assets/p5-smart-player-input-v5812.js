@@ -2,7 +2,7 @@
  * Paste WhatsApp list -> preview -> explicit import. No Reclub/API requests.
  */
 (()=>{'use strict';
- const MAX=60, state={text:'',parsed:null,group:'A',confirmPairs:false,flash:''};
+ const MAX=60, state={text:'',parsed:null,group:'A',flash:'',pairs:[],selected:null,excluded:[]};
  const norm=s=>String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
  const empty=s=>!s||/^(?:[.\-–—_*•?]+|tba|tbd|kosong|empty|vacant)$/i.test(s);
  function parse(text){
@@ -97,14 +97,80 @@
  function pending(){
   const c=context(),p=state.parsed;
   if(!c||!p||p.raw!==state.text||p.overflow||(p.source==='reclub'&&p.declared!==p.slots))return null;
-  const names=p.names.filter(n=>!c.existing.has(norm(n)));
-  if(!names.length)return null;
-  if(c.mode==='fixed'&&(!state.confirmPairs||names.length%2))return null;
-  return {mode:c.mode,names,group:state.group,paired:state.confirmPairs};
+  const fresh=p.names.filter(n=>!c.existing.has(norm(n)));
+  if(!fresh.length)return null;
+  if(c.mode==='fixed'){
+   const active=fresh.filter(n=>!state.excluded.some(x=>norm(x)===norm(n)));
+   const flattened=state.pairs.flat(),keys=flattened.map(norm),expected=new Set(active.map(norm));
+   if(!state.pairs.length||state.selected||flattened.length!==active.length||
+      new Set(keys).size!==keys.length||keys.some(k=>!expected.has(k)))return null;
+   return {mode:'fixed',names:flattened,pairs:state.pairs.map(pair=>pair.slice())};
+  }
+  return {mode:c.mode,names:fresh,group:state.group};
  }
  function imported(count){
-  state.text='';state.parsed=null;state.confirmPairs=false;
+  state.text='';state.parsed=null;state.pairs=[];state.selected=null;state.excluded=[];
   state.flash=count+' player'+(count===1?'':'s')+' added. Review Registration before Start.';
+ }
+ function resetPairing(){state.pairs=[];state.selected=null;state.excluded=[];}
+ function fixedPairing(root,fresh){
+  const board=node('section','p5812-pair-board');
+  board.setAttribute('aria-label','Fixed Partner Pairing Review');
+  const valid=new Set(fresh.map(norm)),used=new Set();
+  state.pairs=state.pairs.filter(pair=>pair.length===2&&pair.every(n=>valid.has(norm(n)))&&pair.every(n=>!state.excluded.some(x=>norm(x)===norm(n)))&&pair.every(n=>!used.has(norm(n))&&used.add(norm(n))));
+  const assigned=new Set(state.pairs.flat().map(norm));
+  if(state.selected&&(!valid.has(norm(state.selected))||assigned.has(norm(state.selected))))state.selected=null;
+  state.excluded=state.excluded.filter(n=>valid.has(norm(n))&&!assigned.has(norm(n)));
+  const available=fresh.filter(n=>!assigned.has(norm(n))&&!state.excluded.some(x=>norm(x)===norm(n)));
+  const count=node('div','p5812-pair-header');
+  count.append(node('strong','','PAIRING REVIEW'),node('span','',state.pairs.length+' pairs · '+available.length+' unpaired'));
+  board.append(count);
+  board.append(node('p','p5812-pair-help','Tap two names to create a pair. Select Change to edit any pair.'));
+  const ready=node('div','p5812-pair-ready');
+  if(!state.pairs.length)ready.append(node('p','p5812-pair-empty','No pairs assigned yet. Choose two players below.'));
+  state.pairs.forEach((pair,i)=>{
+   const row=node('div','p5812-pair-row');
+   row.append(node('span','p5812-pair-number','PAIR '+String(i+1).padStart(2,'0')));
+   const content=node('div','p5812-pair-names');
+   content.append(node('strong','',pair[0]),node('span','p5812-pair-plus','+'),node('strong','',pair[1]));
+   row.append(content);
+   const edit=node('button','p5812-pair-edit','CHANGE');edit.type='button';edit.setAttribute('aria-label','Change pair '+(i+1)+': '+pair.join(' and '));
+   edit.addEventListener('click',()=>{state.pairs.splice(i,1);state.selected=pair[0];preview(root);});
+   row.append(edit);ready.append(row);
+  });
+  board.append(ready);
+  const header=node('div','p5812-pool-heading');
+  header.append(node('strong','','UNPAIRED PLAYERS'),node('span','',state.selected?'Choose partner for '+state.selected:available.length+' available'));
+  board.append(header);
+  const pool=node('div','p5812-player-pool');
+  for(const name of available){
+   const chip=node('button','p5812-player-chip'+(state.selected&&norm(state.selected)===norm(name)?' is-selected':''),name);
+   chip.type='button';chip.setAttribute('aria-pressed',String(!!state.selected&&norm(state.selected)===norm(name)));
+   chip.addEventListener('click',()=>{
+    if(!state.selected)state.selected=name;
+    else if(norm(state.selected)===norm(name))state.selected=null;
+    else{state.pairs.push([state.selected,name]);state.selected=null;}
+    preview(root);
+   });
+   const item=node('div','p5812-player-item');item.append(chip);
+   const omit=node('button','p5812-player-skip','SKIP');omit.type='button';omit.setAttribute('aria-label','Exclude '+name+' from import');
+   omit.addEventListener('click',()=>{state.excluded.push(name);if(state.selected&&norm(state.selected)===norm(name))state.selected=null;preview(root);});
+   item.append(omit);pool.append(item);
+  }
+  if(!available.length)pool.append(node('p','p5812-muted','All available players have been assigned or skipped.'));
+  board.append(pool);
+  if(state.excluded.length){
+   const skipped=node('div','p5812-skipped');
+   skipped.append(node('span','','SKIPPED · '+state.excluded.length));
+   state.excluded.forEach(name=>{
+    const restore=node('button','p5812-restore','RESTORE '+name);restore.type='button';restore.setAttribute('aria-label','Restore '+name+' to pairing');
+    restore.addEventListener('click',()=>{state.excluded=state.excluded.filter(n=>norm(n)!==norm(name));preview(root);});
+    skipped.append(restore);
+   });
+   board.append(skipped);
+  }
+  if(available.length||state.selected)board.append(node('p','p5812-pair-notice','Assign every included player to a pair, or Skip players who are not playing.'));
+  return board;
  }
  function preview(root){
   const c=context(),p=state.parsed,out=root.querySelector('.p5812-preview'),button=root.querySelector('[data-act="smart-player-import"]');
@@ -122,16 +188,12 @@
   if(p.marked)out.append(node('p','p5812-muted',p.marked+' trailing * markers removed; no meaning assumed.'));
   if(p.duplicates||fresh.length!==p.names.length)out.append(node('p','p5812-muted',(p.duplicates+p.names.length-fresh.length)+' duplicate name(s) skipped.'));
   if(!p.numbered)out.append(node('p','p5812-muted','No numbered slots detected. Check the names carefully.'));
-  const list=node('ol','p5812-names');
-  fresh.forEach(x=>list.append(node('li','',x)));out.append(list);
-  if(p.overflow)out.append(node('p','p5812-error','Too many names. Use up to '+MAX+' names per import.'));
-  if(c.mode==='fixed'){
-   const label=node('label','p5812-confirm'),cb=node('input');cb.type='checkbox';cb.checked=state.confirmPairs;
-   cb.addEventListener('change',()=>{state.confirmPairs=cb.checked;preview(root);});
-   label.append(cb,node('span','','Pair consecutive names: 1+2, 3+4, etc. (review before Start)'));out.append(label);
-   if(fresh.length%2)out.append(node('p','p5812-error','Fixed Partner needs an even number of new players. Add the missing name.'));
-   else if(!state.confirmPairs)out.append(node('p','p5812-muted','Partners are never assigned automatically.'));
+  if(c.mode==='fixed')out.append(fixedPairing(root,fresh));
+  else{
+   const list=node('ol','p5812-names');
+   fresh.forEach(x=>list.append(node('li','',x)));out.append(list);
   }
+  if(p.overflow)out.append(node('p','p5812-error','Too many names. Use up to '+MAX+' names per import.'));
   if(c.mode==='structured'){
    const label=node('label','p5812-group','IMPORT TO GROUP');
    const select=node('select');select.setAttribute('aria-label','Import to group');
@@ -140,20 +202,21 @@
    label.append(select);out.append(label);
    out.append(node('p','p5812-muted','Select a group. Balance Group A/B before starting.'));
   }
-  if(pending()){button.disabled=false;button.textContent='ADD '+fresh.length+' PLAYER'+(fresh.length===1?'':'S');}
+  const ready=pending();
+  if(ready){button.disabled=false;button.textContent=c.mode==='fixed'?'ADD '+ready.pairs.length+' PAIR'+(ready.pairs.length===1?'':'S')+' TO REGISTRATION':'ADD '+ready.names.length+' PLAYER'+(ready.names.length===1?'':'S');}
  }
  function mount(){
   const c=context();if(!c||c.card.querySelector('#p5812-smart'))return;
   const anchor=c.card.querySelector('.p5-v2-reg.p5-b32-reg-list, .p5-52-columns');
   if(!anchor)return;
   const root=node('details','p5812-smart');root.id='p5812-smart';
-  const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','3 LIST FORMATS'));root.append(title);
+  const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'));root.append(title);
   const box=node('div','p5812-body');box.append(node('p','p5812-help','Supports WhatsApp List, Reclub Participants List & Simple Name List. For full names, use commas or new lines.'));
   const field=node('textarea','p5812-textarea');field.rows=4;field.maxLength=16000;field.setAttribute('aria-label','Paste player list');field.placeholder='Paste player list here…';field.value=state.text;
-  field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;state.flash='';clear.hidden=!state.text;review.disabled=!state.text.trim();preview(root);});box.append(field);
+  field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;resetPairing();state.flash='';clear.hidden=!state.text;review.disabled=!state.text.trim();preview(root);});box.append(field);
   const actions=node('div','p5812-buttons');
-  const review=node('button','p5812-review','PREVIEW PLAYERS');review.type='button';review.disabled=!state.text.trim();review.addEventListener('click',()=>{state.text=field.value;if(!state.text.trim())return;state.parsed={...parse(state.text),raw:state.text};state.flash='';preview(root);});
-  const clear=node('button','p5812-clear','CLEAR');clear.type='button';clear.hidden=!state.text;clear.addEventListener('click',()=>{state.text='';state.parsed=null;state.flash='';state.confirmPairs=false;field.value='';clear.hidden=true;review.disabled=true;preview(root);field.focus();});
+  const review=node('button','p5812-review','PREVIEW PLAYERS');review.type='button';review.disabled=!state.text.trim();review.addEventListener('click',()=>{state.text=field.value;if(!state.text.trim())return;resetPairing();state.parsed={...parse(state.text),raw:state.text};state.flash='';preview(root);});
+  const clear=node('button','p5812-clear','CLEAR');clear.type='button';clear.hidden=!state.text;clear.addEventListener('click',()=>{state.text='';state.parsed=null;resetPairing();state.flash='';field.value='';clear.hidden=true;review.disabled=true;preview(root);field.focus();});
   actions.append(review,clear);box.append(actions);
   const out=node('div','p5812-preview');out.hidden=true;box.append(out);
   const add=node('button','p5812-add','ADD TO REGISTRATION');add.type='button';add.dataset.act='smart-player-import';add.disabled=true;add.hidden=true;box.append(add);

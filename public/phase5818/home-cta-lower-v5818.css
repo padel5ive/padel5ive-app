@@ -1,0 +1,42 @@
+/* PADEL 5IVE v5.8.18 · Home CTA Vertical Balance
+ * iPhone installed PWA ONLY. The user-approved cluster (Start New Session,
+ * Load Session, Session History, optional Resume) moves together.
+ * Preserve hero photo, brand, button sizes, spacing, PWA viewport,
+ * Initial Setup, Dashboard and all match engines.
+ */
+@media screen and (display-mode:standalone) and (max-width:760px) and (orientation:portrait) {
+ /* Use the exact v5.8.16 anchor formula; only subtract a 40px offset. */
+ html body:not(.p54-active) #portal .p541-home-actions {
+  bottom:calc(
+   clamp(62px,calc(18svh - 58px),122px)
+   + var(--p5816-status-offset,59px)
+   - 40px
+  )!important;
+ }
+ /* Tagline is separate from the controls; make it follow by 16px,
+    keeping breathing room below Resume and above the Home Indicator. */
+ html body:not(.p54-active) #portal .signature {
+  bottom:calc(
+   clamp(23px,calc(9svh - 44px),53px)
+   + var(--p5816-status-offset,59px)
+   - 16px
+  )!important;
+ }
+}
+@media screen and (display-mode:standalone) and (max-width:760px) and (orientation:portrait) and (max-height:760px) {
+ /* On short iPhones don't push controls into the tagline. */
+ html body:not(.p54-active) #portal .p541-home-actions {
+  bottom:calc(
+   clamp(62px,calc(18svh - 58px),122px)
+   + var(--p5816-status-offset,59px)
+   - 24px
+  )!important;
+ }
+ html body:not(.p54-active) #portal .signature {
+  bottom:calc(
+   clamp(23px,calc(9svh - 44px),53px)
+   + var(--p5816-status-offset,59px)
+   - 10px
+  )!important;
+ }
+}

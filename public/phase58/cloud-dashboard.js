@@ -30,7 +30,8 @@ function message(m){
   '*SESSION CODE:* '+m.code+'\n\n_View Only · Live Scores · Auto Sync_';
  return top+location.origin+'\n\n*SESSION CODE:* '+m.code+'\n*ACCESS PIN:* '+(m.pin||'')+
   '\n\n*HOW TO ACCESS*\n1. Open the link → Load Session.\n2. Enter Code & PIN → Load Session.'+
-  '\n\n*NOTE*\nLegacy session: one controller at a time. Share these credentials privately.';
+  '\n\n*HOW TO TAKE CONTROL*\n1. Open Menu & Settings → Cloud Session.\n2. Tap Take Control.\n3. Current controller taps Approve Control Transfer.'+
+  '\n\n*NOTE*\nOne controller at a time. Others are View Only. Offline control transfers after the lease expires.';
 }
 async function api(action,opts={}){
  const res=await fetch(API,{method:'POST',credentials:'same-origin',cache:'no-store',

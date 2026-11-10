@@ -97,7 +97,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('nod
  assert(compiled.includes('body:JSON.stringify({data,preview})'),'POST must carry PNG');
  assert(compiled.includes('/phase57/social-card-v574.js'),'Renderer must load with app');
  const worker=fs.readFileSync('public/sw.js','utf8');
- assert((worker.includes('p5-pwa-phase57-v577')||worker.includes('p5-pwa-phase58-lab-01'))&&worker.includes('/phase57/social-card-v574.js'),'PWA offline social renderer missing');
+ assert((worker.includes('p5-pwa-phase57-v577')||worker.includes('p5-pwa-phase58-lab-01')||worker.includes('p5-pwa-setup-prewarm-v588-1'))&&worker.includes('/phase57/social-card-v574.js'),'PWA offline social renderer missing');
  assert(worker.includes("'/social/'"),'Social images must bypass the PWA cache');
  console.log('PASS Phase 5.7.4 — Top 5, live/final/KO, Mexicano/Individual, Canvas, OG, server/image routes, PWA.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

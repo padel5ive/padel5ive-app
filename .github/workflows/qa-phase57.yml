@@ -57,7 +57,7 @@ jobs:
             'OG preview':res.includes('PADEL 5IVE · Signature Game')&&res.includes('og:image:secure_url')&&res.includes('og:image:width'),
             'fixed public backdrop':res.includes('p5-unified-fixed-backdrop'),
             'public champion reveal assets':res.includes('/phase57/share-champion-v571.css')&&res.includes('/phase57/champion-render-v571.js'),
-            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&(sw.includes('p5-pwa-phase57-v577')||sw.includes('p5-pwa-phase58-lab-01')),
+            'PWA cache':sw.includes('/phase57/home-session-history.js')&&sw.includes('/phase57/setup-refinement-v572.css')&&(sw.includes('p5-pwa-phase57-v577')||sw.includes('p5-pwa-phase58-lab-01')||sw.includes('p5-pwa-setup-prewarm-v588-1')),
             'server optional time':api.includes('if(s.time!==undefined'),
             'master engine present':u.includes('P5EngineRegistry')&&u.includes('P5KO')&&u.includes('P5PublicResults')
           };

@@ -5,6 +5,9 @@
 const fs=require('node:fs');
 function patch(path,from,to,label){
  let s=fs.readFileSync(path,'utf8');
+ // Later supported PWA generations supersede the v5.8 SW version; this
+ // transform must remain idempotent when regression tests re-run it.
+ if(label==='PWA version'&&s.includes("const VERSION = 'p5-pwa-setup-prewarm-v588-1';"))return;
  if(s.includes(to))return;
  const n=s.split(from).length-1;
  if(n!==1)throw Error('v5.8 source drift: '+label+' expected one target, found '+n);

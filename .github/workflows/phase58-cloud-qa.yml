@@ -44,7 +44,7 @@ jobs:
           grep -Fq 'data-p58-cloud' public/modes/unified/index.html
           grep -Fq '/phase58/cloud-dashboard.js' public/modes/club-match/index.html
           grep -Fq '/api/cloud-session' netlify.toml
-          grep -Fq 'p5-pwa-phase58-lab-01' public/sw.js
+          grep -Eq 'p5-pwa-(phase58-lab-01|setup-prewarm-v588-1)' public/sw.js
 
   deploy-preview-smoke:
     if: github.event_name == 'pull_request'

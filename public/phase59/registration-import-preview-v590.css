@@ -1,4 +1,4 @@
-/* PADEL 5IVE v5.9 — native Registration import UX preview.
+/* PADEL 5IVE v5.9.1 — Reclub event-share auto-detect preview.
    Small quiet-luxury collapsible section between player rows & Advanced Rules.
    No master registration or engine styling is replaced. */
 .p59-import{margin:14px 0 13px;border:1px solid rgba(205,176,134,.29);border-radius:11px;background:rgba(19,38,56,.33);overflow:hidden}
@@ -18,17 +18,23 @@
 .p59-modal-head small{font-size:9px;letter-spacing:.19em;color:#bda17e;font-weight:650}
 .p59-modal-head h2{margin:6px 0 0;font-size:21px;letter-spacing:.005em;font-weight:650}
 .p59-close{width:32px;height:32px;flex:none;border:1px solid rgba(206,181,147,.24);border-radius:50%;background:transparent;color:#ded6c8;font-size:22px;line-height:1;cursor:pointer}
-.p59-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 18px;padding:5px;border:1px solid rgba(206,181,147,.19);border-radius:10px;background:rgba(3,14,26,.33)}
-.p59-tabs button{border:0;border-radius:7px;min-height:39px;padding:8px 6px;background:transparent;color:#aebdca;font-size:11.5px;font-weight:600;cursor:pointer}
-.p59-tabs button.is-active{color:#f0dec4;background:rgba(200,170,132,.18)}
-.p59-content{overflow:auto;padding:17px 20px 15px;-webkit-overflow-scrolling:touch}
+.p59-content{overflow:auto;padding:15px 20px 17px;-webkit-overflow-scrolling:touch}
 .p59-content label{display:block;margin:0 0 9px;font-size:10px;color:#d2b68f;letter-spacing:.12em;font-weight:700}
 .p59-content textarea,.p59-content input{display:block;box-sizing:border-box;width:100%;min-height:47px;padding:12px;resize:vertical;border-radius:9px;border:1px solid rgba(199,185,166,.32);background:rgba(2,13,26,.47);color:#f4f2ef;font:500 13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}
 .p59-content textarea:focus,.p59-content input:focus{border-color:#d8b58b}
 .p59-content [hidden],.p59-preview[hidden]{display:none!important}
 .p59-help{color:#a9b7c3;font-size:11px;line-height:1.5;margin:9px 0 14px}
 .p59-primary{width:100%;min-height:45px;border:1px solid #d8b990;border-radius:8px;background:#d2b58d;color:#142334;font-size:12px;font-weight:750;cursor:pointer}
-.p59-preview{margin-top:16px;padding-top:15px;border-top:1px solid rgba(206,181,147,.22)}
+.p59-preview{margin-top:15px;padding-top:14px;border-top:1px solid rgba(206,181,147,.22)}
+.p59-detected-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.p59-detected-status{color:#e8c69a;font-weight:750;font-size:10px;letter-spacing:.13em}
+.p59-detected-header strong{font-size:12px;color:#dbe2e7;letter-spacing:.08em}
+.p59-event-name{font-size:13px;font-weight:650;color:#f0e6d8;line-height:1.5;margin:0 0 8px;overflow-wrap:anywhere}
+.p59-event-meta{font-size:11.5px;color:#bac8d2;margin:5px 0;line-height:1.5}
+.p59-event-link{display:inline-flex;align-items:center;gap:5px;color:#dfc298;text-decoration:underline;text-underline-offset:3px;font-size:11px;font-weight:600;margin:9px 0 14px}
+.p59-connection-note{margin:5px 0 0;padding:11px 12px;border-radius:8px;border:1px solid rgba(204,179,151,.19);background:rgba(6,19,31,.40)}
+.p59-connection-note b{display:block;font-size:10px;letter-spacing:.09em;color:#ddc6a7}
+.p59-connection-note p{font-size:11px;line-height:1.55;color:#b8c3cd;margin:6px 0 0}
 .p59-preview-title{display:block;color:#e7cfac;font-size:11px;letter-spacing:.09em}
 .p59-name-list{margin:9px 0 0;padding:0 0 0 22px;max-height:170px;overflow:auto;font-size:12px;line-height:1.9}
 .p59-warning{color:#e2b8a8;font-size:11px;line-height:1.5}

@@ -1,0 +1,15 @@
+name: PADEL 5IVE v5.8.10 Read-only Navigation Source Audit
+on:
+  push:
+    branches: [feature/v5.8.10-viewonly-round-navigation]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/qa-v5810-nav-inspect.cjs

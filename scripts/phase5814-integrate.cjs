@@ -3,7 +3,7 @@
  */
 'use strict';
 const fs=require('node:fs');
-const assetVersion='5814.16'; // new moderator credential share + unified sizing on iOS
+const assetVersion='5820.2'; // fresh viewer navigation code for Safari/PWA; all Cloud asset URLs are versioned
 const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${assetVersion}">`;
 const js=`<script defer src="/phase5814/view-only-v5814.js?v=${assetVersion}"></script>`;
 function insert(path,anchor,tag){

@@ -13,11 +13,11 @@ for(const page of ['public/modes/unified/index.html','public/modes/club-match/in
 const pages=['public/modes/unified/index.html','public/modes/club-match/index.html'];
 for(const page of pages){
  const built=fs.readFileSync(page,'utf8');
- assert(built.includes('view-only-v5814.css?v=5814.16'),'Safari must receive newly versioned stylesheet');
- assert(built.includes('view-only-v5814.js?v=5814.16'),'Safari must receive newly versioned viewer script');
+ assert(built.includes('view-only-v5814.css?v=5820.2'),'Safari must receive newly versioned stylesheet');
+ assert(built.includes('view-only-v5814.js?v=5820.2'),'Safari must receive newly versioned viewer script');
  assert.equal(built.split('view-only-v5814.css?v=').length-1,1,'Only one viewer stylesheet reference');
- assert(built.includes('cloud-dashboard.js?v=5814.16'),'Safari receives latest Cloud moderator controller UI');
- assert(built.includes('cloud-session.css?v=5814.16'),'Safari receives latest Cloud Session modal sizing');
+ assert(built.includes('cloud-dashboard.js?v=5820.2'),'Safari receives latest Cloud moderator controller UI');
+ assert(built.includes('cloud-session.css?v=5820.2'),'Safari receives latest Cloud Session modal sizing');
  assert.equal(built.split('cloud-dashboard.js?v=').length-1,1,'No duplicate Cloud controller script tags');
 }
 const sw=fs.readFileSync('public/sw.js','utf8');

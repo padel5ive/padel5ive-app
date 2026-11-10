@@ -48,7 +48,11 @@ function restoreText(){
 function menuView(){
  const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
  if(!root)return;
- for(const child of Array.from(root.children))if(!child.classList.contains('p5814-view-menu')&&!child.classList.contains('p5814-master-menu-hidden'))child.classList.add('p5814-master-menu-hidden');
+ for(const child of Array.from(root.children)){
+  if(child.classList.contains('p5814-view-menu'))continue;
+  child.classList.add('p5814-master-menu-hidden');
+  hideControl(child);
+ }
  const outer=$('.p5814-view-menu',root);
  if(outer){updateStatus(outer);return;}
  const panel=make('details','p5-4852-section p5814-view-menu');
@@ -144,23 +148,23 @@ function scoreViewer(){
  }
 }
 function actions(){
- const root=kind==='unified'?$('#americano'):$('#app');
- if(!root)return;
+ const roots=kind==='unified'?[$('#americano')]:[$('#app'),$('#mainMenu')];
  const attr=kind==='unified'?'act':'action';
- // Closed-world spectator policy: everything is hidden unless explicitly
- // identified as harmless round/bracket/leaderboard browsing.
- // This includes native buttons without data-act/data-action.
- for(const button of $$('button, input[type="button"], input[type="submit"]',root)){
-  if(button.closest('.p5814-view-menu, #p58-cloud-host'))continue;
-  const action=button.dataset[attr];
-  const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
-  if(permitted)showControl(button);else hideControl(button);
- }
- // Likewise, prevent editor forms from appearing as disabled empty controls.
- // Club match inputs keep their passive numeric score displays in scoreViewer.
- for(const field of $$('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
-  if(field.closest('.p5814-view-menu, #p58-cloud-host'))continue;
-  hideControl(field);
+ // Closed-world spectator policy: hide all editor actions including buttons
+ // without action IDs, Club's global dock, and controls added after re-render.
+ for(const root of roots){
+  if(!root)continue;
+  for(const button of $('button, input[type="button"], input[type="submit"]',root)){
+   if(button.closest('.p5814-view-menu, #p58-cloud-host'))continue;
+   const action=button.dataset[attr];
+   const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
+   if(permitted)showControl(button);else hideControl(button);
+  }
+  // Club score values are mirrored in passive text before hiding input fields.
+  for(const field of $('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
+   if(field.closest('.p5814-view-menu, #p58-cloud-host'))continue;
+   hideControl(field);
+  }
  }
 }
 function restore(){

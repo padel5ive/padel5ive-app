@@ -50,7 +50,7 @@ function joinSafe(result){
  }
  if(list.length>60)throw Error('Session History is full. Export and remove an old session first.');
  const link={kind,code:result.code,token:result.token,pin:null,viewerKey:null,
-  moderatorPinRequired:!!result.moderatorPinRequired,summary:result.summary,
+  moderatorPinRequired:!!result.moderatorPinRequired,moderatorPinDigits:result.moderatorPinDigits||null,summary:result.summary,
   localId:identity(result.data,kind),revision:result.revision,role:result.role,waiting:false};
  // Baseline hash to detect unexpected offline changes after the next app restart.
  const stableCopy={...result.data};delete stableCopy.ui;if(kind==='unified')delete stableCopy.viewRound;
@@ -81,9 +81,9 @@ function init(){
  const description=e('p','p58-home-hint','Open a Viewer Link for instant access, or enter a Session Code manually.');
  const form=e('form','p58-home-form');
  const codeLabel=e('label','','SESSION CODE'),code=e('input','');
- code.id='p58-session-code';code.name='code';code.required=true;code.maxLength=11;
+ code.id='p58-session-code';code.name='code';code.required=true;code.maxLength=10;
  code.setAttribute('autocomplete','off');code.setAttribute('autocapitalize','characters');
- code.placeholder='10-character Session Code';
+ code.placeholder='6-character Session Code';
  const pinLabel=e('label','','LEGACY ACCESS PIN'),pin=e('input','');
  pin.name='pin';pin.type='password';pin.maxLength=4;pin.pattern='[0-9]{4}';
  pin.setAttribute('inputmode','numeric');pin.setAttribute('autocomplete','off');
@@ -94,7 +94,7 @@ function init(){
  form.append(codeLabel,pinLabel,submit,status);panel.append(description,form);overlay.append(panel);document.body.append(overlay);
  const normalize=x=>String(x||'').toUpperCase().replace(/[\s-]/g,'');
  const isLegacy=c=>/^\d{6}$/.test(c);
- const isNew=c=>/^[2-9A-HJ-NP-Z]{10}$/.test(c);
+ const isNew=c=>/^(?:[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5}|[2-9A-HJ-NP-Z]{10})$/.test(c);
  const updatePin=()=>{const old=isLegacy(normalize(code.value));pinLabel.hidden=!old;pin.required=old;};
  const hide=()=>{overlay.hidden=true;pin.value='';status.textContent=''};
  const show=()=>{overlay.hidden=false;updatePin();code.focus()};

@@ -1,0 +1,29 @@
+name: PADEL 5IVE v5.8.24 Secure Short Viewer Link QA
+on:
+  pull_request:
+    paths:
+      - 'netlify/functions/cloud-session.mjs'
+      - 'netlify.toml'
+      - 'public/phase58/cloud-home.js'
+      - 'public/phase58/cloud-dashboard.js'
+      - 'scripts/phase5814-integrate.cjs'
+      - 'scripts/phase5822-integrate.cjs'
+      - 'scripts/qa-v5824-short-viewer.mjs'
+      - 'scripts/qa-phase58-preview.mjs'
+      - '.github/workflows/qa-v5824-short-link.yml'
+jobs:
+  secure-share:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-v5824-short-viewer.mjs
+      - run: node scripts/qa-phase58.mjs
+      - run: node scripts/qa-v5823-short-cloud-credentials.cjs
+      - run: node scripts/qa-v5822-cloud-modal.cjs
+      - run: npm install --no-save jsdom@26
+      - run: node scripts/qa-v5814-view-only.cjs

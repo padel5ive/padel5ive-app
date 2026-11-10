@@ -109,8 +109,10 @@ function init(){
   submit.disabled=true;submit.textContent='CONNECTING';status.textContent='Connecting to Live Session…';
   try{
    const label=/iPad/i.test(navigator.userAgent)?'iPad':/Android/i.test(navigator.userAgent)?'Android tablet / phone':'iPhone / browser';
-   const r=await api('join',{code:normalized,...options.pin?{pin:options.pin}:{},
-    ...options.viewerKey?{viewerKey:options.viewerKey}:{},label});
+   const r=await api(options.shortToken?'join-short':'join',{
+    code:normalized,...options.pin?{pin:options.pin}:{},
+    ...options.viewerKey?{viewerKey:options.viewerKey}:{},
+    ...options.shortToken?{shortToken:options.shortToken}:{},label});
    const destination=joinSafe(r);
    location.assign(destination);
   }catch(err){
@@ -122,11 +124,18 @@ function init(){
   event.preventDefault();const c=normalize(code.value);status.textContent='';
   void connect(c,{pin:isLegacy(c)?pin.value.trim():undefined});
  });
- // The token is kept in a URL fragment, never HTTP request or referrer.
- // Erase it before loading the cloud session to avoid accidental sharing.
+ // Older long Viewer Links keep their token in a fragment (backward-compatible).
+ // New short links use an independent 96-bit View Only key in /v/CODE.TOKEN;
+ // erase it from the visible URL before contacting Cloud.
  const params=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'');
  const autoCode=normalize(params.get('join')),viewerKey=params.get('v');
- if(autoCode&&viewerKey){
+ const short=location.pathname.match(/^\/v\/([A-HJ-NP-Z][2-9A-HJ-NP-Z]{5}|[2-9A-HJ-NP-Z]{10})\.([A-Za-z0-9_-]{16})\/?$/);
+ if(short){
+  window.history.replaceState(window.history.state,'','/'+location.search);
+  code.value=short[1];updatePin();
+  overlay.hidden=false;close.disabled=true;
+  void connect(short[1],{shortToken:short[2],auto:true}).finally(()=>{close.disabled=false});
+ }else if(autoCode&&viewerKey){
   window.history.replaceState(window.history.state,'',location.pathname+location.search);
   code.value=autoCode;updatePin();
   overlay.hidden=false;close.disabled=true;

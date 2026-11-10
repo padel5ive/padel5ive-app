@@ -14,6 +14,21 @@
   status = 200
   force = true
 
+# Short Viewer Links: /v/CODE.RANDOM96, rewritten to the existing landing app.
+# A token alone confers View Only; Moderator PIN is never embedded.
+[[redirects]]
+  from = "/v/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/v/*"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    Cache-Control = "private, no-store, max-age=0"
+    X-Robots-Tag = "noindex, nofollow"
+
 [[redirects]]
   from = "/api/unified-results"
   to = "/.netlify/functions/unified-results"

@@ -14,6 +14,7 @@ const NEW_CODE=/^(?:[2-9A-HJ-NP-Z]{10}|[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5})$/;
 const CODE_ALPHABET='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const CODE_LETTERS='ABCDEFGHJKLMNPQRSTUVWXYZ';
 const VIEW_TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
+const SHORT_TOKEN=/^[A-Za-z0-9_-]{16}$/; // 96-bit View Only bearer token
 const createViewerCode=()=>CODE_LETTERS[randomInt(0,CODE_LETTERS.length)]+
  Array.from({length:5},()=>CODE_ALPHABET[randomInt(0,CODE_ALPHABET.length)]).join('');
 // PIN length is persisted for new sessions, existing sessions default to six.
@@ -27,7 +28,7 @@ const TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
 const LEASE_MS=90_000;
 const LOCK_MS=15*60_000;
 const MAX_BYTES=1_700_000;
-const allowed=new Set(['create','join','sync','save','heartbeat','take-control','approve-control','release-control','recover-access']);
+const allowed=new Set(['create','join','sync','save','heartbeat','take-control','approve-control','release-control','recover-access','share-short','join-short']);
 const hash=v=>createHash('sha256').update(String(v)).digest('hex');
 const safe=v=>String(v??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,90);
 const now=()=>Date.now();
@@ -39,6 +40,13 @@ function mintInvite(entry){
  const viewerKey=deviceToken();
  const prev=Array.isArray(entry.viewerKeyHashes)?entry.viewerKeyHashes:[];
  return {viewerKey,viewerKeyHashes:[...prev.slice(-255),hash(viewerKey)]};
+}
+// Hash-only short viewer bearer keys. Moderator PIN and raw bearer keys
+// are never persisted in Netlify Blobs.
+function mintShort(entry){
+ const shortToken=randomBytes(12).toString('base64url');
+ const prev=Array.isArray(entry.shortViewerHashes)?entry.shortViewerHashes:[];
+ return {shortToken,shortViewerHashes:[...prev.slice(-255),hash(shortToken)]};
 }
 const pinHash=(pin,salt)=>scryptSync(pin,salt,32).toString('hex');
 const eq=(a,b)=>{const x=Buffer.from(String(a||''),'hex'),y=Buffer.from(String(b||''),'hex');return x.length===32&&y.length===32&&timingSafeEqual(x,y)};
@@ -114,17 +122,17 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     if(!validState(data,kind))return error('Save a registered session before enabling cloud access',422);
     if(Buffer.byteLength(JSON.stringify(data),'utf8')>1_450_000)return error('Session exceeds cloud size limit',413);
     const moderatorPin=String(randomInt(0,10_000)).padStart(4,'0');
-    const viewerKey=deviceToken();
+    const viewerKey=deviceToken(),shortToken=randomBytes(12).toString('base64url');
     const salt=randomBytes(16).toString('hex'),token=deviceToken(),id=uid();
     for(let attempt=0;attempt<20;attempt++){
      const code=createViewerCode();
      const entry={v:58,code,kind,summary:summary(data,kind),data,revision:1,updatedAt:ts,
-      salt,viewerKeyHash:hash(viewerKey),moderatorPinHash:pinHash(moderatorPin,salt),moderatorPinDigits:4,
+      salt,viewerKeyHash:hash(viewerKey),shortViewerHashes:[hash(shortToken)],moderatorPinHash:pinHash(moderatorPin,salt),moderatorPinDigits:4,
       failures:{count:0,until:0},
       devices:[{id,hash:hash(token),label:safe(input.label)||'Primary device',joinedAt:ts}],
       controller:{id,expires:ts+LEASE_MS},request:null};
      const result=await store.setJSON('session/'+code,entry,{onlyIfNew:true});
-     if(changed(result))return json({...metadata(entry,id,ts,false),viewerKey,moderatorPin,token,created:true},201);
+     if(changed(result))return json({...metadata(entry,id,ts,false),viewerKey,shortToken,moderatorPin,token,created:true},201);
      if(result.modified) return error('Cloud write could not be verified. Please retry.',503);
     }
     return error('Could not generate unique code. Please retry.',503);
@@ -136,8 +144,13 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
    if(!found||!found.data)return error('Session not found or access denied',404);
    let entry=found.data,etag=found.etag;
    if(entry.v!==58||!Array.isArray(entry.devices))return error('Unsupported session version',409);
-   if(action==='join'){
-    if(entry.viewerKeyHash){
+   if(action==='join'||action==='join-short'){
+    if(action==='join-short'){
+     const shortToken=String(input.shortToken||'');
+     if(!entry.viewerKeyHash||!SHORT_TOKEN.test(shortToken)||
+         !(entry.shortViewerHashes||[]).some(h=>eq(h,hash(shortToken))))
+      return error('Invalid Viewer Link',401);
+    }else if(entry.viewerKeyHash){
      // Current six-character and original ten-character manual codes grant VIEW ONLY.
      if(input.viewerKey){
       if(!VIEW_TOKEN.test(String(input.viewerKey))||!(eq(hash(input.viewerKey),entry.viewerKeyHash)||(entry.viewerKeyHashes||[]).some(h=>eq(hash(input.viewerKey),h))))
@@ -166,6 +179,15 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
    }
    const id=verify(entry,input.token);
    if(!id)return error('This device is not authorized for the session',401);
+   if(action==='share-short'){
+    if(!entry.viewerKeyHash||role(entry,id,ts)!=='controller')
+     return error('Only the active moderator can create a short Viewer Link',423);
+    const short=mintShort(entry);
+    const next={...entry,shortViewerHashes:short.shortViewerHashes};
+    const saved=await write(store,code,next,etag);
+    if(!changed(saved))return error('Session changed. Refresh and retry sharing.',409);
+    return json({...metadata(next,id,ts,false),shortToken:short.shortToken});
+   }
    if(action==='sync'){
     return json(metadata(entry,id,ts,input.afterRevision!==entry.revision||input.force===true));
    }
@@ -207,12 +229,12 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
      if(!changed(saved))return error('PIN verification conflicted. Retry.',409);
      return error('Incorrect Moderator PIN',401);
     }
-    const invite=mintInvite(entry);
-    const next={...entry,failures:{count:0,until:0},viewerKeyHashes:invite.viewerKeyHashes,
+    const invite=mintInvite(entry),short=mintShort(entry);
+    const next={...entry,failures:{count:0,until:0},viewerKeyHashes:invite.viewerKeyHashes,shortViewerHashes:short.shortViewerHashes,
      devices:entry.devices.map(x=>x.id===id?{...x,pinAttempts:0,pinLockedUntil:0}:x)};
     const saved=await write(store,code,next,etag);
     if(!changed(saved))return error('Session changed. Retry access recovery.',409);
-    return json({...metadata(next,id,ts,false),viewerKey:invite.viewerKey});
+    return json({...metadata(next,id,ts,false),viewerKey:invite.viewerKey,shortToken:short.shortToken});
    }
    if(action==='take-control'){
     if(role(entry,id,ts)==='controller')return json(metadata(entry,id,ts,false));
@@ -235,14 +257,14 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
       return error('Incorrect Moderator PIN',401);
      }
      // Atomic single-writer transfer, with a fresh viewer invitation for the new moderator.
-     const invite=mintInvite(entry);
-     const next={...entry,failures:{count:0,until:0},viewerKeyHashes:invite.viewerKeyHashes,
+     const invite=mintInvite(entry),short=mintShort(entry);
+     const next={...entry,failures:{count:0,until:0},viewerKeyHashes:invite.viewerKeyHashes,shortViewerHashes:short.shortViewerHashes,
       devices:entry.devices.map(d=>d.id===id
        ?{...d,pinAttempts:0,pinLockedUntil:0}:d),
       controller:{id,expires:ts+LEASE_MS},request:null};
      const saved=await write(store,code,next,etag);
      if(!changed(saved))return error('Another device updated control. Refresh and retry.',409);
-     return json({...metadata(next,id,ts,true),viewerKey:invite.viewerKey,transferred:true});
+     return json({...metadata(next,id,ts,true),viewerKey:invite.viewerKey,shortToken:short.shortToken,transferred:true});
     }
     // Legacy sessions retain their request/approval/lease flow.
     const active=entry.controller&&entry.controller.expires>ts;

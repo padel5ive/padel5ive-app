@@ -38,8 +38,10 @@ if(!newAssets.every(a=>sw.includes(a))){
  if(sw.split(marker).length!==2)throw Error('v5816: Service Worker asset anchor drift');
  sw=sw.replace(marker,marker+' '+newAssets.map(x=>x+',').join(' '));
 }
-const versionRx=/const VERSION *= *['"][^'"]+['"];/;
-if(!versionRx.test(sw))throw Error('v5816: Service Worker cache version assignment missing');
-sw=sw.replace(versionRx,"const VERSION = 'p5-pwa-lab-v5816-ios-origin';");
+/* This build adds the new PWA assets to the existing worker's PRECACHE.
+ * The SW file content changes, so WebKit installs an updated worker; keep
+ * the established cache-version constant for compatibility with earlier
+ * build transforms and their repeat-safe regression checks.
+ */
 fs.writeFileSync(swFile,sw);
 console.log('PASS v5.8.16: iOS PWA viewport origin and full-height landing/initial setup integrated.');

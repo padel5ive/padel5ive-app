@@ -1,0 +1,30 @@
+name: PADEL 5IVE v5.8.14 View Only Master QA
+on:
+  push:
+    branches: [feature/v5.8.14-cloud-view-only-dashboard]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  viewer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save jsdom@26
+      - name: Verify viewer UI and Cloud regressions
+        run: |
+          node scripts/qa-v5814-view-only.cjs
+          node scripts/qa-v5813-pairing-ui.cjs
+          node scripts/qa-v5812-smart-paste.cjs
+          node scripts/qa-v5812-fixed-pair-review.cjs
+          node scripts/qa-v5810-viewer.cjs
+          node scripts/qa-v589-cloud-whatsapp.cjs
+          node scripts/qa-pwa.cjs
+          git diff --check

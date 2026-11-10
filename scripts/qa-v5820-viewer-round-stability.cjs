@@ -73,9 +73,9 @@ vm.runInNewContext(refreshCode+'\nthis.poll=refresh;',pollCtx);
  assert.equal(pollCtx.meta.revision,7,'Revision is only advanced by applyRemote');
  const pageContent=pages.map(p=>fs.readFileSync(p,'utf8'));
  for(const [index,html] of pageContent.entries()){
-  assert(html.includes('cloud-dashboard.js?v=5820.2'),
+  assert(html.includes('cloud-dashboard.js?v=5823.0'),
    pages[index]+': browser must load fresh Cloud adapter');
-  assert(html.includes('view-only-v5814.js?v=5820.2'),
+  assert(html.includes('view-only-v5814.js?v=5823.0'),
    pages[index]+': browser must load fresh viewer adapter');
   assert.equal(html.split('cloud-dashboard.js?v=').length-1,1,'No duplicate Cloud JS');
  }

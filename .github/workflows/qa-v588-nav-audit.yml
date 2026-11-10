@@ -1,0 +1,16 @@
+name: PADEL 5IVE v5.8.8 Navigation Source Audit
+on:
+  push:
+    branches: [feature/v5.8.8-faster-initial-setup-preview]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Locate Setup navigation and engine boot
+        run: node scripts/qa-v588-source-audit.cjs

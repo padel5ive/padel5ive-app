@@ -26,6 +26,12 @@ async function api(action,values){
 function joinSafe(result){
  const kind=result.kind;
  if(!Object.hasOwn(K,kind)||!active(result.data,kind))throw Error('The cloud session data is not compatible with this version.');
+ // First join follows the active round, not a moderator's temporary history view.
+ if(kind==='unified'&&result.role==='viewer'&&Array.isArray(result.data.rounds)&&result.data.rounds.length){
+  const now=Number(result.data.currentRound);
+  if(Number.isInteger(now))result={...result,data:{...result.data,
+   viewRound:Math.max(0,Math.min(now,result.data.rounds.length-1))}};
+ }
  const key=K[kind],archKey=ARCH[kind],metaKey='p58-cloud-link-'+kind;
  const oldCurrent=localStorage.getItem(key),oldArchive=localStorage.getItem(archKey),oldMeta=localStorage.getItem(metaKey);
  const current=get(key),arch=get(archKey),list=Array.isArray(arch)?arch.slice():[];

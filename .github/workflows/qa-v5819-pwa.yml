@@ -1,0 +1,23 @@
+name: PADEL 5IVE v5.8.19 Home Brass and Setup Top Seam QA
+on:
+  pull_request:
+    paths:
+      - 'public/phase5819/**'
+      - 'scripts/phase5819-integrate.cjs'
+      - 'scripts/qa-v5819-pwa.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-v5819-pwa.yml'
+jobs:
+  home-and-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-v5819-pwa.cjs
+      - run: node scripts/qa-v5818-pwa.cjs
+      - run: node scripts/qa-v5817-pwa.cjs
+      - run: node scripts/qa-v5816-pwa.cjs

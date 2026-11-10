@@ -1,0 +1,94 @@
+/* PADEL 5IVE · v5.8.19 — iPhone PWA final Home / Initial Setup polish
+ * New layer after v5.8.18. No game engine, court, scoring, Home image,
+ * hero logo, viewport-fit, or Cloud Session changes.
+ */
+@media screen and (display-mode:standalone) and (max-width:760px) and (orientation:portrait){
+ /* 70 CSS px lower than v5.8.18. The whole cluster moves together:
+    Start, Load, History and optional Resume. Keep grid dimensions intact. */
+ html body:not(.p54-active) #portal .p541-home-actions{
+  bottom:calc(
+   clamp(62px,calc(18svh - 58px),122px)
+   + var(--p5816-status-offset,59px)
+   - 110px
+  )!important;
+ }
+ /* Follow the cluster, preserving ~38px of separation beneath Resume. */
+ html body:not(.p54-active) #portal .signature{
+  bottom:max(24px,
+   calc(clamp(23px,calc(9svh - 44px),53px)
+   + var(--p5816-status-offset,59px)
+   - 81px)
+  )!important;
+  color:#dec6a5!important;
+ }
+ /* Warm brass tracks the amber venue backlight, not bright beige. */
+ html body:not(.p54-active) #portal .p541-home-actions > #p54-start{
+  background:#c7a477!important;
+  border:1px solid #d6b78b!important;
+  color:#112131!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+ }
+ html body:not(.p54-active) #portal .p541-home-actions > #p54-start:hover,
+ html body:not(.p54-active) #portal .p541-home-actions > #p54-start:focus-visible{
+  background:#d3b287!important;
+  border-color:#e0c398!important;
+ }
+ html body:not(.p54-active) #portal .p541-home-actions > #p58-load,
+ html body:not(.p54-active) #portal .p541-home-actions > #p57-history-button{
+  background:rgba(10,26,39,.78)!important;
+  border:1px solid rgba(202,164,115,.63)!important;
+  color:#e8d4b9!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+ }
+ html body:not(.p54-active) #portal #p54-resume .p54-resume-btn{
+  color:#d9c09d!important;
+  text-shadow:0 1px 5px rgba(3,9,16,.48)!important;
+ }
+}
+/* Short iPhone safe placement: move down less to protect the caption, without
+   reintroducing the net overlap or making bottom actions untappable. */
+@media screen and (display-mode:standalone) and (max-width:760px) and (orientation:portrait) and (max-height:760px){
+ html body:not(.p54-active) #portal .p541-home-actions{
+  bottom:calc(
+   clamp(62px,calc(18svh - 58px),122px)
+   + var(--p5816-status-offset,59px)
+   - 59px
+  )!important;
+ }
+ html body:not(.p54-active) #portal .signature{
+  bottom:calc(
+   clamp(23px,calc(9svh - 44px),53px)
+   + var(--p5816-status-offset,59px)
+   - 45px
+  )!important;
+ }
+}
+/* Initial Setup: v5.8.17's 60px sticky pseudo created a dark one-line seam
+   exactly at the status-bar/scroll-container boundary. Remove it from the
+   scroll flow and paint the fade on a fixed overlay instead. The overlay is
+   noninteractive and the existing content stays above it. */
+@media screen and (display-mode:standalone) and (max-width:760px){
+ html body.p54-active #p54-workspace.p54-workspace::before{
+  content:""!important;
+  display:block!important;
+  position:fixed!important;
+  top:0!important;left:0!important;right:0!important;
+  bottom:auto!important;
+  width:100%!important;
+  height:88px!important;
+  margin:0!important;
+  background:linear-gradient(180deg,
+   #11171d 0px,
+   #11171d 18px,
+   rgba(17,23,29,.78) 43px,
+   rgba(17,23,29,0) 88px)!important;
+  pointer-events:none!important;
+  z-index:1!important;
+ }
+ html body.p54-active #p54-workspace.p54-workspace>.p54-shell{
+  position:relative!important;
+  z-index:2!important;
+ }
+}

@@ -7,7 +7,12 @@ import { getStore } from '@netlify/blobs';
 import { randomBytes, randomInt, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
 
 const STORE='padel5ive-cloud-sessions-v58';
-const CODE=/^\d{6}$/;
+const CODE=/^(?:\d{6}|[2-9A-HJ-NP-Z]{10})$/;
+const NEW_CODE=/^[2-9A-HJ-NP-Z]{10}$/;
+const CODE_ALPHABET='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const MOD_PIN=/^\d{6}$/;
+const VIEW_TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
+const createViewerCode=()=>Array.from({length:10},()=>CODE_ALPHABET[randomInt(0,CODE_ALPHABET.length)]).join('');
 const PIN=/^\d{4}$/;
 const TOKEN=/^[A-Za-z0-9_-]{40,90}$/;
 const LEASE_MS=90_000;
@@ -54,7 +59,7 @@ function role(entry,id,ts){
 }
 function metadata(entry,id,ts,includeData){
  const r={ok:true,code:entry.code,kind:entry.kind,summary:entry.summary,revision:entry.revision,
-  role:role(entry,id,ts),controllerOnline:!!(entry.controller&&entry.controller.expires>ts),
+  role:role(entry,id,ts),moderatorPinRequired:!!entry.moderatorPinHash,controllerOnline:!!(entry.controller&&entry.controller.expires>ts),
   controllerExpires:entry.controller?.expires||null,
   pendingControl:entry.request?.id===id,
   takeoverRequested:entry.controller?.id===id&&!!entry.request&&entry.request.expires>ts,
@@ -91,16 +96,18 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     const kind=input.kind, data=input.data;
     if(!validState(data,kind))return error('Save a registered session before enabling cloud access',422);
     if(Buffer.byteLength(JSON.stringify(data),'utf8')>1_450_000)return error('Session exceeds cloud size limit',413);
-    const pin=String(randomInt(0,10000)).padStart(4,'0');
+    const moderatorPin=String(randomInt(0,1_000_000)).padStart(6,'0');
+    const viewerKey=deviceToken();
     const salt=randomBytes(16).toString('hex'),token=deviceToken(),id=uid();
     for(let attempt=0;attempt<20;attempt++){
-     const code=String(randomInt(0,1_000_000)).padStart(6,'0');
+     const code=createViewerCode();
      const entry={v:58,code,kind,summary:summary(data,kind),data,revision:1,updatedAt:ts,
-      salt,pinHash:pinHash(pin,salt),failures:{count:0,until:0},
+      salt,viewerKeyHash:hash(viewerKey),moderatorPinHash:pinHash(moderatorPin,salt),
+      failures:{count:0,until:0},
       devices:[{id,hash:hash(token),label:safe(input.label)||'Primary device',joinedAt:ts}],
       controller:{id,expires:ts+LEASE_MS},request:null};
      const result=await store.setJSON('session/'+code,entry,{onlyIfNew:true});
-     if(changed(result))return json({...metadata(entry,id,ts,false),pin,token,created:true},201);
+     if(changed(result))return json({...metadata(entry,id,ts,false),viewerKey,moderatorPin,token,created:true},201);
      if(result.modified) return error('Cloud write could not be verified. Please retry.',503);
     }
     return error('Could not generate unique code. Please retry.',503);
@@ -113,16 +120,25 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
    let entry=found.data,etag=found.etag;
    if(entry.v!==58||!Array.isArray(entry.devices))return error('Unsupported session version',409);
    if(action==='join'){
-    if(entry.failures?.until>ts)return error('Too many attempts. Try again later.',429);
-    const pin=String(input.pin||'');
-    const correct=PIN.test(pin)&&eq(pinHash(pin,entry.salt),entry.pinHash);
-    if(!correct){
-     const count=(entry.failures?.count||0)+1;
-     const next={...entry,failures:{count,until:count>=5?ts+LOCK_MS:0}};
-     await write(store,code,next,etag);
-     return error('Invalid Session Code or Access PIN',401);
+    if(entry.viewerKeyHash){
+     // New sessions: 50-bit manual code or one-tap token grants VIEW ONLY.
+     if(input.viewerKey){
+      if(!VIEW_TOKEN.test(String(input.viewerKey))||!eq(hash(input.viewerKey),entry.viewerKeyHash))
+       return error('Invalid Viewer Link',401);
+     }else if(!NEW_CODE.test(code))return error('Invalid Session Code',401);
+    }else{
+     // Existing six-digit sessions retain their original Access PIN.
+     if(entry.failures?.until>ts)return error('Too many attempts. Try again later.',429);
+     const pin=String(input.pin||'');
+     const correct=PIN.test(pin)&&eq(pinHash(pin,entry.salt),entry.pinHash);
+     if(!correct){
+      const count=(entry.failures?.count||0)+1;
+      const next={...entry,failures:{count,until:count>=5?ts+LOCK_MS:0}};
+      await write(store,code,next,etag);
+      return error('Invalid Session Code or Access PIN',401);
+     }
     }
-    if(entry.devices.length>=16)return error('Device limit reached. Contact session owner.',403);
+    if(entry.devices.length>=128)return error('Device limit reached. Contact session owner.',403);
     const token=deviceToken(),id=uid();
     const next={...entry,devices:[...entry.devices,{id,hash:hash(token),
      label:safe(input.label)||'Connected device',joinedAt:ts}],failures:{count:0,until:0}};
@@ -156,6 +172,28 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
    }
    if(action==='take-control'){
     if(role(entry,id,ts)==='controller')return json(metadata(entry,id,ts,false));
+    if(entry.moderatorPinHash){
+     const device=entry.devices.find(d=>d.id===id);
+     if((device?.pinLockedUntil||0)>ts)return error('Too many incorrect PIN attempts. Try again later.',429);
+     const supplied=String(input.moderatorPin||'');
+     const correct=MOD_PIN.test(supplied)&&eq(pinHash(supplied,entry.salt),entry.moderatorPinHash);
+     if(!correct){
+      const attempts=(device?.pinAttempts||0)+1;
+      const next={...entry,devices:entry.devices.map(d=>d.id===id
+       ?{...d,pinAttempts:attempts>=5?0:attempts,pinLockedUntil:attempts>=5?ts+LOCK_MS:0}:d)};
+      const saved=await write(store,code,next,etag);
+      if(!changed(saved))return error('PIN check conflicted. Please retry.',409);
+      return error('Incorrect Moderator PIN',401);
+     }
+     // Atomic single-writer transfer: old device immediately loses save permission.
+     const next={...entry,devices:entry.devices.map(d=>d.id===id
+      ?{...d,pinAttempts:0,pinLockedUntil:0}:d),
+      controller:{id,expires:ts+LEASE_MS},request:null};
+     const saved=await write(store,code,next,etag);
+     if(!changed(saved))return error('Another device updated control. Refresh and retry.',409);
+     return json({...metadata(next,id,ts,true),transferred:true});
+    }
+    // Legacy sessions retain their request/approval/lease flow.
     const active=entry.controller&&entry.controller.expires>ts;
     if(active){
      const next={...entry,request:{id,expires:ts+120_000}};

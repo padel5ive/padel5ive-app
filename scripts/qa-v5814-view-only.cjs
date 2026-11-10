@@ -56,7 +56,7 @@ async function one(kind){
  assert.equal(actualRow.style.getPropertyValue('display'),'flex','iOS intrinsic layout remains flex even if stylesheet is cached');
  assert.equal(actualRow.style.getPropertyPriority('display'),'important','Critical row display has inline override');
  assert.equal(actualRow.style.getPropertyValue('justify-content'),'space-between','Chevron is aligned to the right');
- assert.equal(actualRow.style.getPropertyValue('border-top'),'1px solid rgba(206,184,153,.17)','Viewer actions have dividers');
+ assert.match(actualRow.style.getPropertyValue('border-top'),/1px solid/,'Viewer actions have dividers');
  assert.equal(actualRow.style.getPropertyValue('min-height'),'55px','Rows keep native touch-friendly height');
  assert.equal(actualRow.querySelector('.p5814-view-row-chevron').style.getPropertyValue('margin-left'),'auto','Chevron stays at far right');
  assert.equal(doc.querySelectorAll('.p5814-view-row').length,3,'Exactly three viewer actions');

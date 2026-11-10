@@ -108,7 +108,7 @@
  }
  function preview(root){
   const c=context(),p=state.parsed,out=root.querySelector('.p5812-preview'),button=root.querySelector('[data-act="smart-player-import"]');
-  out.replaceChildren();out.hidden=!p;button.disabled=true;button.textContent='ADD TO REGISTRATION';
+  out.replaceChildren();out.hidden=!p;button.hidden=!p;button.disabled=true;button.textContent='ADD TO REGISTRATION';
   if(!p||!c)return;
   const fresh=p.names.filter(x=>!c.existing.has(norm(x)));
   out.append(node('p','p5812-count',(p.source==='reclub'?'Reclub Participants':p.source==='quick-list'?'Quick name list':'WhatsApp list')+' · '+p.names.length+' detected · '+fresh.length+' new'+(p.skipped?' · '+p.skipped+' empty slots skipped':'')));
@@ -148,18 +148,18 @@
   if(!anchor)return;
   const root=node('details','p5812-smart');root.id='p5812-smart';
   const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','WHATSAPP / RECLUB'));root.append(title);
-  const box=node('div','p5812-body');box.append(node('p','p5812-help','Paste a WhatsApp roster, Reclub Participants share, or a simple space-separated name list. For full names, use commas or one name per line.'));
-  const field=node('textarea','p5812-textarea');field.rows=6;field.maxLength=16000;field.setAttribute('aria-label','WhatsApp player list');field.placeholder='1. Edwin\n2. Teo\n3.\n4. Febrian\n5. Chris*';field.value=state.text;
-  field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;state.flash='';preview(root);});box.append(field);
+  const box=node('div','p5812-body');box.append(node('p','p5812-help','Supports WhatsApp, Reclub & simple name lists. Separate full names with commas or new lines.'));
+  const field=node('textarea','p5812-textarea');field.rows=4;field.maxLength=16000;field.setAttribute('aria-label','Paste player list');field.placeholder='Paste player list here…';field.value=state.text;
+  field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;state.flash='';clear.hidden=!state.text;review.disabled=!state.text.trim();preview(root);});box.append(field);
   const actions=node('div','p5812-buttons');
-  const review=node('button','p5812-review','PREVIEW PLAYERS');review.type='button';review.addEventListener('click',()=>{state.text=field.value;state.parsed={...parse(state.text),raw:state.text};state.flash='';preview(root);});
-  const clear=node('button','p5812-clear','CLEAR');clear.type='button';clear.addEventListener('click',()=>{state.text='';state.parsed=null;state.flash='';state.confirmPairs=false;field.value='';preview(root);});
+  const review=node('button','p5812-review','PREVIEW PLAYERS');review.type='button';review.disabled=!state.text.trim();review.addEventListener('click',()=>{state.text=field.value;if(!state.text.trim())return;state.parsed={...parse(state.text),raw:state.text};state.flash='';preview(root);});
+  const clear=node('button','p5812-clear','CLEAR');clear.type='button';clear.hidden=!state.text;clear.addEventListener('click',()=>{state.text='';state.parsed=null;state.flash='';state.confirmPairs=false;field.value='';clear.hidden=true;review.disabled=true;preview(root);field.focus();});
   actions.append(review,clear);box.append(actions);
   const out=node('div','p5812-preview');out.hidden=true;box.append(out);
-  const add=node('button','p5812-add','ADD TO REGISTRATION');add.type='button';add.dataset.act='smart-player-import';add.disabled=true;box.append(add);
+  const add=node('button','p5812-add','ADD TO REGISTRATION');add.type='button';add.dataset.act='smart-player-import';add.disabled=true;add.hidden=true;box.append(add);
   if(state.flash)box.append(node('p','p5812-success',state.flash));
   root.append(box);c.card.insertBefore(root,anchor);
-  if(state.text||state.flash)root.open=true;
+  // Collapsed by default, and after a successful import. Reopen only to keep a drafted paste.\n  if(state.text)root.open=true;
   preview(root);
  }
  function init(){

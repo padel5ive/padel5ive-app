@@ -26,13 +26,18 @@ function viewerLink(m){
  return location.origin+'/#'+new URLSearchParams({join:m.code,v:m.viewerKey}).toString()
 }
 async function ensureShortViewerLink(){
- // Existing modern sessions can mint a fresh short invite when sharing.
- // Only active controller credentials are accepted server-side.
  if(meta?.role!=='controller'||!meta.viewerKey||meta.shortToken)return;
  const r=await api('share-short',{code:meta.code,token:meta.token});
  if(!r.shortToken)throw Error('Short Viewer Link could not be created.');
- meta.shortToken=r.shortToken;
- persist();
+ meta.shortToken=r.shortToken;persist();
+}
+let preparingShort=false,shortLinkError='';
+function prefetchShortViewerLink(){
+ if(preparingShort||!meta||meta.role!=='controller'||!meta.viewerKey||meta.shortToken)return;
+ preparingShort=true;shortLinkError='';
+ void ensureShortViewerLink()
+  .catch(err=>{shortLinkError=err?.message||'Unable to create short Viewer Link.'})
+  .finally(()=>{preparingShort=false;if(dialog&&!dialog.hidden)render()});
 }
 function message(m){
  const s=m.summary||{},date=[formatDate(s.date),s.time].filter(Boolean).join(' · ');
@@ -140,16 +145,29 @@ function render(){
  body.append(e('p','p58-date',[formatDate(s.date),s.time].filter(Boolean).join(' · ')));
  if(meta.role==='controller'&&(meta.viewerKey||meta.pin)){
   if(meta.moderatorPin)body.append(info('Moderator PIN stays private and is never included in Viewer WhatsApp shares. Share it separately with trusted moderators.'));
-  body.append(btn('SHARE VIEWER ACCESS · WHATSAPP',async()=>{
-   await ensureShortViewerLink();
-   const text=message(meta);window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');
-  }));
-  body.append(btn('COPY ACCESS DETAILS',async()=>{
-   await ensureShortViewerLink();
-   const str=message(meta);if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(str);
-   else{const a=e('textarea');a.value=str;document.body.append(a);a.select();if(!document.execCommand('copy'))throw Error('Copy is unavailable on this device.');a.remove();}
-   alert('Access details copied.');
-  },true));
+  if(meta.viewerKey&&!meta.shortToken){
+   // Preparing on Cloud modal open avoids iPhone Safari popup blocks after
+   // asynchronous network calls. Copy and WhatsApp share stay tap-synchronous.
+   if(shortLinkError)body.append(info(shortLinkError));
+   const prepare=btn(preparingShort?'PREPARING SHORT VIEWER LINK…':'GENERATE SHORT VIEWER LINK',
+    async()=>{await ensureShortViewerLink()},true);
+   prepare.disabled=preparingShort;body.append(prepare);
+  }else{
+   body.append(btn('SHARE VIEWER ACCESS · WHATSAPP',async()=>{
+    const text=message(meta);
+    window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');
+   }));
+   body.append(btn('COPY ACCESS DETAILS',async()=>{
+    const str=message(meta);
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(str);
+    else{
+     const a=e('textarea');a.value=str;document.body.append(a);a.select();
+     if(!document.execCommand('copy'))throw Error('Copy is unavailable on this device.');
+     a.remove();
+    }
+    alert('Access details copied.');
+   },true));
+  }
  }
  const controls=e('div','p58-control-actions');
  const moderatorPinDigits=meta.moderatorPinDigits===4?4:6;
@@ -364,9 +382,9 @@ function mount(){
  close.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg>';
  head.append(h,close);
  body=e('div','p58-body');panel.append(head,body);dialog.append(panel);host.append(dialog);document.body.append(host);
- openButton.addEventListener('click',()=>{dialog.hidden=false;render()});
+ openButton.addEventListener('click',()=>{dialog.hidden=false;render();prefetchShortViewerLink()});
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.hidden=true});
- document.addEventListener('click',e=>{if(e.target.closest?.('[data-p58-cloud]')){e.preventDefault();e.stopImmediatePropagation();dialog.hidden=false;render();}},true);
+ document.addEventListener('click',e=>{if(e.target.closest?.('[data-p58-cloud]')){e.preventDefault();e.stopImmediatePropagation();dialog.hidden=false;render();prefetchShortViewerLink();}},true);
  for(const type of ['click','touchend','pointerup','change','input','submit','keydown'])document.addEventListener(type,guard,true);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden){dialog.hidden=true;}});
  render();

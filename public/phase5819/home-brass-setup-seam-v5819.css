@@ -14,10 +14,10 @@
  }
  /* Follow the cluster, preserving ~38px of separation beneath Resume. */
  html body:not(.p54-active) #portal .signature{
-  bottom:calc(
-   clamp(23px,calc(9svh - 44px),53px)
+  bottom:max(24px,
+   calc(clamp(23px,calc(9svh - 44px),53px)
    + var(--p5816-status-offset,59px)
-   - 81px
+   - 81px)
   )!important;
   color:#dec6a5!important;
  }

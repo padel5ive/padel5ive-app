@@ -54,6 +54,25 @@ const reclub=[
  ' 1. billy',
  '2. Diki'
 ].join('\n');
+
+const spaceList='Andry andre diki felix dennis filipus boby brill dylan erwind abud edwin';
+const quick=P.parse(spaceList);
+assert.equal(quick.source,'quick-list');
+assert.equal(quick.quickFormat,'spaces');
+assert.deepEqual(Array.from(quick.names),[
+ 'Andry','andre','diki','felix','dennis','filipus',
+ 'boby','brill','dylan','erwind','abud','edwin'
+]);
+assert.equal(quick.names.length,12,'Space-separated example recognizes twelve players');
+assert.equal(quick.duplicates,0,'Every provided name is distinct');
+assert.deepEqual(Array.from(P.parse('Andry, Andre Melvin, Dennis H Sutandi, Edgar Marvelo').names),
+ ['Andry','Andre Melvin','Dennis H Sutandi','Edgar Marvelo'],
+ 'Comma-separated quick list preserves multiword names');
+assert.deepEqual(Array.from(P.parse('Andre Melvin\nDennis H Sutandi\nEdgar Marvelo').names),
+ ['Andre Melvin','Dennis H Sutandi','Edgar Marvelo'],
+ 'One name per line preserves multiword names');
+assert.equal(P.parse('Andry andre ANDRY').duplicates,1,'Case-insensitive duplicate skipping');
+
 const rp=P.parse(reclub);
 assert.equal(rp.source,'reclub','Reclub share format detected');
 assert.equal(rp.declared,10);
@@ -144,9 +163,19 @@ assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,fals
 assert(box.querySelector('.p5812-warning')?.textContent.includes('guest'));
 assert(box.querySelector('.p5812-muted')?.textContent.includes('2 On Hold excluded'));
 assert.equal(doc.window.P5SmartInput.pending().names.length,10);
+area.value=spaceList;
+area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));
+box.querySelector('.p5812-review').click();
+assert.equal(box.querySelectorAll('.p5812-names li').length,12,'Simple whitespace list shows 12 players');
+assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,false);
+assert(box.querySelector('.p5812-warning')?.textContent.includes('each word'));
+assert.equal(doc.window.P5SmartInput.pending().names.length,12);
+area.value=reclub;
+area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));
+box.querySelector('.p5812-review').click();
 area.value=reclub.replace('Participants (10)','Participants (11)');
 area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));
 box.querySelector('.p5812-review').click();
 assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,true,'Malformed Reclub count disables import');
 doc.window.close();
-console.log('PASS v5.8.12: 13/16 WhatsApp entries, empty slots, marker handling, duplicates, fixed-pair opt-in, structured groups, native 8-row Registration and preview.');
+console.log('PASS v5.8.12: 13/16 WhatsApp entries, 10 Reclub participants, 12 whitespace names, full names with commas/lines, duplicates, fixed-pair opt-in, structured groups and native registration preview.');

@@ -1,0 +1,30 @@
+name: PADEL 5IVE v5.8.8 Faster Initial Setup QA
+on:
+  push:
+    branches: [feature/v5.8.8-faster-initial-setup-preview]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Validate selected mode prewarming and native engine safety
+        run: |
+          node --check public/phase588/setup-prewarm-v588.js
+          node --check public/sw.js
+          node scripts/qa-v588-prewarm.cjs
+          node scripts/qa-pwa.cjs
+          node scripts/qa-v587-home.cjs
+          node scripts/qa-v585-ui.cjs
+          node scripts/qa-v586-background.cjs
+          node scripts/qa-phase574.cjs
+          git diff --check

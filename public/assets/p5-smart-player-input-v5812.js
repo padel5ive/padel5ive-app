@@ -16,7 +16,7 @@
   const reclub=lines.some(line=>{
    const m=line.match(sectionPattern);return !!m&&isParticipants(m[1]);
   });
-  let candidates=[],excludedOnHold=0,excludedOther=0,declared=0;
+  let candidates=[],excludedOnHold=0,excludedOther=0,declared=0,quickFormat='';
   if(reclub){
    let inParticipants=false;
    for(const line of lines){
@@ -36,8 +36,27 @@
    }
   }else{
    const numbered=lines.map(line=>line.match(numberedPattern)).filter(Boolean);
-   candidates=numbered.length?numbered.map(m=>m[2]):
-    lines.filter(line=>/^[\p{L}][\p{L}\p{M} .'’\-]{1,68}$/u.test(line.trim()));
+   if(numbered.length)candidates=numbered.map(m=>m[2]);
+   else {
+    const nonempty=lines.map(line=>line.trim()).filter(Boolean);
+    if(nonempty.length===1){
+     const line=nonempty[0];
+     // Commas/semicolons explicitly separate full names (including spaces).
+     const commaParts=line.split(/[,;，]+/u).map(x=>x.trim()).filter(Boolean);
+     if(commaParts.length>1&&commaParts.every(x=>/\p{L}/u.test(x)&&x.length<=70&&!/\d/.test(x))){
+      candidates=commaParts;quickFormat='commas';
+     }else{
+      // A clean single-line string of >=3 name-like tokens is a quick list.
+      // No guessing multi-word names: each whitespace token is a player;
+      // show the split clearly in Preview and suggest comma/newline for full names.
+      const words=line.split(/\s+/u);
+      const safeWord=/^[\p{L}][\p{L}\p{M}'’.-]*$/u;
+      if(words.length>=3&&words.length<=MAX&&words.every(x=>safeWord.test(x)&&x.length<=40)){
+       candidates=words;quickFormat='spaces';
+      }else if(/^[\p{L}][\p{L}\p{M} .'’\-]{1,68}$/u.test(line))candidates=[line];
+     }
+    }else candidates=nonempty.filter(line=>/^[\p{L}][\p{L}\p{M} .'’\-]{1,68}$/u.test(line));
+   }
   }
   const names=[],seen=new Set();
   let skipped=0,marked=0,duplicates=0,guests=0;
@@ -61,8 +80,8 @@
   return {
    names,skipped,marked,duplicates,guests,
    slots:candidates.length,numbered:reclub||candidates.length>0,
-   overflow:names.length>MAX,source:reclub?'reclub':'whatsapp',
-   declared,excludedOnHold,excludedOther
+   overflow:names.length>MAX,source:reclub?'reclub':quickFormat?'quick-list':'whatsapp',
+   quickFormat,declared,excludedOnHold,excludedOther
   };
  }
  const node=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;};
@@ -92,7 +111,9 @@
   out.replaceChildren();out.hidden=!p;button.disabled=true;button.textContent='ADD TO REGISTRATION';
   if(!p||!c)return;
   const fresh=p.names.filter(x=>!c.existing.has(norm(x)));
-  out.append(node('p','p5812-count',(p.source==='reclub'?'Reclub Participants':'WhatsApp list')+' · '+p.names.length+' detected · '+fresh.length+' new'+(p.skipped?' · '+p.skipped+' empty slots skipped':'')));
+  out.append(node('p','p5812-count',(p.source==='reclub'?'Reclub Participants':p.source==='quick-list'?'Quick name list':'WhatsApp list')+' · '+p.names.length+' detected · '+fresh.length+' new'+(p.skipped?' · '+p.skipped+' empty slots skipped':'')));
+  if(p.quickFormat==='spaces')out.append(node('p','p5812-warning','Space-separated list: each word is treated as one player. For full names, separate players with commas or put one name per line. Review the preview.'));
+  if(p.quickFormat==='commas')out.append(node('p','p5812-muted','Names separated by commas; spaces within full names are preserved.'));
   if(p.source==='reclub'){
    out.append(node('p','p5812-muted',p.excludedOnHold+' On Hold excluded · '+p.excludedOther+' other-list entries excluded'));
    if(p.declared!==p.slots)out.append(node('p','p5812-error','Reclub Participants count differs from numbered entries. Review before importing.'));
@@ -127,7 +148,7 @@
   if(!anchor)return;
   const root=node('details','p5812-smart');root.id='p5812-smart';
   const title=node('summary','p5812-title');title.append(node('strong','','SMART PLAYER INPUT'),node('span','','WHATSAPP / RECLUB'));root.append(title);
-  const box=node('div','p5812-body');box.append(node('p','p5812-help','Paste a full WhatsApp roster or Reclub Participants share. Only Reclub Participants are selected; On Hold is excluded.'));
+  const box=node('div','p5812-body');box.append(node('p','p5812-help','Paste a WhatsApp roster, Reclub Participants share, or a simple space-separated name list. For full names, use commas or one name per line.'));
   const field=node('textarea','p5812-textarea');field.rows=6;field.maxLength=16000;field.setAttribute('aria-label','WhatsApp player list');field.placeholder='1. Edwin\n2. Teo\n3.\n4. Febrian\n5. Chris*';field.value=state.text;
   field.addEventListener('input',()=>{state.text=field.value;state.parsed=null;state.flash='';preview(root);});box.append(field);
   const actions=node('div','p5812-buttons');

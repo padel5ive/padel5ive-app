@@ -50,6 +50,10 @@ function restoreText(){
  * the three native master accordions. Works for Unified and Club Match.
  * p585 consolidates its menu asynchronously, so this adapter follows it.
  */
+/* The controller sees Cloud Session as the FOURTH native menu row.
+ * Viewers see only Viewer Settings; the existing Cloud action remains wired
+ * but is hidden (never cloned), so controller restoration is lossless.
+ */
 function promoteCloud(){
  const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
  if(!root)return;
@@ -58,8 +62,19 @@ function promoteCloud(){
  if(!share||!cloud)return;
  if(!cloud.classList.contains('p5814-cloud-primary')){
   cloud.classList.add('p5814-cloud-primary');
+  // Remove the old highlighted-action classes, keeping the real Cloud handler.
+  cloud.classList.remove('p585-cloud-row','p58-menu-action','p5-4852-action');
   cloud.setAttribute('aria-label','Cloud Session');
-  cloud.innerHTML='<span class="p5-4852-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg></span><span class="p5814-cloud-copy"><span class="p5-4852-label">Cloud Session</span><small>LIVE SYNC &amp; DEVICE ACCESS</small></span><span class="p5-4852-chevron" aria-hidden="true">›</span>';
+  const summary=$(':scope > summary',share);
+  const nativeSummary=summary?.cloneNode(true);
+  if(nativeSummary){
+   const icon=$('.p5-4852-icon',nativeSummary),label=$('.p5-4852-label',nativeSummary);
+   if(icon)icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg>';
+   if(label)label.textContent='Cloud Session';
+   cloud.replaceChildren(...Array.from(nativeSummary.childNodes));
+  }else{
+   cloud.replaceChildren(make('span','p5-4852-label','Cloud Session'));
+  }
  }
  if(cloud.parentElement!==root||cloud.previousElementSibling!==share)
   root.insertBefore(cloud,share.nextSibling);
@@ -68,37 +83,31 @@ function menuView(){
  const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
  if(!root)return;
  for(const child of Array.from(root.children)){
-  if(child.classList.contains('p5814-view-menu')||child.classList.contains('p5814-cloud-primary'))continue;
+  if(child.classList.contains('p5814-view-menu'))continue;
   if(!child.classList.contains('p5814-master-menu-hidden'))child.classList.add('p5814-master-menu-hidden');
   hideControl(child);
  }
- const outer=$('.p5814-view-menu',root);
- if(outer){updateStatus(outer);return;}
+ const existing=$('.p5814-view-menu',root);
+ if(existing){updateStatus(existing);return;}
  const panel=make('details','p5-4852-section p5814-view-menu');
  const summary=make('summary','');
  const icon=make('span','p5-4852-icon');
  icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.8-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.8 6.5-9.5 6.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>';
  summary.append(icon,make('span','p5-4852-label','Viewer Settings'),make('span','p5-4852-chevron','›'));
- const content=make('div','p5-4852-content p5814-menu-body');
- content.append(make('div','p585-heading','CLOUD ACCESS'));
- const line=make('div','p5814-connection');
- line.append(make('span','p5814-connection-label','CONNECTION STATUS'),make('strong','p5814-cloud-state','VIEW ONLY'));
- content.append(line);
- const menuButton=(label,action,description)=>{
+ const content=make('div','p5814-menu-body');
+ const menuButton=(label,action)=>{
   const b=make('button','p5814-view-action');
   b.type='button';b.dataset.p5814ViewerAction=action;
-  const copy=make('span','p5814-view-action-copy');
-  copy.append(make('span','p5814-view-action-label',label));
-  if(description)copy.append(make('small','p5814-view-action-desc',description));
-  b.append(copy,make('span','p5814-view-action-chevron','›'));
+  b.append(make('span','p5814-view-action-label',label),
+   make('span','p5814-view-action-chevron','›'));
   return b;
  };
- content.append(menuButton('Take Control','cloud','Request access to moderate this session'));
- content.append(menuButton('Refresh Data','refresh','Check for the latest confirmed scores'));
-  content.append(menuButton('Follow Latest Round','live','Automatically display the active round'));
- content.append(make('div','p585-heading p5814-session-heading','SESSION'));
- content.append(menuButton('Back to Home','home','Session remains connected'));
- content.append(menuButton('Leave Cloud Session','leave','Disconnect this device only'));
+ content.append(menuButton('Take Control','cloud'));
+ content.append(menuButton('Refresh Data','refresh'));
+ // Keep a quiet, deliberate disconnect action for changing sessions.
+ const footer=make('div','p5814-menu-footer');
+ footer.append(menuButton('Leave Cloud Session','leave'));
+ content.append(footer);
  panel.append(summary,content);root.append(panel);
  panel.addEventListener('click',async event=>{
   const button=event.target.closest('button[data-p5814-viewer-action]');
@@ -107,34 +116,18 @@ function menuView(){
   if(button.disabled||!document.body.classList.contains('p58-view-only'))return;
   const action=button.dataset.p5814ViewerAction,cloud=window.P5CloudSession;
   if(!cloud)return;
-  if(action==='home'){location.assign('/');return;}
-  if(action==='live'){
-   cloud.setFollowLive?.(!cloud.getStatus?.().followingLive);
-   updateStatus(panel);return;
-  }
   if(action==='leave'){cloud.leaveViewer?.();return;}
   if(action==='cloud'){cloud.open?.();return;}
   if(action==='refresh'){
    button.disabled=true;
-   try{await cloud.refreshNow?.();updateStatus(panel);}
+   try{await cloud.refreshNow?.();}
    finally{button.disabled=false;}
   }
  });
  updateStatus(panel);
 }
 function updateStatus(root){
- const line=$('.p5814-cloud-state',root),cloud=window.P5CloudSession?.getStatus?.();
- if(!line)return;
- const label=cloud?.status||'VIEW ONLY';
- const value=label==='VIEW ONLY'?'CONNECTED · AUTO SYNC':label==='SYNCING'?'SYNCING':label==='OFFLINE'?'OFFLINE':label==='CONFLICT'?'SYNC CONFLICT':label;
- if(line.textContent!==value)line.textContent=value;
- line.dataset.state=label.toLowerCase().replaceAll(' ','-');
- const follow=$('[data-p5814-viewer-action="live"]',root);
- if(follow){
-  const desc=$('.p5814-view-action-desc',follow),on=cloud?.followingLive!==false;
-  if(desc)desc.textContent=on?'On · Latest round updates automatically':'Paused · Browse history until you return to Live';
-  follow.dataset.following=on?'on':'off';
- }
+ const cloud=window.P5CloudSession?.getStatus?.();
  const take=$('[data-p5814-viewer-action="cloud"]',root);
  if(take){
   const desired=cloud?.waiting?'Check Control Request':'Take Control';

@@ -266,9 +266,10 @@ function actions(){
  * hideControl remembers original styles for instant Moderator restoration.
  */
 function hideViewerDiagnostics(){
- for(const notice of $('.p5-b2-fairness-ok, .p5-b2-fairness-warning')){
+ for(const notice of $$('.p5-b2-fairness-ok, .p5-b2-fairness-warning')){
   const title=(notice.textContent||'').trim();
-  if(/^ADVANCED PLAYER RULES\\b|^SCHEDULING FAIRNESS REVIEW\\b/i.test(title))
+  if(title.startsWith('ADVANCED PLAYER RULES')||
+     title.startsWith('SCHEDULING FAIRNESS REVIEW'))
    hideControl(notice);
  }
 }

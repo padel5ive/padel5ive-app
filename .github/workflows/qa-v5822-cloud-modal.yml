@@ -1,0 +1,22 @@
+name: PADEL 5IVE v5.8.22 Compact Cloud Modal QA
+on:
+  pull_request:
+    paths:
+      - 'public/phase5822/**'
+      - 'scripts/phase5822-integrate.cjs'
+      - 'scripts/qa-v5822-cloud-modal.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-v5822-cloud-modal.yml'
+jobs:
+  cloud-modal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-v5822-cloud-modal.cjs
+      - run: node scripts/qa-v5814-view-only.cjs
+      - run: node scripts/qa-v5820-viewer-round-stability.cjs

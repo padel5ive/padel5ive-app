@@ -48,7 +48,7 @@ assert.equal(viewer.moderatorPin,undefined);
 assert.deepEqual(viewer.data,state);
 assert.equal((await call('join-short',{code:made.code,shortToken:'invalid'})).status,401);
 assert.equal((await call('join-short',{code:made.code,shortToken:randomBytes(12).toString('base64url')})).status,401);
-assert.equal((await call('join-short',{code:'A12345',shortToken:made.shortToken})).status,404);
+assert.equal((await call('join-short',{code:'A23456',shortToken:made.shortToken})).status,404);
 assert.equal((await call('share-short',{code:made.code,token:viewer.token})).status,423,'Viewer cannot mint invites');
 assert.equal((await call('save',{code:made.code,token:viewer.token,revision:1,data:state})).status,423,'Short URL grants no scoring rights');
 const another=await call('share-short',{code:made.code,token:made.token});

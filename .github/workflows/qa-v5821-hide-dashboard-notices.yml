@@ -1,0 +1,20 @@
+name: PADEL 5IVE v5.8.21 Hide Round Diagnostics QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase5821-hide-dashboard-notices.cjs'
+      - 'scripts/qa-v5821-hide-dashboard-notices.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-v5821-hide-dashboard-notices.yml'
+jobs:
+  notice-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-v5821-hide-dashboard-notices.cjs
+      - run: node scripts/qa-v5820-viewer-round-stability.cjs

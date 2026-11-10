@@ -16,7 +16,9 @@ const isSession=s=>kind==='unified'
  : !!s?.setup?.sessionName&&!!s?.stage&&s.stage!=='setup';
 const e=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x};
 // UI presentation state is not a score edit. Exclude it from dirty/conflict detection.
-const stable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;return JSON.stringify(copy)};
+// Viewer round selection is local presentation, not a cloud score change.
+const legacyStable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;return JSON.stringify(copy)};
+const stable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;if(kind==='unified')delete copy.viewRound;return JSON.stringify(copy)};
 const formatDate=s=>{if(!/^\d{4}-\d\d-\d\d$/.test(s||''))return s||'';const d=new Date(s+'T12:00:00Z');return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(d)};
 function message(m){const s=m.summary||{},date=[formatDate(s.date),s.time].filter(Boolean).join(' · ');
  return '*PADEL 5IVE · CLOUD SESSION*\n_BEYOND 5IVE. BEYOND PLAY._\n\n'+
@@ -141,6 +143,13 @@ function applyRemote(r,force=false){
  if(dirty()&&!force){
   conflict=true;throw Error('Local changes have not been uploaded. Cloud data was not applied.');
  }
+ // A viewer browsing an older round should not be forced back to the
+ // controller's round whenever a new score is synced from Cloud.
+ if(view()&&kind==='unified'){
+  const selected=Number(get(KEY)?.viewRound);
+  if(Number.isInteger(selected)&&Array.isArray(r.data.rounds)&&r.data.rounds.length)
+   r.data={...r.data,viewRound:Math.max(0,Math.min(selected,r.data.rounds.length-1))};
+ }
  set(KEY,r.data);last=stable(r.data);
  meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;
  meta.waiting=!!r.pendingControl;meta.takeoverRequested=!!r.takeoverRequested;
@@ -200,14 +209,32 @@ async function heartbeat(){
  }catch(e){if(e.status===423||e.status===401)conflict=true;else offline=true;}
  mark();
 }
+// Verified native engine handlers. All other controls (especially score,
+// next-round, stage mutations and edit/court tools) remain strictly blocked.
+const viewerActions={
+ unified:new Set(['round','view-schedule','tab-stage1','tab-stage2','back-stage1','bracket-nav','jump-ko-courts','ko-history','report-preview','report-close','replay-champion']),
+ club:new Set(['view-round','toggle-rounds','latest-round','filter-leaderboard','jump-leaderboard','replay-champion'])
+};
+function viewerNavigation(target){
+ const cloud=target?.closest?.('button[data-p58-cloud]');
+ if(cloud&&!cloud.disabled)return true;
+ const button=target?.closest?.('button[data-act],button[data-action]');
+ if(!button||button.disabled)return false;
+ return viewerActions[kind].has(kind==='club'?button.dataset.action:button.dataset.act);
+}
 function guard(e){
  if(!view()||!meta)return;
  if(e.target?.closest?.('#p58-cloud-host'))return;
- if(e.type==='keydown'&&['Escape','Tab','ArrowUp','ArrowDown','PageUp','PageDown',' '].includes(e.key))return;
- // Read-only client: prevent all editing controls and in-engine mutation actions.
  const t=e.target;
+ if(e.type==='keydown'&&['Escape','Tab','ArrowUp','ArrowDown','PageUp','PageDown'].includes(e.key))return;
+ // Navigate existing rounds/history and read-only tabs via click, keyboard,
+ // or iOS touch. Never allow a mutation event or form submission through.
+ const navEvent=e.type==='click'||e.type==='touchend'||e.type==='pointerup'||
+   (e.type==='keydown'&&(e.key==='Enter'||e.key===' '));
+ if(navEvent&&viewerNavigation(t))return;
+ if(e.type==='keydown'&&e.key!=='Enter'&&e.key!==' ')return;
  if(e.type==='submit'||(e.type==='keydown'&&e.key==='Enter')||
-    t?.closest?.('button,input,select,textarea,[data-act],[contenteditable],label')){
+    t?.closest?.('button,input,select,textarea,[data-act],[data-action],[contenteditable],label')){
   e.preventDefault();e.stopImmediatePropagation();
  }
 }
@@ -229,10 +256,15 @@ function mount(){
  openButton.addEventListener('click',()=>{dialog.hidden=false;render()});
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.hidden=true});
  document.addEventListener('click',e=>{if(e.target.closest?.('[data-p58-cloud]')){e.preventDefault();e.stopImmediatePropagation();dialog.hidden=false;render();}},true);
- for(const type of ['click','change','input','submit','keydown'])document.addEventListener(type,guard,true);
+ for(const type of ['click','touchend','pointerup','change','input','submit','keydown'])document.addEventListener(type,guard,true);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dialog.hidden){dialog.hidden=true;}});
  render();
- if(meta){last=meta.lastHash===stringHash(stable(get(KEY)))?stable(get(KEY)):'';
+ if(meta){
+  const local=get(KEY),snapshot=stable(local);
+  // Existing cloud links were hashed before viewRound was classified as UI
+  // state. Accept both hashes so opening a current session is never treated
+  // as an offline conflict just because this version was deployed.
+  last=(meta.lastHash===stringHash(snapshot)||meta.lastHash===stringHash(legacyStable(local)))?snapshot:'';
   // Device was edited offline while this app was closed: retain dirty session instead of treating it as cloud baseline.
   if(!last){offline=true;conflict=false;}
   void refresh();

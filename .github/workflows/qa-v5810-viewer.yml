@@ -1,0 +1,27 @@
+name: PADEL 5IVE v5.8.10 View-only Round Navigation QA
+on:
+  push:
+    branches: [feature/v5.8.10-viewonly-round-navigation]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verify viewer can browse rounds but cannot modify tournament data
+        run: |
+          node scripts/qa-v5810-viewer.cjs
+          node scripts/qa-phase58.mjs
+          node scripts/qa-phase58-resume.cjs
+          node scripts/qa-v589-cloud-whatsapp.cjs
+          node scripts/qa-pwa.cjs
+          git diff --check

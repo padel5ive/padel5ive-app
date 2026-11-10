@@ -20,13 +20,17 @@ const e=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=c
 const legacyStable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;return JSON.stringify(copy)};
 const stable=s=>{if(!s||typeof s!=='object')return '';const copy={...s};delete copy.ui;if(kind==='unified')delete copy.viewRound;return JSON.stringify(copy)};
 const formatDate=s=>{if(!/^\d{4}-\d\d-\d\d$/.test(s||''))return s||'';const d=new Date(s+'T12:00:00Z');return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(d)};
-function message(m){const s=m.summary||{},date=[formatDate(s.date),s.time].filter(Boolean).join(' · ');
- return '*PADEL 5IVE · CLOUD SESSION*\n_BEYOND 5IVE. BEYOND PLAY._\n\n'+
- '*'+(s.session||'Game Session')+'*\n'+(date?date+'\n\n':'\n')+
- location.origin+'\n\n*SESSION CODE:* '+m.code+'\n*ACCESS PIN:* '+m.pin+
- '\n\n*HOW TO ACCESS*\n1. Open the link → Load Session.\n2. Enter Code & PIN → Load Session.'+
- '\n\n*HOW TO TAKE CONTROL*\n1. Open Menu & Settings → Cloud Session.\n2. Tap Take Control.\n3. Current controller taps Approve Control Transfer.'+
- '\n\n*NOTE*\nOne controller at a time. Others are View Only. Offline control transfers after the lease expires.';
+function viewerLink(m){return location.origin+'/#'+new URLSearchParams({join:m.code,v:m.viewerKey}).toString()}
+function message(m){
+ const s=m.summary||{},date=[formatDate(s.date),s.time].filter(Boolean).join(' · ');
+ const top='*PADEL 5IVE · CLOUD SESSION*\n_BEYOND 5IVE. BEYOND PLAY._\n\n'+
+  '*'+(s.session||'Game Session')+'*\n'+(date?date+'\n\n':'\n');
+ if(m.viewerKey)return top+'*JOIN LIVE SESSION*\n'+viewerLink(m)+'\n\n'+
+  '*MANUAL ACCESS*\nOpen '+location.origin+' → Load Session\n'+
+  '*SESSION CODE:* '+m.code+'\n\n_View Only · Live Scores · Auto Sync_';
+ return top+location.origin+'\n\n*SESSION CODE:* '+m.code+'\n*ACCESS PIN:* '+(m.pin||'')+
+  '\n\n*HOW TO ACCESS*\n1. Open the link → Load Session.\n2. Enter Code & PIN → Load Session.'+
+  '\n\n*NOTE*\nLegacy session: one controller at a time. Share these credentials privately.';
 }
 async function api(action,opts={}){
  const res=await fetch(API,{method:'POST',credentials:'same-origin',cache:'no-store',
@@ -76,19 +80,24 @@ function render(){
    if(!navigator.onLine)throw Error('Connect to the internet to create a Cloud Session.');
    const data=get(KEY),localId=identity(data);
    const result=await api('create',{kind,data,label:'Primary device'});
-   meta={kind,code:result.code,token:result.token,pin:result.pin,summary:result.summary,
+   meta={kind,code:result.code,token:result.token,pin:result.pin||null,
+    moderatorPin:result.moderatorPin||null,viewerKey:result.viewerKey||null,
+    moderatorPinRequired:!!result.moderatorPinRequired,summary:result.summary,
     localId,revision:result.revision,role:result.role,waiting:false};
    last=stable(data);persist();offline=false;conflict=false;dialog.hidden=false;
   });b.disabled=!isSession(state);body.append(b);return;
  }
  const cr=e('div','p58-credentials');
- cr.append(card('SESSION CODE',meta.code),card('ACCESS PIN',meta.pin||'Saved on creator device'));
+ cr.append(card('SESSION CODE',meta.code));
+ if(meta.moderatorPin)cr.append(card('MODERATOR PIN · PRIVATE',meta.moderatorPin));
+ else if(meta.pin)cr.append(card('LEGACY ACCESS PIN',meta.pin));
  body.append(cr);
  const s=meta.summary||{};
  body.append(e('p','p58-session',s.session||'Cloud Session'));
  body.append(e('p','p58-date',[formatDate(s.date),s.time].filter(Boolean).join(' · ')));
- if(meta.pin){
-  body.append(btn('SHARE VIA WHATSAPP',async()=>{
+ if(meta.viewerKey||meta.pin){
+  if(meta.moderatorPin)body.append(info('Moderator PIN is private and never included in Viewer WhatsApp shares. Share separately with trusted moderators.'));
+  body.append(btn('SHARE VIEWER ACCESS · WHATSAPP',async()=>{
    const text=message(meta);window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');
   }));
   body.append(btn('COPY ACCESS DETAILS',async()=>{
@@ -99,16 +108,36 @@ function render(){
  }
  const controls=e('div','p58-control-actions');
  if(meta.role==='viewer'){
-  controls.append(btn(meta.waiting?'REQUEST SENT · CHECK STATUS':'TAKE CONTROL',async()=>{
-   const oldRevision=meta.revision;
-   const r=await api('take-control',{code:meta.code,token:meta.token});
-   Object.assign(meta,{role:r.role,waiting:!!r.waiting,revision:r.revision,summary:r.summary});persist();
-   if(r.waiting)alert('Approval requested from the active device. If it is offline, control becomes available after its lease expires.');
-   else if(r.role==='controller'){
-    if(r.revision!==oldRevision)conflict=true;
-    else conflict=false;
-   }
-  },true));
+  if(meta.moderatorPinRequired){
+   const form=e('form','p58-moderator-form');
+   const title=e('label','p58-moderator-label','MODERATOR PIN');
+   const field=e('input','p58-moderator-input');
+   field.type='password';field.inputMode='numeric';field.autocomplete='one-time-code';
+   field.maxLength=6;field.pattern='[0-9]{6}';field.required=true;
+   field.placeholder='Enter private 6-digit PIN';
+   title.append(field);form.append(title);
+   const take=e('button','p58-action','TAKE CONTROL');take.type='submit';form.append(take);
+   form.addEventListener('submit',async ev=>{
+    ev.preventDefault();const pin=field.value.trim();
+    if(!/^\d{6}$/.test(pin)||working)return;
+    working=true;take.disabled=true;
+    try{
+     const response=await api('take-control',{code:meta.code,token:meta.token,moderatorPin:pin});
+     if(!response.data)throw Error('Cloud snapshot unavailable. Refresh and try again.');
+     applyRemote(response,true);
+    }catch(err){field.value='';alert(err.message||'Unable to take control.');}
+    finally{working=false;take.disabled=false;}
+   });
+   controls.append(form);
+  }else{
+   controls.append(btn(meta.waiting?'REQUEST SENT · CHECK STATUS':'TAKE CONTROL',async()=>{
+    const oldRevision=meta.revision;
+    const result=await api('take-control',{code:meta.code,token:meta.token});
+    Object.assign(meta,{role:result.role,waiting:!!result.waiting,revision:result.revision,summary:result.summary});persist();
+    if(result.waiting)alert('Approval requested from the active device. If it is offline, control becomes available after its lease expires.');
+    else if(result.role==='controller')conflict=result.revision!==oldRevision;
+   },true));
+  }
  }else{
   if(meta.takeoverRequested)controls.append(btn('APPROVE CONTROL TRANSFER',async()=>{
    if(dirty())await push();if(dirty())throw Error('Unsynced changes must be resolved before transferring control.');
@@ -134,7 +163,7 @@ function render(){
   },true));
  }
  if(offline)body.append(info('Cloud unavailable. Changes remain on this device until a safe sync is possible.'));
- body.append(e('p','p58-footnote','Only the active controller can edit. Session Code and PIN grant access—share them privately.'));
+ body.append(e('p','p58-footnote',meta.moderatorPinRequired?'Only one controller can edit. Keep Moderator PIN private.':'Only the active controller can edit. Legacy Access PIN grants access.'));
 }
 function applyRemote(r,force=false){
  if(!r?.data||!isSession(r.data)||identity(r.data)!==meta.localId){
@@ -153,6 +182,7 @@ function applyRemote(r,force=false){
  set(KEY,r.data);last=stable(r.data);
  meta.revision=r.revision;meta.role=r.role;meta.summary=r.summary;
  meta.waiting=!!r.pendingControl;meta.takeoverRequested=!!r.takeoverRequested;
+ meta.moderatorPinRequired=!!r.moderatorPinRequired;
  persist();offline=false;conflict=false;
  // Embedded engine keeps in-memory state: reload is necessary to render updated score cards.
  location.reload();
@@ -180,6 +210,7 @@ async function refresh(){
    }
    meta.role=r.role;meta.revision=r.revision;meta.summary=r.summary;
    meta.waiting=!!r.pendingControl;meta.takeoverRequested=!!r.takeoverRequested;
+   meta.moderatorPinRequired=!!r.moderatorPinRequired;
    persist();
    if(localDirty&&r.role!=='controller')conflict=true;
   }else{
@@ -206,7 +237,7 @@ async function heartbeat(){
  try{
   const r=await api('heartbeat',{code:meta.code,token:meta.token});
   meta.role=r.role;meta.takeoverRequested=!!r.takeoverRequested;persist();
- }catch(e){if(e.status===423||e.status===401)conflict=true;else offline=true;}
+ }catch(e){if(e.status===423){meta.role='viewer';persist();void refresh();}else if(e.status===401)conflict=true;else offline=true;}
  mark();
 }
 // Verified native engine handlers. All other controls (especially score,

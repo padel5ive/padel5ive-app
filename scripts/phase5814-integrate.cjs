@@ -10,8 +10,10 @@ function insert(path,anchor,tag){
  let s=fs.readFileSync(path,'utf8');
  // Remove any earlier cache-keyed or unversioned tags before adding exactly
  // one current adapter reference. Repeated builds remain idempotent.
- s=s.replace(/<link\s+rel="stylesheet"\s+href="\/phase5814\/view-only-v5814\.css(?:\?[^"]*)?"\s*\/?>\s*/g,'');
- s=s.replace(/<script\s+defer\s+src="\/phase5814\/view-only-v5814\.js(?:\?[^"]*)?"\s*><\/script>\s*/g,'');
+ if(anchor==='</head>')
+  s=s.replace(/<link\s+rel="stylesheet"\s+href="\/phase5814\/view-only-v5814\.css(?:\?[^"]*)?"\s*\/?>\s*/g,'');
+ else
+  s=s.replace(/<script\s+defer\s+src="\/phase5814\/view-only-v5814\.js(?:\?[^"]*)?"\s*><\/script>\s*/g,'');
  const i=s.lastIndexOf(anchor);
  if(i<0)throw Error('v5814 missing HTML anchor '+path);
  s=s.slice(0,i)+tag+'\n'+s.slice(i);

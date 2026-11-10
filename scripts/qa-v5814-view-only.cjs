@@ -20,8 +20,8 @@ assert(cloud.includes("if(!meta||!view())return false"),'A controller cannot lea
 assert(cloud.includes('location.reload();'),'Native Cloud state rehydrate policy preserved');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details>';
-const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button></div></section></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section><div class="p5-v26-session-control">SESSION CONTROL</div></aside></div></main>';
-const club='<details id="mainMenu"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section></div></details><main id="app"><div class="p5-stage-head">GAME MODE</div><div class="master-stats">STATS</div><div class="layout stage1-layout"><div class="stage1-main"><section class="match-center"><button data-action="toggle-rounds">History</button><div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div><button data-action="view-round">Round 2</button><div class="court"><input data-stage1-score value="3"><input data-stage1-score value="2"><button data-action="complete-stage1">Review Score</button></div></section></div><aside><section class="leaderboard-card">LEADERBOARD</section></aside></div></main>';
+const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section><div class="p5-v26-session-control">SESSION CONTROL</div></aside></div></main>';
+const club='<details id="mainMenu"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><button id="club-global-admin">New Tournament</button></div></details><main id="app"><div class="p5-stage-head">GAME MODE</div><div class="master-stats">STATS</div><div class="layout stage1-layout"><div class="stage1-main"><section class="match-center"><button data-action="toggle-rounds">History</button><div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div><button data-action="view-round">Round 2</button><div class="court"><input data-stage1-score value="3"><input data-stage1-score value="2"><button data-action="complete-stage1">Review Score</button><button id="viewer-untagged">Reset Court</button></div></section></div><aside><section class="leaderboard-card">LEADERBOARD</section></aside></div></main>';
 async function one(kind){
  const isU=kind==='unified';
  const dom=new JSDOM('<!doctype html><html><head><style>'+css+'</style></head><body class="p58-view-only">'+(isU?unified:club)+'</body></html>',{runScripts:'outside-only',pretendToBeVisual:true,url:'https://padel5ive.netlify.app/modes/'+(isU?'unified':'club-match')+'/'});
@@ -42,12 +42,25 @@ async function one(kind){
  if(isU){
   assert(doc.querySelector('[data-act=next-round]').classList.contains('p5814-hide-action'));
   assert(!doc.querySelector('[data-act=round]').classList.contains('p5814-hide-action'));
-  assert(!doc.querySelector('[data-act=score]').classList.contains('p5814-hide-action'),'Scorecard visible');
-  assert.equal(doc.querySelector('[data-act=score]').getAttribute('aria-disabled'),'true');
+  assert.equal(doc.querySelector('[data-act=score]').style.getPropertyValue('display'),'none','Editable score button must actually disappear');
+  const staticScore=doc.querySelector('.p5814-score-static');
+  assert(staticScore&&staticScore.textContent.includes('Andry vs Diki'),'Native scorecard content remains, but is passive');
+  assert.equal(staticScore.tagName,'DIV','Read-only card is not a button');
+  assert.equal(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Unlabelled moderator button hidden');
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5');
   assert.equal(w.getComputedStyle(doc.querySelector('.p5-v26-session-control')).display,'none');
+  assert.equal(doc.querySelector('#viewer-edit').style.getPropertyValue('display'),'none','Free-form player edits hidden');
+  assert.equal(doc.querySelector('[data-act=round]').style.getPropertyValue('display'),'','Round navigation remains enabled');
+  // The original controls can be dynamically added by the master after a round update.
+  const dynamic=doc.createElement('button');dynamic.id='viewer-dynamic';dynamic.textContent='Reset Stage';
+  doc.querySelector('.p5-v26-round-card').append(dynamic);
+  await delay(80);
+  assert.equal(dynamic.style.getPropertyValue('display'),'none','Newly rendered moderator buttons immediately hide');
+
  }else{
-  assert(doc.querySelector('[data-action=complete-stage1]').classList.contains('p5814-hide-action'));
+  assert.equal(doc.querySelector('[data-action=complete-stage1]').style.getPropertyValue('display'),'none','Club scoring button removed');
+  assert.equal(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Club untagged button removed');
+  assert.equal(doc.querySelector('#club-global-admin').style.getPropertyValue('display'),'none','Club global dock moderator button removed');
   assert(!doc.querySelector('[data-action=view-round]').classList.contains('p5814-hide-action'));
   assert.equal(doc.querySelectorAll('.p5814-read-score').length,2);
   assert.deepEqual(Array.from(doc.querySelectorAll('.p5814-read-score')).map(e=>e.textContent),['3','2']);
@@ -62,10 +75,13 @@ async function one(kind){
  assert.equal(doc.querySelector('.p5814-hide-action'),null,'Moderator actions restored');
  if(isU){
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5 · Tap to Score');
-  assert(!doc.querySelector('[data-act=score]').hasAttribute('aria-disabled'));
+  assert(!doc.querySelector('.p5814-score-static'),'Passive score surface removed on controller switch');
+  assert.notEqual(doc.querySelector('[data-act=score]').style.getPropertyValue('display'),'none','Native scoring restored');
+  assert.notEqual(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Other controller controls restored');
  }else{
   assert.equal(doc.querySelectorAll('.p5814-read-score').length,0);
   assert(!doc.querySelector('input[data-stage1-score]').hasAttribute('aria-disabled'));
+  assert.notEqual(doc.querySelector('#club-global-admin').style.getPropertyValue('display'),'none','Club global dock restored');
  }
  // Keep this jsdom window alive until its pending requestAnimationFrame flushes;
  // native Safari never destroys the document mid-frame during role restoration.

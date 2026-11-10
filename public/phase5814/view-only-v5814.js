@@ -26,7 +26,7 @@ function restoreText(){
 function menuView(){
  const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
  if(!root)return;
- for(const child of Array.from(root.children))if(!child.classList.contains('p5814-view-menu'))child.classList.add('p5814-master-menu-hidden');
+ for(const child of Array.from(root.children))if(!child.classList.contains('p5814-view-menu')&&!child.classList.contains('p5814-master-menu-hidden'))child.classList.add('p5814-master-menu-hidden');
  const outer=$('.p5814-view-menu',root);
  if(outer){updateStatus(outer);return;}
  const panel=make('details','p5-4852-section p5814-view-menu');
@@ -85,7 +85,7 @@ function updateStatus(root){
 function scoreViewer(){
  if(kind==='unified'){
   for(const b of $$('#americano .p5sm-open-score')){
-   b.classList.add('p5814-locked-editor');b.setAttribute('aria-disabled','true');b.tabIndex=-1;
+   if(!b.classList.contains('p5814-locked-editor'))b.classList.add('p5814-locked-editor');b.setAttribute('aria-disabled','true');b.tabIndex=-1;
   }
   for(const hint of $$('#americano .p5sm-card .scorehint')){
    const old=changed.get(hint)||hint.textContent;
@@ -94,7 +94,7 @@ function scoreViewer(){
   }
  }else{
   for(const field of $$('#app input[data-stage1-score], #app input[data-custom-score]')){
-   field.classList.add('p5814-locked-editor');field.tabIndex=-1;field.setAttribute('aria-disabled','true');
+   if(!field.classList.contains('p5814-locked-editor'))field.classList.add('p5814-locked-editor');field.tabIndex=-1;field.setAttribute('aria-disabled','true');
    let display=field.nextElementSibling;
    if(!display||!display.classList.contains('p5814-read-score')){
     display=make('span','p5814-read-score');
@@ -121,8 +121,8 @@ function actions(){
   const preserve=scoreButtons.has(action)&&kind==='unified'||
    button.classList.contains('mc38-rename')||
    allowed[kind].has(action);
-  button.classList.toggle('p5814-hide-action',!preserve);
-  if(button.classList.contains('mc38-rename')){button.classList.add('p5814-locked-editor');button.tabIndex=-1;button.setAttribute('aria-disabled','true');}
+  if(button.classList.contains('p5814-hide-action')===preserve)button.classList.toggle('p5814-hide-action',!preserve);
+  if(button.classList.contains('mc38-rename')){if(!button.classList.contains('p5814-locked-editor'))button.classList.add('p5814-locked-editor');button.tabIndex=-1;button.setAttribute('aria-disabled','true');}
  }
 }
 function restore(){

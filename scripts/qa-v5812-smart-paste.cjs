@@ -147,6 +147,8 @@ doc.window.eval(js);
 doc.window.document.dispatchEvent(new doc.window.Event('DOMContentLoaded'));
 const box=doc.window.document.getElementById('p5812-smart');
 assert(box,'Smart Input must mount within native Registration');
+assert.equal(box.querySelector('.p5812-title span')?.textContent,'3 LIST FORMATS');
+assert.equal(box.querySelector('.p5812-help')?.textContent,'Supports WhatsApp List, Reclub Participants List & Simple Name List. For full names, use commas or new lines.');
 assert.equal(box.open,false,'Default Smart Input must be collapsed');
 const area=box.querySelector('textarea');
 assert.equal(area.value,'','Initial textarea must be empty');

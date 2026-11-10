@@ -154,14 +154,14 @@ function actions(){
  // without action IDs, Club's global dock, and controls added after re-render.
  for(const root of roots){
   if(!root)continue;
-  for(const button of $('button, input[type="button"], input[type="submit"]',root)){
+  for(const button of $$('button, input[type="button"], input[type="submit"]',root)){
    if(button.closest('.p5814-view-menu, #p58-cloud-host'))continue;
    const action=button.dataset[attr];
    const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
    if(permitted)showControl(button);else hideControl(button);
   }
   // Club score values are mirrored in passive text before hiding input fields.
-  for(const field of $('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
+  for(const field of $$('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
    if(field.closest('.p5814-view-menu, #p58-cloud-host'))continue;
    hideControl(field);
   }

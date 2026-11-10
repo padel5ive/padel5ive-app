@@ -11,9 +11,31 @@ const allowed={
  unified:new Set(['round','view-schedule','tab-stage1','tab-stage2','back-stage1','bracket-nav','jump-ko-courts','ko-history','report-preview','report-close','replay-champion']),
  club:new Set(['view-round','toggle-rounds','latest-round','filter-leaderboard','jump-leaderboard','replay-champion'])
 };
-const scoreButtons=new Set(['score']);
 let queued=false;
-const changed=new Map();
+const changed=new Map(), hiddenInline=new Map();
+// Inline important is intentional: the legacy master applies many
+// high-specificity display: flex!important overrides to its own buttons.
+function hideControl(el){
+ if(!el)return;
+ if(!hiddenInline.has(el))hiddenInline.set(el,{
+  value:el.style.getPropertyValue('display'),
+  priority:el.style.getPropertyPriority('display')
+ });
+ el.classList.add('p5814-hide-action');
+ if(el.style.getPropertyValue('display')!=='none'||el.style.getPropertyPriority('display')!=='important')
+  el.style.setProperty('display','none','important');
+}
+function showControl(el){
+ if(!el)return;
+ el.classList.remove('p5814-hide-action');
+ if(!hiddenInline.has(el))return;
+ const prior=hiddenInline.get(el);hiddenInline.delete(el);
+ if(prior.value)el.style.setProperty('display',prior.value,prior.priority);
+ else el.style.removeProperty('display');
+}
+function showAllControls(){
+ for(const el of hiddenInline.keys())showControl(el);
+}
 function replaceText(el,text){
  if(!el||el.textContent===text)return;
  if(!changed.has(el))changed.set(el,el.textContent);
@@ -84,8 +106,18 @@ function updateStatus(root){
 }
 function scoreViewer(){
  if(kind==='unified'){
-  for(const b of $$('#americano .p5sm-open-score')){
-   if(!b.classList.contains('p5814-locked-editor'))b.classList.add('p5814-locked-editor');b.setAttribute('aria-disabled','true');b.tabIndex=-1;
+  for(const button of $('#americano button.p5sm-open-score')){
+   // A score card is informational, not an unclickable edit button.
+   // Keep the original button untouched underneath for Controller restoration.
+   let display=button.nextElementSibling;
+   if(!display||!display.classList.contains('p5814-score-static')){
+    display=make('div','p5sm-open-score p5814-score-static');
+    display.setAttribute('role','group');
+    display.setAttribute('aria-label','Match score · View Only');
+    button.insertAdjacentElement('afterend',display);
+   }
+   if(display.innerHTML!==button.innerHTML)display.innerHTML=button.innerHTML;
+   hideControl(button);
   }
   for(const hint of $$('#americano .p5sm-card .scorehint')){
    const old=changed.get(hint)||hint.textContent;
@@ -115,25 +147,35 @@ function actions(){
  const root=kind==='unified'?$('#americano'):$('#app');
  if(!root)return;
  const attr=kind==='unified'?'act':'action';
- for(const button of $$('button[data-'+attr+']',root)){
+ // Closed-world spectator policy: everything is hidden unless explicitly
+ // identified as harmless round/bracket/leaderboard browsing.
+ // This includes native buttons without data-act/data-action.
+ for(const button of $('button, input[type="button"], input[type="submit"]',root)){
   if(button.closest('.p5814-view-menu, #p58-cloud-host'))continue;
   const action=button.dataset[attr];
-  const preserve=scoreButtons.has(action)&&kind==='unified'||
-   button.classList.contains('mc38-rename')||
-   allowed[kind].has(action);
-  if(button.classList.contains('p5814-hide-action')===preserve)button.classList.toggle('p5814-hide-action',!preserve);
-  if(button.classList.contains('mc38-rename')){if(!button.classList.contains('p5814-locked-editor'))button.classList.add('p5814-locked-editor');button.tabIndex=-1;button.setAttribute('aria-disabled','true');}
+  const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
+  if(permitted)showControl(button);else hideControl(button);
+ }
+ // Likewise, prevent editor forms from appearing as disabled empty controls.
+ // Club match inputs keep their passive numeric score displays in scoreViewer.
+ for(const field of $('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea',root)){
+  if(field.closest('.p5814-view-menu, #p58-cloud-host'))continue;
+  hideControl(field);
  }
 }
 function restore(){
  restoreText();
  $$('.p5814-view-menu').forEach(x=>x.remove());
- $$('.p5814-hide-action, .p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-hide-action','p5814-master-menu-hidden'));
- $$('.p5814-read-score').forEach(x=>x.remove());
+ showAllControls();
+ $('.p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-master-menu-hidden'));
+ $('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
  $$('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }
 function run(){
- if(!document.body.classList.contains('p58-view-only')){if($('.p5814-view-menu')||$('.p5814-read-score')||changed.size)restore();return;}
+ if(!document.body.classList.contains('p58-view-only')){
+  if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
+  return;
+ }
  menuView();scoreViewer();actions();
 }
 function schedule(){

@@ -23,6 +23,65 @@ assert.equal(parsed.overflow,false);
 assert.equal(P.parse('1. Edwin\n2. edwin\n3. Teo*').duplicates,1,'Repeated names ignored');
 assert.equal(P.parse('Rabu 11 Nov\n2 court\n1. Chris*\n2. Chris*').names.length,1,'Unrelated metadata ignored');
 assert.equal(P.parse('1. Kris\n2. Chris').names.length,2,'Distinct players must stay distinct');
+
+const reclub=[
+ '🟤 PADEL 5IVE • FIXED PARTNER • BRONZE SERIES • 3H 🔶 222,5K',
+ 'Tue, Nov 10 @7:00 PM',
+ 'PADEL 5IVE',
+ '',
+ ' (3) ',
+ ' 1. PADEL 5IVE',
+ '2. Dennis H Sutandi',
+ '3. andry',
+ '',
+ 'Participants (10) ',
+ ' 1. Andre Melvin',
+ '2. Brillian',
+ '3. Nicky Sutandi',
+ '4. Dennis H Sutandi',
+ '5. Dylan',
+ '6. Ian',
+ '7. Edgar Marvelo',
+ "8. Ian +1 (Ian's +1)",
+ '9. Zefan',
+ '10. Mario',
+ '',
+ ' (2) ',
+ ' 1. darrell',
+ '2. Michael',
+ '',
+ 'On Hold (2) ',
+ ' 1. billy',
+ '2. Diki'
+].join('\n');
+const rp=P.parse(reclub);
+assert.equal(rp.source,'reclub','Reclub share format detected');
+assert.equal(rp.declared,10);
+assert.equal(rp.slots,10);
+assert.equal(rp.excludedOther,5,'Unlabelled groups 3 + 2 excluded by default');
+assert.equal(rp.excludedOnHold,2,'On Hold list excluded');
+assert.equal(rp.duplicates,0,'Dennis repeated in another section must not cause cross-section duplicate');
+assert.deepEqual(Array.from(rp.names),[
+ 'Andre Melvin','Brillian','Nicky Sutandi','Dennis H Sutandi','Dylan','Ian',
+ 'Edgar Marvelo','Ian +1','Zefan','Mario'
+],'Only Participants (10), in source order; guest slot stays separate');
+assert.equal(rp.guests,1,'Unidentified guest slot is flagged for review');
+assert(!rp.names.includes('PADEL 5IVE')&&!rp.names.includes('andry')&&!rp.names.includes('darrell')&&!rp.names.includes('Michael'));
+assert(!rp.names.includes('billy')&&!rp.names.includes('Diki'));
+assert(rp.names.includes('Ian')&&rp.names.includes('Ian +1'),'Ian and Ian +1 must not merge');
+const otherHold=P.parse(reclub.replace('On Hold (2)','On Hold (3)').replace('2. Diki','2. Diki\n3. Andry'));
+assert.equal(otherHold.names.length,10,'On Hold count variations must not affect Participant selection');
+const malformed=P.parse(reclub.replace('Participants (10)','Participants (11)'));
+assert.equal(malformed.source,'reclub');
+assert.equal(malformed.declared,11);
+assert.equal(malformed.slots,10,'Mismatched declared count flags the source for review');
+const pOnly=P.parse("Participants (2)\n1. Ana\n2. Ben\nOn Hold (1)\n1. Cara");
+assert.deepEqual(Array.from(pOnly.names),['Ana','Ben']);
+assert.equal(pOnly.excludedOnHold,1);
+const emptyP=P.parse('Participants (0)\nOn Hold (2)\n1. Billy\n2. Diki');
+assert.deepEqual(Array.from(emptyP.names),[]);
+assert.equal(emptyP.source,'reclub');
+
 assert.equal(P.parse('1. .\n2. -\n3. TBA').skipped,3);
 assert.equal(P.parse(Array.from({length:61},(_,i)=>(i+1)+'. Player'+i).join('\n')).overflow,true,'Large lists require smaller batches');
 assert.equal(html.split("case 'smart-player-import':").length-1,1,'Controller integration exactly once');
@@ -76,5 +135,18 @@ assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,fals
 const pending=doc.window.P5SmartInput.pending();
 assert.equal(pending.names.length,13);
 assert.equal(pending.mode,'individual');
+area.value=reclub;
+area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));
+box.querySelector('.p5812-review').click();
+const previewNames=Array.from(box.querySelectorAll('.p5812-names li')).map(x=>x.textContent);
+assert.deepEqual(previewNames,rp.names);
+assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,false);
+assert(box.querySelector('.p5812-warning')?.textContent.includes('guest'));
+assert(box.querySelector('.p5812-muted')?.textContent.includes('2 On Hold excluded'));
+assert.equal(doc.window.P5SmartInput.pending().names.length,10);
+area.value=reclub.replace('Participants (10)','Participants (11)');
+area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));
+box.querySelector('.p5812-review').click();
+assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,true,'Malformed Reclub count disables import');
 doc.window.close();
 console.log('PASS v5.8.12: 13/16 WhatsApp entries, empty slots, marker handling, duplicates, fixed-pair opt-in, structured groups, native 8-row Registration and preview.');

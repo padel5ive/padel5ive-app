@@ -19,7 +19,7 @@ assert(cloud.includes("if(isSession(current)&&identity(current)===meta.localId)l
 assert(cloud.includes("if(!meta||!view())return false"),'A controller cannot leave as viewer');
 assert(cloud.includes('location.reload();'),'Native Cloud state rehydrate policy preserved');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
-const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details>';
+const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details><details data-submenu="share" data-menu-section="Share & Export"><summary>Session & Results</summary><div class="p5-4852-content"><button type="button" data-p58-cloud>Cloud Session</button></div></details>';
 const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section><div class="p5-v26-session-control">SESSION CONTROL</div></aside></div></main>';
 const club='<details id="mainMenu"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><button id="club-global-admin">New Tournament</button></div></details><main id="app"><div class="p5-stage-head">GAME MODE</div><div class="master-stats">STATS</div><div class="layout stage1-layout"><div class="stage1-main"><section class="match-center"><button data-action="toggle-rounds">History</button><div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div><button data-action="view-round">Round 2</button><div class="court"><input data-stage1-score value="3"><input data-stage1-score value="2"><button data-action="complete-stage1">Review Score</button><button id="viewer-untagged">Reset Court</button></div></section></div><aside><section class="leaderboard-card">LEADERBOARD</section></aside></div></main>';
 async function one(kind){
@@ -32,8 +32,15 @@ async function one(kind){
  const menu=doc.querySelector((isU?'#americano':'#mainMenu')+' .p5-4852-menu');
  const viewer=menu.querySelector('.p5814-view-menu');
  assert(viewer,'Viewer menu in native master component');
+ assert(viewer.querySelector('.p5814-view-action-copy .p5814-view-action-desc'),'Editorial multiline action labels are structured, not text crammed inline');
+ assert(viewer.querySelector('.p5814-view-action-chevron'),'Native-style row affordance is present');
  assert.equal(menu.querySelectorAll('.p5814-view-menu').length,1);
- assert.equal(menu.querySelectorAll('.p5814-master-menu-hidden').length,2,'Moderator menus hidden');
+ assert.equal(menu.querySelectorAll('.p5814-master-menu-hidden').length,3,'Moderator menus hidden');
+ const cloudRow=menu.querySelector(':scope > button.p5814-cloud-primary');
+ assert(cloudRow,'Original cloud action is a visible top-level native menu row');
+ assert.equal(cloudRow.previousElementSibling?.getAttribute('data-submenu'),'share','Cloud Session directly follows Session & Results');
+ assert.equal(cloudRow.querySelector('.p5814-cloud-copy .p5-4852-label')?.textContent,'Cloud Session');
+ assert.equal(cloudRow.style.getPropertyValue('display'),'','Cloud action must NOT be hidden from viewer');
  for(const label of ['Connection Status','Take Control','Refresh Data','Back to Home','Leave Cloud Session'])
   assert(viewer.textContent.includes(label),'Viewer menu item '+label);
  assert(doc.querySelector('.p5-stage-head').textContent.includes('GAME MODE'));
@@ -73,6 +80,9 @@ async function one(kind){
  doc.body.classList.remove('p58-view-only');await delay(100);
  assert.equal(menu.querySelector('.p5814-view-menu'),null,'Viewer controls removed after taking control');
  assert.equal(doc.querySelector('.p5814-hide-action'),null,'Moderator actions restored');
+ const controllerCloud=menu.querySelector(':scope > button.p5814-cloud-primary');
+ assert(controllerCloud,'Cloud Session stays top-level on moderator dashboard');
+ assert.equal(controllerCloud.previousElementSibling?.getAttribute('data-submenu'),'share');
  if(isU){
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5 · Tap to Score');
   assert(!doc.querySelector('.p5814-score-static'),'Passive score surface removed on controller switch');

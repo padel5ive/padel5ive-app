@@ -45,11 +45,30 @@ function restoreText(){
  for(const [el,text] of changed){if(el.isConnected)el.textContent=text;}
  changed.clear();
 }
+/* Promote the EXISTING Cloud Session action, never clone the button.
+ * It remains wired to the original Cloud modal/permissions and sits alongside
+ * the three native master accordions. Works for Unified and Club Match.
+ * p585 consolidates its menu asynchronously, so this adapter follows it.
+ */
+function promoteCloud(){
+ const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
+ if(!root)return;
+ const share=kind==='unified'?$('details[data-submenu="share"]',root):$('details[data-menu-section="Share & Export"]',root);
+ const cloud=$('[data-p58-cloud]',root);
+ if(!share||!cloud)return;
+ if(!cloud.classList.contains('p5814-cloud-primary')){
+  cloud.classList.add('p5814-cloud-primary');
+  cloud.setAttribute('aria-label','Cloud Session');
+  cloud.innerHTML='<span class="p5-4852-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4.5 4.5 0 0 0 .6-9A6.5 6.5 0 0 0 5.2 11.3 3.5 3.5 0 0 0 7 18Z"/><path d="M12 13v8m-3-3 3 3 3-3"/></svg></span><span class="p5814-cloud-copy"><span class="p5-4852-label">Cloud Session</span><small>LIVE SYNC &amp; DEVICE ACCESS</small></span><span class="p5-4852-chevron" aria-hidden="true">›</span>';
+ }
+ if(cloud.parentElement!==root||cloud.previousElementSibling!==share)
+  root.insertBefore(cloud,share.nextSibling);
+}
 function menuView(){
  const root=$(kind==='club'?'#mainMenu .p5-4852-menu':'#americano .p5-4852-menu');
  if(!root)return;
  for(const child of Array.from(root.children)){
-  if(child.classList.contains('p5814-view-menu'))continue;
+  if(child.classList.contains('p5814-view-menu')||child.classList.contains('p5814-cloud-primary'))continue;
   if(!child.classList.contains('p5814-master-menu-hidden'))child.classList.add('p5814-master-menu-hidden');
   hideControl(child);
  }
@@ -61,21 +80,24 @@ function menuView(){
  icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.8-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.8 6.5-9.5 6.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>';
  summary.append(icon,make('span','p5-4852-label','Viewer Settings'),make('span','p5-4852-chevron','›'));
  const content=make('div','p5-4852-content p5814-menu-body');
- content.append(make('div','p585-heading','CLOUD SESSION'));
+ content.append(make('div','p585-heading','CLOUD ACCESS'));
  const line=make('div','p5814-connection');
- line.append(make('span','','Connection Status'),make('strong','p5814-cloud-state','VIEW ONLY'));
+ line.append(make('span','p5814-connection-label','CONNECTION STATUS'),make('strong','p5814-cloud-state','VIEW ONLY'));
  content.append(line);
  const menuButton=(label,action,description)=>{
-  const b=make('button','p5814-view-action',label);
+  const b=make('button','p5814-view-action');
   b.type='button';b.dataset.p5814ViewerAction=action;
-  if(description)b.append(make('small','',description));
+  const copy=make('span','p5814-view-action-copy');
+  copy.append(make('span','p5814-view-action-label',label));
+  if(description)copy.append(make('small','p5814-view-action-desc',description));
+  b.append(copy,make('span','p5814-view-action-chevron','›'));
   return b;
  };
- content.append(menuButton('Take Control','cloud','Request permission from the active controller'));
- content.append(menuButton('Refresh Data','refresh','Check Cloud for the latest results'));
+ content.append(menuButton('Take Control','cloud','Request access to moderate this session'));
+ content.append(menuButton('Refresh Data','refresh','Auto Sync is already active'));
  content.append(make('div','p585-heading p5814-session-heading','SESSION'));
- content.append(menuButton('Back to Home','home','Keep this viewer connected'));
- content.append(menuButton('Leave Cloud Session','leave','Disconnect this viewer device'));
+ content.append(menuButton('Back to Home','home','Session remains connected'));
+ content.append(menuButton('Leave Cloud Session','leave','Disconnect this device only'));
  panel.append(summary,content);root.append(panel);
  panel.addEventListener('click',async event=>{
   const button=event.target.closest('button[data-p5814-viewer-action]');
@@ -105,7 +127,8 @@ function updateStatus(root){
  const take=$('[data-p5814-viewer-action="cloud"]',root);
  if(take){
   const desired=cloud?.waiting?'Check Control Request':'Take Control';
-  for(const node of Array.from(take.childNodes))if(node.nodeType===3&&node.textContent!==desired)node.textContent=desired;
+  const labelNode=$('.p5814-view-action-label',take);
+  if(labelNode&&labelNode.textContent!==desired)labelNode.textContent=desired;
  }
 }
 function scoreViewer(){
@@ -155,7 +178,7 @@ function actions(){
  for(const root of roots){
   if(!root)continue;
   for(const button of $$('button, input[type="button"], input[type="submit"]',root)){
-   if(button.closest('.p5814-view-menu, #p58-cloud-host'))continue;
+   if(button.closest('.p5814-view-menu, #p58-cloud-host')||button.matches('[data-p58-cloud].p5814-cloud-primary'))continue;
    const action=button.dataset[attr];
    const permitted=button.tagName==='BUTTON'&&allowed[kind].has(action);
    if(permitted)showControl(button);else hideControl(button);
@@ -176,11 +199,12 @@ function restore(){
  $$('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }
 function run(){
+ promoteCloud();
  if(!document.body.classList.contains('p58-view-only')){
   if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
   return;
  }
- menuView();scoreViewer();actions();
+ promoteCloud();menuView();scoreViewer();actions();
 }
 function schedule(){
  if(queued)return;

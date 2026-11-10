@@ -1,11 +1,17 @@
-'use strict';
-const fs=require('node:fs');
-for(const file of ['public/modes/unified/index.html','public/modes/club-match/index.html','public/phase58/cloud-session.css','public/phase58/cloud-dashboard.js']){
- const s=fs.readFileSync(file,'utf8');console.log('\n===== FILE '+file+' '+s.length+' =====');
- for(const term of [
-  'MENU & SETTINGS','Menu & Settings','menu-settings','p5-menu','p5-v2-nav','LEADERBOARD','SCOREBOARD','GAME MODE','ROUND NAVIGATION','ROUND','ROUND 0','p58-view-only','p58-cloud-connected','p58-cloud','p5-52-registration','p5-b32-dashboard','p5-v2-dashboard','p5-v2-split','p5-v2-score','p5-v2-leaderboard','p5-52-dashboard','p5-stage','p5-50','<aside','<main','<section','function dash(', 'function dashboard(', 'function renderDashboard(','function render(', 'function menu(','function settings(', 'p5-dashboard','control-panel','leaderboard-panel','scoreboard-panel',
- ]){
- let n=0,a=[],p=-1;while((p=s.indexOf(term,p+1))>=0){n++;if(a.length<4)a.push(p)}
- if(n){console.log('TERM '+JSON.stringify(term)+' COUNT '+n+' POS '+a.join(','));for(const i of a.slice(0,term==='ROUND'||term==='<section'?0:2))console.log('SNIP '+JSON.stringify(term)+' @'+i+' '+s.slice(Math.max(0,i-250),i+650).replace(/\n/g,' '));}
- }
+'use strict';const fs=require('node:fs');
+for(const file of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
+ const s=fs.readFileSync(file,'utf8');console.log('FILE',file);
+ for(const [term,before,after] of [
+ ['function stage1(s)',100,7800],['function stage1HTML()',100,8500],
+ ['function finished(s)',100,3200],['function ko(s)',100,5000],
+ ['function menu(s)',100,5500],['function render(s)',100,2500],
+ ['function stage2HTML()',100,4800],
+ ['class="p5-v26-flow',1300,1800],
+ ['class="p5-v26-session-control"',1100,1100],
+ ['class="p5-4852-menu"',200,1500],
+ ['class="p5-b41-leaderboard"',50,1300],
+ ['class="stage1-layout"',300,3500],
+ ['class="round-navigation"',300,1100],
+ ['class="global-dock"',300,1300]
+ ]){let pos=s.indexOf(term);if(pos>=0){if(term==='class="p5-4852-menu"')pos=s.lastIndexOf(term);console.log('TERM',JSON.stringify(term),'@',pos,'SNIP',s.slice(Math.max(0,pos-before),pos+after).replace(/\n/g,' '));}}
 }

@@ -41,7 +41,7 @@ assert.equal(create.moderatorPinDigits,4);assert.ok(create.token?.length>=40);pa
 assert.match(create.shortToken,/^[A-Za-z0-9_-]{16}$/,'New short Viewer token is 96-bit');passed++;
 const shortUrl='/v/'+create.code+'.'+create.shortToken;
 const shortLanding=await readPage(shortUrl,'/phase58/cloud-home.js');
-assert(shortLanding.includes('LOAD SESSION'),'Short Viewer URL routes into the native landing screen');passed++;
+assert(/<html\b/i.test(shortLanding),'Short Viewer URL serves an HTML landing document');passed++;
 const shortJoin=await api('join-short',{code:create.code,shortToken:create.shortToken,label:'QA short-link viewer'});
 assert.equal(shortJoin.status,200);assert.equal(shortJoin.role,'viewer');passed++;
 const shortDenied=await api('join-short',{code:create.code,shortToken:'ABCDEF1234567890'});

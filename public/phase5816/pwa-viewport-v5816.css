@@ -1,0 +1,83 @@
+/* PADEL 5IVE v5.8.16 — iOS standalone viewport origin correction.
+ * WebKit PWA with viewport-fit=cover can exclude a status-bar-height strip at
+ * the physical BOTTOM of the screen, despite 100dvh and 150px overscan.
+ * The landing document uses viewport-fit=auto ONLY when installed; its content
+ * starts below the status bar and ends at the bottom glass. Dashboard documents
+ * retain their existing viewport settings, Cloud and match engines unchanged.
+ */
+@media screen and (display-mode:standalone) and (max-width:760px){
+ :root{--p5816-status-offset:59px}
+ html,html body{background-color:#071624!important}
+ html body:not(.p54-active){background-color:#071624!important}
+ /* Remove the attempted 90/150px overscan; it was clipped by WebKit's
+    compositor. The photo now covers ONE actual PWA document viewport. */
+ html body:not(.p54-active)::before{display:none!important;content:none!important}
+ html body:not(.p54-active) #portal.portal{
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100vh!important;height:100dvh!important;
+  min-height:100dvh!important;max-height:100dvh!important;
+  margin:0!important;padding:0!important;
+  overflow:hidden!important;
+  background:transparent!important;
+ }
+ html body:not(.p54-active) #portal .p541-venue{
+  position:absolute!important;
+  inset:0!important;
+  top:0!important;right:0!important;bottom:0!important;left:0!important;
+  width:100%!important;
+  height:100%!important;min-height:100%!important;max-height:none!important;
+  overflow:hidden!important;
+  background-color:#092448!important;
+  background-image:
+   linear-gradient(180deg,
+    rgba(3,12,25,.21) 0%,
+    rgba(3,12,25,.06) 22%,
+    transparent 35%,
+    transparent 71%,
+    rgba(3,12,25,.08) 84%,
+    rgba(3,12,25,.23) 100%),
+   url('/phase585/home-venue-user-refined-hd.webp')!important;
+  background-position:50% 50%!important;
+  background-size:cover!important;
+  background-repeat:no-repeat!important;
+  pointer-events:none!important;
+ }
+ html body:not(.p54-active) #portal .p541-venue::after{
+  display:none!important;content:none!important;
+ }
+ /* Keep the original APPROVED layout at the same physical y coordinates:
+    after viewport-fit=auto the new layout origin is BELOW the status bar.
+    Correct the fixed top/bottom positions once, by that measured offset. */
+ html body:not(.p54-active) #portal .masthead{
+  padding-top:clamp(39px,calc(11svh + 14px - var(--p5816-status-offset)),77px)!important;
+ }
+ html body:not(.p54-active) #portal .p541-home-actions{
+  bottom:calc(clamp(62px,calc(18svh - 58px),122px) + var(--p5816-status-offset))!important;
+ }
+ html body:not(.p54-active) #portal .signature{
+  bottom:calc(clamp(23px,calc(9svh - 44px),53px) + var(--p5816-status-offset))!important;
+ }
+ /* The approved v5.8.15 editorial subtitle remains unchanged. */
+ /* Initial Setup: the scrollable WORKSPACE must fit the real viewport.
+    Its previously enlarged 100dvh+90px shell was still clipped and caused
+    a false bottom extension. Do not expand the scroll range or hide options. */
+ html body.p54-active #p54-workspace.p54-workspace{
+  position:fixed!important;
+  top:0!important;right:0!important;bottom:0!important;left:0!important;
+  height:100vh!important;height:100dvh!important;
+  min-height:100dvh!important;max-height:100dvh!important;
+  padding-top:5px!important;
+  padding-bottom:0!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+  background-color:#071624!important;
+  background-repeat:no-repeat!important;
+  background-size:cover!important;
+ }
+ html body.p54-active #p54-workspace>.p54-shell{
+  padding-top:17px!important;
+  padding-bottom:max(40px,env(safe-area-inset-bottom,0px))!important;
+ }
+}

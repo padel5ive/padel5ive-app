@@ -31,8 +31,9 @@ const state=()=>({
 const made=await call('create',{kind:'unified',data:state()});
 assert.equal(made.status,201);checks++;
 const owner=made.body;
-assert.match(owner.code,/^[2-9A-HJ-NP-Z]{10}$/);
-assert.match(owner.moderatorPin,/^\d{6}$/);
+assert.match(owner.code,/^[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5}$/);
+assert.match(owner.moderatorPin,/^\d{4}$/);
+assert.equal(owner.moderatorPinDigits,4);
 assert.match(owner.viewerKey,/^[A-Za-z0-9_-]{40,90}$/);
 assert.equal(owner.role,'controller');assert.equal(owner.pin,undefined);checks++;
 const raw=entries.get('session/'+owner.code).data;
@@ -43,6 +44,7 @@ assert(!JSON.stringify(raw).includes(owner.token));checks++;
 const manual=await call('join',{code:owner.code,label:'Manual Viewer'});
 assert.equal(manual.status,200);assert.equal(manual.body.role,'viewer');
 assert.equal(manual.body.moderatorPin,undefined);
+assert.equal(manual.body.moderatorPinDigits,4);
 assert.equal(manual.body.viewerKey,undefined);
 assert.deepEqual(manual.body.data,state());checks++;
 const link=await call('join',{code:owner.code,viewerKey:owner.viewerKey,label:'One Tap'});
@@ -52,8 +54,8 @@ assert.equal((await call('save',{code:owner.code,token:manual.body.token,revisio
 const next={...state(),stage:'stage1'};
 const scored=await call('save',{code:owner.code,token:owner.token,revision:1,data:next});
 assert.equal(scored.status,200);assert.equal(scored.body.revision,2);checks++;
-const wrong=owner.moderatorPin==='000000'?'000001':'000000';
-for(let i=0;i<5;i++){
+const wrong=owner.moderatorPin==='0000'?'0001':'0000';
+for(let i=0;i<3;i++){
  const bad=await call('take-control',{code:owner.code,token:link.body.token,moderatorPin:wrong});
  assert.equal(bad.status,401);checks++;
 }
@@ -110,4 +112,44 @@ assert.equal(approved.status,200);assert.equal(approved.body.role,'viewer');chec
 assert.equal((await call('save',{code:legacyCode,token,revision:1,data:state()})).status,423);checks++;
 assert.equal((await call('join',{code:'123'})).status,400);checks++;
 assert.equal((await call('create',{kind:'unified',data:{...state(),stage:'setup'}})).status,422);checks++;
-console.log('PASS Cloud Session',checks,'checks: token viewer, manual viewer, PIN takeover, single writer, legacy compatibility.');
+// Existing ten-character cloud sessions retain their original six-digit
+// moderator PIN, independent of the new creation format.
+const originalCode='7AMR9QKT3Y',originalPin='583021';
+const oldSalt=randomBytes(16).toString('hex'),oldToken=randomBytes(32).toString('base64url');
+const oldViewerKey=randomBytes(32).toString('base64url');
+entries.set('session/'+originalCode,{etag:'"old-modern"',data:{
+ v:58,code:originalCode,kind:'unified',summary:{session:'Earlier cloud session'},
+ data:state(),revision:1,updatedAt:clock,salt:oldSalt,
+ viewerKeyHash:hash(oldViewerKey),moderatorPinHash:scryptSync(originalPin,oldSalt,32).toString('hex'),
+ failures:{count:0,until:0},
+ devices:[{id:'old-moderator',hash:hash(oldToken),label:'Old controller'}],
+ controller:{id:'old-moderator',expires:clock+90_000},request:null
+}});
+const oldViewer=await call('join',{code:originalCode});
+assert.equal(oldViewer.status,200);assert.equal(oldViewer.body.moderatorPinDigits,6);checks++;
+assert.equal((await call('take-control',{code:originalCode,token:oldViewer.body.token,moderatorPin:'0123'})).status,401);checks++;
+const oldTransfer=await call('take-control',{code:originalCode,token:oldViewer.body.token,moderatorPin:originalPin});
+assert.equal(oldTransfer.status,200);assert.equal(oldTransfer.body.role,'controller');checks++;
+assert.equal((await call('join',{code:originalCode,viewerKey:oldViewerKey})).status,200);checks++;
+
+// Short PIN security: both device and global throttles apply.
+const shortMade=(await call('create',{kind:'unified',data:state()})).body;
+const viewers=[];
+for(let i=0;i<3;i++){
+ const v=await call('join',{code:shortMade.code,label:'Lockout '+i});
+ assert.equal(v.status,200);viewers.push(v.body.token);checks++;
+}
+const invalid=shortMade.moderatorPin==='0000'?'0001':'0000';
+for(let i=0;i<3;i++){
+ assert.equal((await call('take-control',{code:shortMade.code,token:viewers[0],moderatorPin:invalid})).status,401);checks++;
+}
+assert.equal((await call('take-control',{code:shortMade.code,token:viewers[0],moderatorPin:shortMade.moderatorPin})).status,429);checks++;
+for(let i=0;i<2;i++){
+ assert.equal((await call('take-control',{code:shortMade.code,token:viewers[1],moderatorPin:invalid})).status,401);checks++;
+}
+assert.equal((await call('take-control',{code:shortMade.code,token:viewers[2],moderatorPin:shortMade.moderatorPin})).status,429,'Global PIN attempt lockout');checks++;
+clock+=30*60_000+1;
+const afterExpiry=await call('take-control',{code:shortMade.code,token:viewers[2],moderatorPin:shortMade.moderatorPin});
+assert.equal(afterExpiry.status,200);assert.equal(afterExpiry.body.role,'controller');checks++;
+
+console.log('PASS Cloud Session',checks,'checks: short code/PIN, rate limits, old 10/6 and legacy numeric access.');

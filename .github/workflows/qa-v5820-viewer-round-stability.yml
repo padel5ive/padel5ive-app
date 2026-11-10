@@ -17,6 +17,7 @@ jobs:
           node-version: '22'
       - run: npm ci
       - run: npm run build
+      - run: npm install --no-save jsdom@26
       - run: node scripts/qa-v5820-viewer-round-stability.cjs
       - run: node scripts/qa-v5810-viewer.cjs
       - run: node scripts/qa-v5814-view-only.cjs

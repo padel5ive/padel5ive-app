@@ -14,7 +14,7 @@ assert.equal(html.split('id="p5813-style-help"').length-1,1);
 assert(html.includes("s.groupConfig={labels:['','']};"),'Fresh group labels must start blank');
 assert(html.includes('l[0].toLocaleLowerCase()===l[1].toLocaleLowerCase()'),'Existing unique-label engine validation preserved');
 assert(html.includes("alertModal(P5Structured.is(s)?'Pairing Groups':'Advanced Player Rules'"));
-assert(html.includes('e.g. Left / ♂')&&html.includes('e.g. Right / ♀'));
+assert(html.includes('e.g. Left')&&html.includes('e.g. Right'));
 assert(html.includes('p5813-setup-style'));
 function sourceBetween(a,b){
  const x=html.indexOf('function '+a+'('),y=html.indexOf('function '+b+'(',x);
@@ -24,17 +24,17 @@ function sourceBetween(a,b){
 const setup=new Function('P5EngineRegistry','esc','displayDate','homeExistingSessions',
  sourceBetween('formSetup','structuredReg')+';return formSetup;')(registry,esc,()=> 'Tuesday',()=> '');
 for(const [id,selected,description] of [
- ['individual-americano','Normal · Flexible Pairing','Players rotate partners throughout the session.'],
+ ['individual-americano','Normal • Flexible Pairing','Players rotate partners throughout the session.'],
  ['fp-americano','Fixed Partners','Partners remain together throughout the session.'],
- ['structured-americano','Structured Pairing (Left/Right, ♂/♀)','Partners are selected from opposite groups.'],
- ['individual-mexicano','Normal · Flexible Pairing','Players rotate partners throughout the session.'],
+ ['structured-americano','Structured Pairing (Left/Right • ♂/♀)','Partners are selected from opposite groups.'],
+ ['individual-mexicano','Normal • Flexible Pairing','Players rotate partners throughout the session.'],
  ['fp-mexicano','Fixed Partners','Partners remain together throughout the session.'],
- ['structured-mexicano','Structured Pairing (Left/Right, ♂/♀)','Partners are selected from opposite groups.']
+ ['structured-mexicano','Structured Pairing (Left/Right • ♂/♀)','Partners are selected from opposite groups.']
 ]){
  const markup=setup({mode:id,session:'Test',date:'2026-11-10',courts:2,matchFormat:'total5'});
  const d=new JSDOM(markup),doc=d.window.document,select=doc.querySelector('#setup-pairing');
  assert.deepEqual(Array.from(select.options).map(x=>x.textContent),[
- 'Select pairing style','Normal · Flexible Pairing','Fixed Partners','Structured Pairing (Left/Right, ♂/♀)'
+ 'Select pairing style','Normal • Flexible Pairing','Fixed Partners','Structured Pairing (Left/Right • ♂/♀)'
  ],'Pairing labels in '+id);
  assert.equal(select.options[select.selectedIndex].textContent,selected);
  assert.equal(doc.querySelector('#p5813-style-help').textContent,description);
@@ -51,8 +51,8 @@ let doc=d.window.document,a=doc.querySelector('#p5-51-label-a'),b=doc.querySelec
 assert(a&&b);
 assert.equal(a.value,'');assert.equal(b.value,'');
 assert(a.required&&b.required);
-assert.equal(a.placeholder,'e.g. Left / ♂');
-assert.equal(b.placeholder,'e.g. Right / ♀');
+assert.equal(a.placeholder,'e.g. Left');
+assert.equal(b.placeholder,'e.g. Right');
 assert.equal(doc.querySelectorAll('.p5813-required').length,2);
 assert(doc.querySelector('.p5-51-summary').textContent.includes('Group A · 2 players'));
 assert(doc.querySelector('.p5-51-summary').textContent.includes('Group B · 2 players'));
@@ -67,7 +67,7 @@ const sid=id=>sd.window.document.getElementById(id);
 const sync=new Function('$','P5EngineRegistry','document',sourceBetween('syncSetup','collectRegistration')+';return syncSetup;')(sid,registry,sd.window.document);
 sync();
 assert.deepEqual(Array.from(sid('setup-pairing').options).map(x=>x.textContent),[
- 'Select pairing style','Normal · Flexible Pairing','Fixed Partners','Structured Pairing (Left/Right, ♂/♀)'
+ 'Select pairing style','Normal • Flexible Pairing','Fixed Partners','Structured Pairing (Left/Right • ♂/♀)'
  ]);
 assert.equal(sid('p5813-style-help').hidden,true);
 for(const [v,desc] of [
@@ -98,4 +98,14 @@ const batch=mock.window.P5SmartInput.pending();
 assert(batch&&batch.mode==='structured'&&batch.group==='B');
 assert.deepEqual(Array.from(batch.names),['Andry','Felix']);
 mock.window.close();
+// Home Game Mode and pairing selection must use precisely the same labels.
+const home=fs.readFileSync('public/index.html','utf8');
+for(const name of ['Normal • Flexible Pairing','Fixed Partners','Structured Pairing (Left/Right • ♂/♀)'])
+ assert(home.includes("'"+name+"',false"),'Home Pairing Style missing: '+name);
+assert(home.includes("m+' · Normal • Flexible Pairing'"),'Home current selection caption updated');
+assert.equal((home.match(/Flexible Pairing · Fixed Partners · Structured/g)||[]).length,2,'Home Americano/Mexicano descriptions consistent');
+assert(!home.includes("'Normal / Flexible Pairing',false"));
+assert(!home.includes("['fixed','Fixed Partner',false"));
+assert(!home.includes("['structured','Structured Pairing',false"));
+assert(!html.includes('e.g. Left / ♂')&&!html.includes('e.g. Right / ♀'),'Structured example fields contain no gender symbols');
 console.log('PASS v5.8.13: pairing styles and descriptions, blank required unique labels, restored labels, Structured Smart Input group destination.');

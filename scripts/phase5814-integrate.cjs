@@ -3,7 +3,7 @@
  */
 'use strict';
 const fs=require('node:fs');
-const assetVersion='5814.15'; // force fresh Safari/WhatsApp viewer styling
+const assetVersion='5814.16'; // new moderator credential share + unified sizing on iOS
 const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${assetVersion}">`;
 const js=`<script defer src="/phase5814/view-only-v5814.js?v=${assetVersion}"></script>`;
 function insert(path,anchor,tag){
@@ -22,6 +22,24 @@ function insert(path,anchor,tag){
 for(const file of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
  insert(file,'</head>',css);
  insert(file,'</body>',js);
+}
+/* Version the existing Cloud UI assets too, so a WhatsApp/Safari webview
+ * cannot reuse pre-takeover scripts while loading the latest Viewer adapter.
+ * Keep the first tag in its original order and eliminate duplicates.
+ */
+for(const file of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
+ let markup=fs.readFileSync(file,'utf8');
+ for(const [pattern,tag] of [
+  [/<link\s+rel="stylesheet"\s+href="\/phase58\/cloud-session\.css(?:\?[^"]*)?"\s*\/?>/g,
+   `<link rel="stylesheet" href="/phase58/cloud-session.css?v=${assetVersion}">`],
+  [/<script\s+defer\s+src="\/phase58\/cloud-dashboard\.js(?:\?[^"]*)?"\s*><\/script>/g,
+   `<script defer src="/phase58/cloud-dashboard.js?v=${assetVersion}"></script>`]
+ ]){
+  let first=true;
+  markup=markup.replace(pattern,()=>{if(!first)return '';first=false;return tag;});
+  if(first)throw Error('Missing Cloud UI asset on '+file);
+ }
+ fs.writeFileSync(file,markup);
 }
 const swFile='public/sw.js';
 let sw=fs.readFileSync(swFile,'utf8');

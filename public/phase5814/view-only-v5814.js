@@ -85,7 +85,7 @@ function updateStatus(root){
 function scoreViewer(){
  if(kind==='unified'){
   for(const b of $$('#americano .p5sm-open-score')){
-   b.setAttribute('aria-disabled','true');b.tabIndex=-1;
+   b.classList.add('p5814-locked-editor');b.setAttribute('aria-disabled','true');b.tabIndex=-1;
   }
   for(const hint of $$('#americano .p5sm-card .scorehint')){
    const old=changed.get(hint)||hint.textContent;
@@ -94,7 +94,7 @@ function scoreViewer(){
   }
  }else{
   for(const field of $$('#app input[data-stage1-score], #app input[data-custom-score]')){
-   field.tabIndex=-1;field.setAttribute('aria-disabled','true');
+   field.classList.add('p5814-locked-editor');field.tabIndex=-1;field.setAttribute('aria-disabled','true');
    let display=field.nextElementSibling;
    if(!display||!display.classList.contains('p5814-read-score')){
     display=make('span','p5814-read-score');
@@ -122,7 +122,7 @@ function actions(){
    button.classList.contains('mc38-rename')||
    allowed[kind].has(action);
   button.classList.toggle('p5814-hide-action',!preserve);
-  if(button.classList.contains('mc38-rename')){button.tabIndex=-1;button.setAttribute('aria-disabled','true');}
+  if(button.classList.contains('mc38-rename')){button.classList.add('p5814-locked-editor');button.tabIndex=-1;button.setAttribute('aria-disabled','true');}
  }
 }
 function restore(){
@@ -130,7 +130,7 @@ function restore(){
  $$('.p5814-view-menu').forEach(x=>x.remove());
  $$('.p5814-hide-action, .p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-hide-action','p5814-master-menu-hidden'));
  $$('.p5814-read-score').forEach(x=>x.remove());
- $$('.p5sm-open-score[aria-disabled="true"], .mc38-rename[aria-disabled="true"], input[aria-disabled="true"]').forEach(x=>{x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
+ $('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }
 function run(){
  if(!document.body.classList.contains('p58-view-only')){if($('.p5814-view-menu')||$('.p5814-read-score')||changed.size)restore();return;}

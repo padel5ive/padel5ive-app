@@ -94,7 +94,8 @@ function menuView(){
   return b;
  };
  content.append(menuButton('Take Control','cloud','Request access to moderate this session'));
- content.append(menuButton('Refresh Data','refresh','Auto Sync is already active'));
+ content.append(menuButton('Refresh Data','refresh','Check for the latest confirmed scores'));
+  content.append(menuButton('Follow Latest Round','live','Automatically display the active round'));
  content.append(make('div','p585-heading p5814-session-heading','SESSION'));
  content.append(menuButton('Back to Home','home','Session remains connected'));
  content.append(menuButton('Leave Cloud Session','leave','Disconnect this device only'));
@@ -107,6 +108,10 @@ function menuView(){
   const action=button.dataset.p5814ViewerAction,cloud=window.P5CloudSession;
   if(!cloud)return;
   if(action==='home'){location.assign('/');return;}
+  if(action==='live'){
+   cloud.setFollowLive?.(!cloud.getStatus?.().followingLive);
+   updateStatus(panel);return;
+  }
   if(action==='leave'){cloud.leaveViewer?.();return;}
   if(action==='cloud'){cloud.open?.();return;}
   if(action==='refresh'){
@@ -124,6 +129,12 @@ function updateStatus(root){
  const value=label==='VIEW ONLY'?'CONNECTED · AUTO SYNC':label==='SYNCING'?'SYNCING':label==='OFFLINE'?'OFFLINE':label==='CONFLICT'?'SYNC CONFLICT':label;
  if(line.textContent!==value)line.textContent=value;
  line.dataset.state=label.toLowerCase().replaceAll(' ','-');
+ const follow=$('[data-p5814-viewer-action="live"]',root);
+ if(follow){
+  const desc=$('.p5814-view-action-desc',follow),on=cloud?.followingLive!==false;
+  if(desc)desc.textContent=on?'On · Latest round updates automatically':'Paused · Browse history until you return to Live';
+  follow.dataset.following=on?'on':'off';
+ }
  const take=$('[data-p5814-viewer-action="cloud"]',root);
  if(take){
   const desired=cloud?.waiting?'Check Control Request':'Take Control';
@@ -210,6 +221,16 @@ function schedule(){
  if(queued)return;
  queued=true;requestAnimationFrame(()=>{queued=false;run();});
 }
+// Previous-round navigation pauses Follow Live; the Live action restores it.
+document.addEventListener('click',event=>{
+ if(!document.body.classList.contains('p58-view-only'))return;
+ const button=event.target?.closest?.('button[data-act],button[data-action]');
+ if(!button)return;
+ const action=kind==='club'?button.dataset.action:button.dataset.act;
+ const cloud=window.P5CloudSession;
+ if(action==='round'||action==='view-round'){cloud?.setFollowLive?.(false);schedule();}
+ else if(action==='latest-round'){cloud?.setFollowLive?.(true);schedule();}
+},true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 })();

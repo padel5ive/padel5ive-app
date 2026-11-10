@@ -38,7 +38,8 @@ if(!newAssets.every(a=>sw.includes(a))){
  if(sw.split(marker).length!==2)throw Error('v5816: Service Worker asset anchor drift');
  sw=sw.replace(marker,marker+' '+newAssets.map(x=>x+',').join(' '));
 }
-sw=sw.replace("const VERSION = 'p5-pwa-lab-v566-1';",
-              "const VERSION = 'p5-pwa-lab-v5816-ios-origin';");
+const versionRx=/const VERSION\\s*=\\s*['"][^'"]+['"];/;
+if(!versionRx.test(sw))throw Error('v5816: Service Worker cache version assignment missing');
+sw=sw.replace(versionRx,"const VERSION = 'p5-pwa-lab-v5816-ios-origin';");
 fs.writeFileSync(swFile,sw);
 console.log('PASS v5.8.16: iOS PWA viewport origin and full-height landing/initial setup integrated.');

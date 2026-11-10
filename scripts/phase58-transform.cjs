@@ -22,6 +22,8 @@ function inject(path,token,markup,position='first'){
     /href="\/phase58\/cloud-session\.css(?:\?[^"]*)?"/.test(s))return;
  if(markup.includes('/phase58/cloud-dashboard.js')&&
     /src="\/phase58\/cloud-dashboard\.js(?:\?[^"]*)?"/.test(s))return;
+ if(markup.includes('/phase58/cloud-home.js')&&
+    /src="\/phase58\/cloud-home\.js(?:\?[^"]*)?"/.test(s))return;
  if(s.includes(markup))return;
  const i=position==='last'?s.lastIndexOf(token):s.indexOf(token);
  if(i<0)throw Error('v5.8 HTML insertion point missing: '+path+' '+token);

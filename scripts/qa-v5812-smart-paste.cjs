@@ -139,7 +139,7 @@ area.value=reclub;
 area.dispatchEvent(new doc.window.Event('input',{bubbles:true}));
 box.querySelector('.p5812-review').click();
 const previewNames=Array.from(box.querySelectorAll('.p5812-names li')).map(x=>x.textContent);
-assert.deepEqual(previewNames,rp.names);
+assert.deepEqual(previewNames,Array.from(rp.names));
 assert.equal(box.querySelector('[data-act="smart-player-import"]').disabled,false);
 assert(box.querySelector('.p5812-warning')?.textContent.includes('guest'));
 assert(box.querySelector('.p5812-muted')?.textContent.includes('2 On Hold excluded'));

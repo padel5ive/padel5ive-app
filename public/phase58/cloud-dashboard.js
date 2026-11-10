@@ -154,11 +154,6 @@ function render(){
    const r=await api('approve-control',{code:meta.code,token:meta.token});
    meta.role=r.role;meta.takeoverRequested=false;persist();await refresh();
   }));
-  controls.append(btn('RELEASE CONTROL',async()=>{
-   if(dirty())await push();if(dirty())throw Error('Unsynced local changes must be saved before releasing control.');
-   const r=await api('release-control',{code:meta.code,token:meta.token});
-   meta.role=r.role;persist();
-  },true));
   controls.append(btn('SYNC NOW',async()=>{await push();await refresh()},true));
  }
  body.append(controls);

@@ -19,6 +19,36 @@ assert(club.includes('TEAM SHOWDOWN')||club.includes('Team Showdown'));
 for(const term of ["const CACHE_PAGES","event.data.type === 'P5_APPLY_UPDATE'","P5_PREWARM_SETUP","DENY_PREFIXES","networkFirst(req, path, CACHE_PAGES, true)"])assert(sw.includes(term),term);
 assert(sw.includes("if(url.searchParams.get('intent')==='new'"),'Only NEW sessions get warmed response');
 assert(!sw.includes("event.data.type === 'P5_APPLY_UPDATE') self.skipWaiting();\n});"),'Both SW messages registered');
+// Home UI integration: only a selected game triggers a warm request; no
+// session state is touched and no extra fetch happens for the same game.
+const {JSDOM}=require('jsdom');
+function testHome(){
+ const dom=new JSDOM('<!doctype html><html><head></head><body><button class="p54-mode" data-mode="Americano">A</button><button class="p54-mode" data-mode="Mexicano">M</button><button class="p54-mode" data-mode="Club Match">C</button><button class="p54-mode" data-mode="Knockout" disabled>K</button></body></html>',{url:'https://padel5ive.netlify.app/',runScripts:'outside-only'});
+ const w=dom.window,posts=[],controller={postMessage:m=>posts.push(m)},serviceWorker={controller,addEventListener(){}};
+ Object.defineProperty(w.navigator,'serviceWorker',{value:serviceWorker,configurable:true});
+ w.eval(client);
+ const dispatch=(s)=>w.document.querySelector(s).dispatchEvent(new w.Event('click',{bubbles:true}));
+ assert.equal(posts.length,0,'No engine prewarm on Home load');
+ dispatch('[data-mode="Americano"]');
+ assert.equal(posts.length,1);assert.equal(posts[0].mode,'unified');
+ dispatch('[data-mode="Mexicano"]');
+ assert.equal(posts.length,1,'Mexicano uses the same Unified engine as Americano');
+ dispatch('[data-mode="Club Match"]');
+ assert.equal(posts.length,2);assert.equal(posts[1].mode,'club');
+ dispatch('[data-mode="Knockout"]');
+ assert.equal(posts.length,2,'Disabled mode cannot prefetch anything');
+ dom.window.close();
+ const first=new JSDOM('<!doctype html><html><head></head><body><button class="p54-mode" data-mode="Americano">A</button></body></html>',{url:'https://padel5ive.netlify.app/',runScripts:'outside-only'});
+ first.window.eval(client);
+ first.window.document.querySelector('button').click();
+ const hint=first.window.document.querySelector('link[rel="prefetch"]');
+ assert(hint,'No-controller first visit should still provide prefetch hint');
+ assert.equal(hint.getAttribute('href'),'/modes/unified/');
+ first.window.close();
+ console.log('PASS v5.8.8 Home choose-mode events and first-visit fallback.');
+}
+testHome();
+
 const incoming=[],cacheStore=new Map(),listeners={};
 let now=Date.now(),calls=0;
 const fakeResponse=(label='ok')=>({

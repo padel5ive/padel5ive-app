@@ -1,0 +1,21 @@
+name: PADEL 5IVE v5.8.16 iOS Standalone Fullscreen QA
+on:
+  pull_request:
+    paths:
+      - 'public/phase5816/**'
+      - 'scripts/phase5816-integrate.cjs'
+      - 'scripts/qa-v5816-pwa.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-v5816-pwa.yml'
+jobs:
+  iPhone-fullscreen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-v5816-pwa.cjs
+      - run: node scripts/qa-v5815-pwa.cjs

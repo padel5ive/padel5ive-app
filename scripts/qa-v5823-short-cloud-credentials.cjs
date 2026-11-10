@@ -33,6 +33,16 @@ const tests={
  'Keep private Viewer Link separate from PIN':dash.includes("if(m.viewerKey)return top+")&&dash.includes('SHARE VIEWER ACCESS · WHATSAPP'),
  'Cloud compact UI still applied':pages.every(path=>fs.readFileSync(path,'utf8').includes('cloud-modal-compact-v5822.css'))
 };
+// Runtime code-format invariants; six-digit numeric codes remain legacy.
+const newCode=/^(?:[A-HJ-NP-Z][2-9A-HJ-NP-Z]{5}|[2-9A-HJ-NP-Z]{10})$/;
+assert(newCode.test('A2B3C4'),'Six-character new code is accepted');
+assert(newCode.test('7AMR9QKT3Y'),'Older ten-character code is accepted');
+assert(!newCode.test('123456'),'Legacy six-digit numeric code requires PIN flow');
+assert(!newCode.test('O12I45'),'Ambiguous I/O glyphs are rejected');
+assert.equal((dash.match(/field.maxLength=moderatorPinDigits;/g)||[]).length,2,
+ 'Both Take Control and Recover Access use the session PIN digit count');
+assert.equal((dash.match(/pin.length!==moderatorPinDigits/g)||[]).length,2,
+ 'Both client-side PIN validation paths are length-aware');
 for(const [name,ok] of Object.entries(tests))console.log((ok?'PASS ':'FAIL ')+name);
 assert(Object.values(tests).every(Boolean),'Short Cloud code/PIN compatibility regression');
 for(const file of ['public/phase58/cloud-dashboard.js','public/phase58/cloud-home.js','netlify/functions/cloud-session.mjs'])

@@ -46,7 +46,9 @@ assert(second.includes('Friday, 13 November 2026 · 20:00'));
 assert(second.includes('*SESSION CODE:* 123456'));
 assert(second.includes('*ACCESS PIN:* 0042'));
 assert(!second.includes('503743')&&!second.includes('0886'),'Sample credentials must never be hard-coded');
-const viewerContext={...context,viewerLink:m=>'https://padel5ive.netlify.app/#join='+m.code+'&v='+m.viewerKey};
+const viewerContext={...context,viewerLink:m=>m.shortToken
+ ?'https://padel5ive.netlify.app/v/'+m.code+'.'+m.shortToken
+ :'https://padel5ive.netlify.app/#join='+m.code+'&v='+m.viewerKey};
 vm.runInNewContext(source.slice(first,end)+'\nthis.renderMessage=message;',viewerContext);
 const viewerMessage=viewerContext.renderMessage({summary:{session:'5IVE TUESDAY',date:'2026-11-10',time:'19:00'},
  code:'7AMR9QKT3Y',viewerKey:'test-private-viewer-token'});
@@ -55,8 +57,17 @@ assert(viewerMessage.includes('https://padel5ive.netlify.app/#join=7AMR9QKT3Y&v=
 assert(viewerMessage.includes('*MANUAL ACCESS*'));
 assert(viewerMessage.includes('*SESSION CODE:* 7AMR9QKT3Y'));
 assert(!viewerMessage.includes('MODERATOR PIN')&&!viewerMessage.includes('ACCESS PIN'));
-assert(source.includes('const text=message(meta);window.open('),'WhatsApp action still uses message builder');
-assert(source.includes('const str=message(meta);if(navigator.clipboard?.writeText)'),'Copy details uses identical approved message');
+const shortMessage=viewerContext.renderMessage({summary:{session:'FRIDAY NIGHT',date:'2026-11-13',time:'20:00'},
+ code:'ABCDEF',viewerKey:'old-long-key',shortToken:'ABCDEF1234567890'});
+assert(shortMessage.includes('https://padel5ive.netlify.app/v/ABCDEF.ABCDEF1234567890'),
+ 'New WhatsApp Viewer Link uses secure short path');
+assert(!shortMessage.includes('#join='),'No long fragment in new shares');
+assert(!shortMessage.includes('MODERATOR PIN')&&!shortMessage.includes('ACCESS PIN'),
+ 'Short link must never reveal private Moderator PIN');
+assert(source.includes('const text=message(meta);')&&source.includes("window.open('https://wa.me/?text='"),
+ 'WhatsApp action still uses message builder and opens wa.me on user tap');
+assert(source.includes('const str=message(meta);')&&source.includes('navigator.clipboard?.writeText(str)'),
+ 'Copy details uses identical approved message');
 assert(source.includes("btn(meta.waiting?'REQUEST SENT · CHECK STATUS':'TAKE CONTROL'"),'Take Control action preserved');
 assert(source.includes("btn('APPROVE CONTROL TRANSFER'"),'Approve Transfer action preserved');
 console.log('PASS v5.8.9 — exact WhatsApp template, dynamic credentials/date, share+copy and control actions.');

@@ -254,7 +254,7 @@ function viewerSessionSummary(){
  */
 function viewerLeaderboardNames(){
  if(kind!=='unified')return;
- for(const button of $('#americano .p5-b41-leaderboard button[data-act="manage-participant"]')){
+ for(const button of $$('#americano .p5-b41-leaderboard button[data-act="manage-participant"]')){
   let passive=button.nextElementSibling;
   if(!passive||!passive.classList.contains('p5814-standing-name')){
    passive=make('span','p5814-standing-name');
@@ -262,7 +262,7 @@ function viewerLeaderboardNames(){
    button.insertAdjacentElement('afterend',passive);
   }
   const copy=button.cloneNode(true);
-  $('.p5-sitout-indicator',copy).forEach(el=>el.remove());
+  $$('.p5-sitout-indicator',copy).forEach(el=>el.remove());
   const text=copy.textContent.replace(/\s+/g,' ').trim();
   if(passive.textContent!==text)passive.textContent=text;
  }

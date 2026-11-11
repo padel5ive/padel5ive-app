@@ -135,7 +135,7 @@ function createMatches(state){const {pairs,courts,format}=state.setup;if(!checkS
  // A round-robin fixture pool. Court numbers are live resources, NOT fixed match assignments.
  state.schedule=[generateSchedule(pairs,courts).flat().map(m=>({ ...m,court:null,wave:null,status:'pending',sequence:null,completedSequence:null }))];
  state.activeWave=0;state.dispatchSequence=0;state.stage='stage1';state.stage2=null;state.stage3=null;state.finalized=false;
- state.arrival={A:Array(pairs).fill(true),B:Array(pairs).fill(true)};state.openingShuffle=0;
+ state.arrival={A:Array(pairs).fill(true),B:Array(pairs).fill(true)};state.sitOut={A:Array(pairs).fill(false),B:Array(pairs).fill(false)};state.openingShuffle=0;
  fillAvailableCourts(state);return state;}
 
 /* Dynamic court dispatcher. A fixture is assigned when a physical court becomes free.
@@ -166,7 +166,7 @@ function previewNextMatches(state,limit=5){
    const turnaround=(gapA<=state.setup.courts?1:0)+(gapB<=state.setup.courts?1:0);
    return imbalance*10000+sum*400+turnaround*75-Math.min(30,gapA+gapB);
  };
- const takenA=new Set(),takenB=new Set(),remaining=pending.filter(m=>isArrived(state,m)),chosen=[];
+ const takenA=new Set(),takenB=new Set(),remaining=pending.filter(m=>isEligible(state,m)),chosen=[];
  const count=Math.min(Math.max(0,Math.floor(Number(limit)||0)),remaining.length);
  for(let i=0;i<count;i++){
    remaining.sort((a,b)=>{
@@ -194,8 +194,20 @@ function ensureArrival(state){
  if(!Number.isInteger(state.openingShuffle)||state.openingShuffle<0)state.openingShuffle=0;
  return state.arrival;
 }
+/* Stage 1 Sit Out: optional in old backups; distinct from Not Arrived. */
+function ensureSitOut(state){
+ const n=state.setup.pairs;
+ if(!state.sitOut||typeof state.sitOut!=='object')state.sitOut={};
+ for(const c of ['A','B']){
+  const old=Array.isArray(state.sitOut[c])?state.sitOut[c]:[];
+  state.sitOut[c]=Array.from({length:n},(_,i)=>old[i]===true);
+ }
+ return state.sitOut;
+}
+function pairIsSitOut(state,club,index){return ensureSitOut(state)[club]?.[index]===true;}
 function hasOpeningScore(state){return matchPool(state).some(m=>m.status==='completed'||m.scoreA!==null||m.scoreB!==null);}
 function isArrived(state,m){const a=ensureArrival(state);return a.A[m.a]!==false&&a.B[m.b]!==false;}
+function isEligible(state,m){return isArrived(state,m)&&!pairIsSitOut(state,'A',m.a)&&!pairIsSitOut(state,'B',m.b);}
 function seededDrawRank(a,b,seed){
  let x=(Math.imul(a+1,0x9e3779b9)^Math.imul(b+1,0x85ebca6b)^Math.imul(seed,0xc2b2ae35))|0;
  x^=x>>>16;x=Math.imul(x,0x7feb352d);x^=x>>>15;x=Math.imul(x,0x846ca68b);x^=x>>>16;return x>>>0;
@@ -203,7 +215,7 @@ function seededDrawRank(a,b,seed){
 function reshuffleOpening(state,increment=true){
  if(state.stage!=='stage1'||state.stage2||hasOpeningScore(state))throw Error('Reshuffle is available only before the first Round 1 result');
  ensureArrival(state);
- const readyA=state.arrival.A.filter(Boolean).length,readyB=state.arrival.B.filter(Boolean).length;
+ const readyA=state.arrival.A.filter((v,i)=>v&&!pairIsSitOut(state,'A',i)).length,readyB=state.arrival.B.filter((v,i)=>v&&!pairIsSitOut(state,'B',i)).length;
  if(increment&&(readyA<1||readyB<1))throw Error('Mark at least one pair from each team Ready before reshuffling');
  const before=liveCourts(state).map(m=>m.id).join('|');
  const all=matchPool(state);
@@ -220,6 +232,14 @@ function reshuffleOpening(state,increment=true){
    }
  }
  return liveCourts(state);
+}
+function setPairSitOut(state,club,index,sitOut){
+ if(state.stage!=='stage1'||state.stage2||!['A','B'].includes(club)||!Number.isInteger(index)||index<0||index>=state.setup.pairs||typeof sitOut!=='boolean')throw Error('Sit Out is available only for registered pairs in Stage 1');
+ ensureSitOut(state)[club][index]=sitOut;
+ // Active games are preserved; only future court assignments are filtered.
+ const activeMatch=liveCourts(state).some(m=>m[club==='A'?'a':'b']===index);
+ fillAvailableCourts(state);
+ return {sitOut,activeMatch};
 }
 function toggleArrival(state,club,index){
  if(state.stage!=='stage1'||!['A','B'].includes(club)||!Number.isInteger(index)||index<0||index>=state.setup.pairs)throw Error('Invalid arrival selection');
@@ -250,7 +270,7 @@ function dispatchMatching(state,freeCount,busyA,busyB){
    prior.A[m.a].push(seq);prior.B[m.b].push(seq);
  }
  const current=(state.dispatchSequence||0)+1,remaining={A:Array(n).fill(0),B:Array(n).fill(0)};
- const pending=pendingMatches(state).filter(m=>isArrived(state,m)&&!busyA.has(m.a)&&!busyB.has(m.b));
+ const pending=pendingMatches(state).filter(m=>isEligible(state,m)&&!busyA.has(m.a)&&!busyB.has(m.b));
  for(const m of pending){remaining.A[m.a]++;remaining.B[m.b]++;}
  const minA=Math.min(...counts.A),minB=Math.min(...counts.B);
  function burden(side,index){
@@ -415,6 +435,7 @@ function validateSavedState(s){
  const t=s.setup;if(!t||!t.clubs||typeof t.clubs.A!=='string'||typeof t.clubs.B!=='string'||typeof t.date!=='string'||!(checkSetup(t.pairs,t.courts,t.format)||(s.stage==='setup'&&t.format===''&&Number.isInteger(t.pairs)&&t.pairs>=1&&t.pairs<=MAX_PAIRS&&Number.isInteger(t.courts)&&t.courts>=1&&t.courts<=MAX_COURTS&&Array.isArray(s.schedule)&&s.schedule.length===0)))return false;
  if(t.teamColors!==undefined&&(!t.teamColors||!['A','B'].every(c=>typeof t.teamColors[c]==='string'&&/^#[0-9a-fA-F]{6}$/.test(t.teamColors[c]))))return false;
  if(!s.roster||!['A','B'].every(c=>Array.isArray(s.roster[c])&&s.roster[c].length===t.pairs&&s.roster[c].every(p=>Array.isArray(p.players)&&p.players.length===2&&p.players.every(x=>typeof x.id==='string'&&typeof x.name==='string'))))return false;
+ if(s.sitOut!==undefined&&(!s.sitOut||!['A','B'].every(c=>Array.isArray(s.sitOut[c])&&s.sitOut[c].length===t.pairs&&s.sitOut[c].every(x=>typeof x==='boolean'))))return false;
  if(!Array.isArray(s.schedule)||s.schedule.length>t.pairs*t.pairs)return false;
  if(!Number.isInteger(s.activeWave)||s.activeWave<0||s.activeWave>Math.max(0,s.schedule.length-1))return false;
  const used=new Set(),onCourtA=new Set(),onCourtB=new Set(),courts=new Set();let count=0;
@@ -458,6 +479,6 @@ function validateSavedState(s){
  if(s.stage3&&!checkRestoredDuels(stage3Matches(s),s.stage3.format))return false;
  return true;
 }
-return {MAX_PAIRS,MAX_COURTS,formats,fmt,ensureArrival,toggleArrival,reshuffleOpening,hasOpeningScore,checkSetup,validateSavedState,generateSchedule,stage1Stats,stage2Stats,stage3Stats,stage3Matches,stage3AssignedPlayers,stage3DuplicateAssignments,stage3Match,verdict,allowedDuels,roster,newState,createMatches,matchPool,liveCourts,pendingMatches,courtStatus,fillAvailableCourts,previewNextMatches,assignCourtResult,amendCourtResult,migrateLegacySchedule,validateScore,scoreMatch,isValidLineup,setStage1Result,makeStage2,stage2AssignedPlayers,assertStage2DuelAvailable,stage2DuplicateAssignments,clearDuelLineup,setDuelLineup,setDuelScore,startFinal,setFinalLineup,setFinalScore,clearFinalLineup};
+return {MAX_PAIRS,MAX_COURTS,formats,fmt,ensureArrival,ensureSitOut,pairIsSitOut,setPairSitOut,toggleArrival,reshuffleOpening,hasOpeningScore,checkSetup,validateSavedState,generateSchedule,stage1Stats,stage2Stats,stage3Stats,stage3Matches,stage3AssignedPlayers,stage3DuplicateAssignments,stage3Match,verdict,allowedDuels,roster,newState,createMatches,matchPool,liveCourts,pendingMatches,courtStatus,fillAvailableCourts,previewNextMatches,assignCourtResult,amendCourtResult,migrateLegacySchedule,validateScore,scoreMatch,isValidLineup,setStage1Result,makeStage2,stage2AssignedPlayers,assertStage2DuelAvailable,stage2DuplicateAssignments,clearDuelLineup,setDuelLineup,setDuelScore,startFinal,setFinalLineup,setFinalScore,clearFinalLineup};
 });
 

@@ -10,7 +10,7 @@ const helper=[
 '  const locked=new Set();let lastLocked=start-1;',
 '  for(let i=start;i<original.length;i++){',
 '   const rd=original[i],ms=(rd.matches||[]).filter(Boolean);',
-'   if(ms.some(m=>m.confirmed||m.score!=null||m.skipped)||rd.balancing){',
+'   if(i===state.viewRound||ms.some(m=>m.confirmed||m.score!=null||m.skipped)||rd.balancing){',
 '    locked.add(i);lastLocked=i;',
 '    if(ms.length>limit||ms.some(m=>(m.court||0)>limit))throw Error("Protected Round "+(i+1)+" has court assignments above new capacity; cannot downsize.");',
 '   }else for(const m of ms)todo.push({...m,teams:m.teams.map(t=>t.slice())});',

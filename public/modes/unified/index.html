@@ -6228,7 +6228,7 @@ window.P5UI=(function(){'use strict';
  if(s.ui.menuOpen){const q=document.querySelector('.compact-controls');if(q)q.open=true;}
  if(s.ui.submenus)for(const name of s.ui.submenus){const q=document.querySelector(`[data-submenu="${name}"]`);if(q)q.open=true;}
  }
- return Object.freeze({render,statistics,total,done,gap:baseStat,term,mode,kind,format,team,esc,menu});
+ return Object.freeze({render,statistics,total,done,gap:baseStat,term,mode,kind,format,team,esc,menu,flexibleRoundScoring});
 })();
 
 </script><script>
@@ -6637,6 +6637,7 @@ window.P5Report=(function(){'use strict';
 window.P5App=(function(){'use strict';
  const KEY='padel5ive-shared-foundation-v2.4-parity-lab',LIBRARY_KEY='padel5ive-shared-v2.10-existing-sessions',ENG=Object.fromEntries(P5EngineRegistry.modes().map(x=>[x.id,P5EngineRegistry.engine(x.id)]));
  const localToday=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+ const flexibleRoundScoring=session=>P5UI.flexibleRoundScoring(session);
  const stateNew=()=>({version:24,_sessionId:sessionId(),stage:'setup',mode:'',session:'',date:'',courts:null,matchFormat:'',koFormat:'',koMatchFormat:'',koFinalFormat:'',roster:[],nextId:1,rules:P5AdvancedRules.blank(),qualification:null,rounds:[],initialSchedule:null,initialCourts:null,currentRound:0,viewRound:0,ko:null,sitout:[],sitoutPending:{},arrival:{},pendingParticipants:[],pendingCourts:null,pendingAdd:false,activityLog:[],seed:Math.floor(Math.random()*4294967295),rankingSeed:null,groupConfig:{labels:['Group A','Group B']},ui:{modal:null,menuOpen:false,submenus:[],fullSchedule:false,reportPreview:false,arrivalOpen:false}});
  let s,undo=[],redo=[],confirmAction=null,noticeTimer=0;
  const $=id=>document.getElementById(id);const clone=v=>JSON.parse(JSON.stringify(v));const random=()=>{s.seed=(1664525*s.seed+1013904223)>>>0;return s.seed/4294967296;};

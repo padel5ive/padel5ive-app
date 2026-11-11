@@ -105,6 +105,19 @@ function init(){
   const normalized=normalize(c);
   if(!isNew(normalized)&&!isLegacy(normalized))throw Error('Enter a valid Session Code.');
   if(isLegacy(normalized)&&!options.pin)throw Error('This older session requires its original 4-digit Access PIN.');
+  // A moderator who opens their OWN WhatsApp Viewer Link in the same
+  // Safari/PWA storage must never replace their moderator device token with
+  // a newly issued viewer token. Reuse the existing authenticated session.
+  // The dashboard will verify the real role with Cloud on reconnect.
+  const ownedKind=Object.keys(K).find(kind=>{
+   const link=get('p58-cloud-link-'+kind),local=get(K[kind]);
+   return link?.code===normalized&&link.role==='controller'&&
+    active(local,kind)&&identity(local,kind)===link.localId&&!!link.token;
+  });
+  if(ownedKind){
+   location.assign(ownedKind==='unified'?'/modes/unified/?intent=resume':'/modes/club-match/?intent=resume');
+   return;
+  }
   if(!options.auto&&!confirm('Load this Cloud Session? Your different local session will be saved to Session History first.'))return;
   submit.disabled=true;submit.textContent='CONNECTING';status.textContent='Connecting to Live Session…';
   try{

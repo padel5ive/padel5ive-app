@@ -16,7 +16,7 @@ for(const page of pages){
  assert(built.includes('view-only-v5814.css?v=5829.1'),'Safari must receive newly versioned stylesheet');
  assert(built.includes('view-only-v5814.js?v=5830.1'),'Safari must receive newly versioned viewer script');
  assert.equal(built.split('view-only-v5814.css?v=').length-1,1,'Only one viewer stylesheet reference');
- assert(built.includes('cloud-dashboard.js?v=5829.1'),'Safari receives latest Cloud moderator controller UI');
+ assert(built.includes('cloud-dashboard.js?v=5833.1'),'Safari receives latest Cloud moderator controller UI');
  assert(built.includes('cloud-session.css?v=5829.1'),'Safari receives latest Cloud Session modal sizing');
  assert.equal(built.split('cloud-dashboard.js?v=').length-1,1,'No duplicate Cloud controller script tags');
 }

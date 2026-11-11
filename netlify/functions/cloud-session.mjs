@@ -79,6 +79,13 @@ function summary(data,kind){
  return {session:safe(session),date:safe(date),time:safe(time),kind};
 }
 function role(entry,id,ts){
+ // Modern PIN-protected sessions have durable moderator OWNERSHIP.
+ // A 90-second lease only signals online presence; it must never revoke
+ // the authorized moderator's access merely because iOS suspended the PWA
+ // while WhatsApp was open. Ownership changes only by a verified PIN transfer.
+ if(entry.moderatorPinHash)
+  return entry.controller?.id===id?'controller':'viewer';
+ // Keep the original lease model for legacy sessions without Moderator PIN.
  return entry.controller?.id===id&&entry.controller.expires>ts?'controller':'viewer';
 }
 function metadata(entry,id,ts,includeData){
@@ -280,6 +287,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     return json(metadata(next,id,ts,false));
    }
    if(action==='approve-control'){
+    if(entry.moderatorPinHash)return error('PIN-protected sessions require Moderator PIN to transfer control',409);
     if(role(entry,id,ts)!=='controller')return error('Only the active controller can approve',423);
     const target=entry.request?.id;
     if(!target||entry.request.expires<ts||!entry.devices.some(d=>d.id===target))
@@ -290,6 +298,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     return json(metadata(next,id,ts,false));
    }
    if(action==='release-control'){
+    if(entry.moderatorPinHash)return error('Moderator control stays assigned until a valid PIN transfer',409);
     if(role(entry,id,ts)!=='controller')return error('Not the active controller',423);
     const target=entry.request?.id&&entry.request.expires>ts?entry.request.id:null;
     const next={...entry,controller:target?{id:target,expires:ts+LEASE_MS}:null,request:null};

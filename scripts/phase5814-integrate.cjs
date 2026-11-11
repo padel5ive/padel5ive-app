@@ -5,6 +5,7 @@
 const fs=require('node:fs');
 const assetVersion='5829.1'; // fresh viewer navigation code for Safari/PWA; all Cloud asset URLs are versioned
 const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${assetVersion}">`;
+const cloudJsVersion='5833.1'; // persistent Moderator ownership + iOS reconnect cache-bust
 const viewerJsVersion='5830.1'; // bust iPhone Safari/PWA cache for read-only leaderboard name fix
 const js=`<script defer src="/phase5814/view-only-v5814.js?v=${viewerJsVersion}"></script>`;
 function insert(path,anchor,tag){
@@ -34,7 +35,7 @@ for(const file of ['public/modes/unified/index.html','public/modes/club-match/in
   [/<link\s+rel="stylesheet"\s+href="\/phase58\/cloud-session\.css(?:\?[^"]*)?"\s*\/?>/g,
    `<link rel="stylesheet" href="/phase58/cloud-session.css?v=${assetVersion}">`],
   [/<script\s+defer\s+src="\/phase58\/cloud-dashboard\.js(?:\?[^"]*)?"\s*><\/script>/g,
-   `<script defer src="/phase58/cloud-dashboard.js?v=${assetVersion}"></script>`]
+   `<script defer src="/phase58/cloud-dashboard.js?v=${cloudJsVersion}"></script>`]
  ]){
   let first=true;
   markup=markup.replace(pattern,()=>{if(!first)return '';first=false;return tag;});

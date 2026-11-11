@@ -286,7 +286,7 @@ async function refresh(){
   offline=false;
   // An offline controller can safely reclaim an expired, unowned lease when the
   // cloud revision is unchanged. Never auto-reclaim over another active device.
-  if(meta.role==='controller'&&r.role!=='controller'&&!r.controllerOnline&&r.revision===before){
+  if(meta.role==='controller'&&!meta.moderatorPinRequired&&r.role!=='controller'&&!r.controllerOnline&&r.revision===before){
    const resumed=await api('take-control',{code:meta.code,token:meta.token});
    if(resumed.role==='controller'){
     meta.role='controller';meta.revision=resumed.revision;meta.waiting=false;
@@ -414,7 +414,8 @@ function safeTick(){
  if(meta&&role()==='controller'&&!conflict&&!busy&&dirty())void push();
  if(meta&&last)localPersistHash();
 }
-window.addEventListener('visibilitychange',()=>{if(document.hidden)safeTick()});
+window.addEventListener('visibilitychange',()=>{if(document.hidden)safeTick();else if(meta)void refresh()});
+window.addEventListener('pageshow',()=>{if(meta&&!document.hidden)void refresh()});
 window.addEventListener('beforeunload',localPersistHash);
 window.P5CloudSession=Object.freeze({
  version:'5.8-lab',

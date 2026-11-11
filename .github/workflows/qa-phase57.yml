@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for approved baseline engine comparison
       - name: Install dependencies
         run: npm ci
       - name: Verify addon syntax
@@ -70,9 +72,28 @@ jobs:
           sum2="$(sha256sum public/modes/unified/index.html public/index.html public/assets/p5-direct-pdf.js public/results/unified/index.html | sha256sum)"
           test "$sum1" = "$sum2"
           git diff --check
-      - name: Protect locked engines and production
+      - name: Protect locked scheduler, KO, and Club Match source
         run: |
-          test "$(git hash-object public/modes/unified/index.html)" != "13985b66f07eb50569daf86a7cbcb6571a312f5c"
-          test "$(git show HEAD:public/modes/unified/index.html | git hash-object --stdin)" = "13985b66f07eb50569daf86a7cbcb6571a312f5c"
+          # The old whole-dashboard SHA was a Phase 5.7 snapshot, not a
+          # scheduler checksum. A deliberately revised scoreboard must not
+          # be rejected as a changed matchmaking engine.
+          node - <<'NODE'
+          const fs=require('node:fs'),cp=require('node:child_process'),assert=require('node:assert/strict');
+          const baseline=cp.execFileSync('git',['show','8c833f9893ec57f550528dd74644a577eef77db9:public/modes/unified/index.html'],{maxBuffer:9*1024*1024}).toString();
+          const current=fs.readFileSync('public/modes/unified/index.html','utf8');
+          function sliceBetween(content,begin,end){
+            const a=content.indexOf(begin),b=content.indexOf(end,a+begin.length);
+            assert(a>=0&&b>a,'Engine protection anchor drift: '+begin);
+            return content.slice(a,b);
+          }
+          for(const [label,begin,end] of [
+            ['individual, fixed, recovery, constraints and registry engines','window.P5EngineIndividual=','window.P5UI='],
+            ['seeded knockout','window.P5KO=','</script>']
+          ]){
+            assert.equal(sliceBetween(current,begin,end),sliceBetween(baseline,begin,end),label+' changed');
+            console.log('PASS locked '+label);
+          }
+          NODE
           test "$(git show HEAD:public/modes/club-match/index.html | git hash-object --stdin)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
           test "$(grep -Fc 'data-p58-cloud' public/modes/club-match/index.html)" -eq 1
+          node scripts/qa-flexible-round-scoring.cjs

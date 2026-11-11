@@ -1,0 +1,155 @@
+'use strict';
+/* PADEL 5IVE: headless Chrome scoring regression for real shared HTML.
+ * No additional npm packages; Chrome DevTools protocol + Node 22 WebSocket.
+ */
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+const os=require('node:os'),child=require('node:child_process'),assert=require('node:assert/strict');
+const root=path.resolve('public');
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp'};
+const server=http.createServer((req,res)=>{
+ let url;try{url=new URL(req.url,'http://local.test');}catch{res.writeHead(400).end();return;}
+ let file=path.resolve(root,'.'+decodeURIComponent(url.pathname));
+ if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403).end();return;}
+ try{if(fs.statSync(file).isDirectory())file=path.join(file,'index.html');}catch{}
+ fs.readFile(file,(err,contents)=>{if(err){res.writeHead(404).end('not found');return;}
+  res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');
+  res.setHeader('Cache-Control','no-store');res.end(contents);
+ });
+});
+async function main(){
+ const chrome=process.env.CHROME_BIN||['google-chrome','google-chrome-stable','chromium','chromium-browser'].find(bin=>{
+  try{return child.execFileSync('which',[bin],{stdio:'pipe'}).length>0;}catch{return false;}
+ });
+ assert(chrome,'Chrome/Chromium browser not installed');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'padel5ive-browser-'));
+ const deadline=Date.now()+55000;
+ let proc=null,ws=null;
+ try{
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const port=server.address().port;
+  proc=child.spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage',
+   '--no-first-run','--no-default-browser-check','--disable-extensions',
+   '--remote-debugging-port=0','--user-data-dir='+dir,'about:blank'],{stdio:'ignore'});
+  const marker=path.join(dir,'DevToolsActivePort');
+  while(!fs.existsSync(marker)&&Date.now()<deadline)await delay(80);
+  assert(fs.existsSync(marker),'Chrome did not start DevTools');
+  const debugPort=Number(fs.readFileSync(marker,'utf8').split('\n')[0]);
+  const page=await(await fetch('http://127.0.0.1:'+debugPort+'/json/new?about:blank',{method:'PUT'})).json();
+  ws=new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
+  let nextId=0;const pending=new Map();
+  ws.onmessage=event=>{const x=JSON.parse(event.data);if(!x.id||!pending.has(x.id))return;
+   const {resolve,reject}=pending.get(x.id);pending.delete(x.id);
+   x.error?reject(Error(JSON.stringify(x.error))):resolve(x.result);
+  };
+  const send=(method,params={})=>new Promise((resolve,reject)=>{
+   const id=++nextId;pending.set(id,{resolve,reject});
+   ws.send(JSON.stringify({id,method,params}));
+  });
+  const evalJS=async(expression)=>{
+   const r=await send('Runtime.evaluate',{expression:'(async()=>{'+expression+'})()',returnByValue:true,awaitPromise:true});
+   if(r.exceptionDetails)throw Error('Chrome JS: '+(r.exceptionDetails.text||'exception')+' '+(r.exceptionDetails.exception?.description||''));
+   return r.result?.value;
+  };
+  const run=fn=>evalJS('return ('+fn.toString()+')();');
+  const until=async(expression)=>{
+   while(Date.now()<deadline){try{const v=await evalJS(expression);if(v)return v;}catch{}
+    await delay(150);
+   }
+   throw Error('Browser timeout: '+expression.slice(0,150));
+  };
+  await send('Page.enable');await send('Runtime.enable');
+  await send('Page.navigate',{url:'http://127.0.0.1:'+port+'/modes/unified/'});
+  await until('return Boolean(window.P5App?.getState && document.querySelector("#setup-session"));');
+  const seed=await run(()=>{
+   const s=window.P5App.getState();
+   Object.assign(s,{_sessionId:'qa-browser-stage1',stage:'stage1',mode:'individual-americano',
+    session:'QA Browser Score Tap',date:'2026-11-11',time:'12:00',courts:2,matchFormat:'total5',
+    roster:Array.from({length:12},(_,i)=>({id:i+1,names:['Player '+(i+1)]})),
+    nextId:13,currentRound:0,viewRound:1,
+    rounds:Array.from({length:17},(_,r)=>({index:r,matches:[0,1].map(c=>({
+      id:'R'+r+'C'+c,court:c+1,teams:c===0?[[1,2],[3,4]]:[[5,6],[7,8]],
+      confirmed:false,score:null
+    }))})),
+    sitout:[],sitoutPending:{},pendingParticipants:[],arrival:{},
+    ko:null,qualification:null,pendingCourts:null,pendingAdd:false,activityLog:[],
+    seed:123,rules:window.P5AdvancedRules.blank(),ui:{modal:null,menuOpen:false,submenus:[],fullSchedule:false,reportPreview:false}
+   });
+   localStorage.setItem('padel5ive-shared-foundation-v2.4-parity-lab',JSON.stringify(s));
+   return s.stage;
+  });
+  assert.equal(seed,'stage1');
+  await send('Page.reload',{ignoreCache:true});
+  await until('const s=window.P5App?.getState?.();return s?.stage==="stage1"&&s.viewRound===1&&document.querySelectorAll(".p5sm-card").length===2;');
+  const nav=await run(()=>({
+    upper:document.querySelectorAll('#americano .p5-flex-switch').length,
+    chips:document.querySelectorAll('#americano .roundbuttons button').length,
+    bottom:document.querySelectorAll('#americano .p5-flex-bottom-actions [data-act="round"]').length,
+    cardAction:document.querySelector('.p5sm-card')?.dataset.act,
+    role:document.body.classList.contains('p58-view-only')
+  }));
+  assert.equal(nav.upper,0,'Remove redundant upper navigation');
+  assert.equal(nav.chips,17,'Keep all round chips');
+  assert.equal(nav.bottom,2,'Keep bottom round buttons');
+  assert.equal(nav.cardAction,'score','Court tile must open scoring');
+  assert.equal(nav.role,false,'Must test editable controller session');
+  const opened=await run(()=>{
+   const errors=[];window.addEventListener('error',event=>errors.push(event.message));
+   const card=document.querySelector('.p5sm-card');
+   let clicks=[];
+   document.addEventListener('click',event=>clicks.push({tag:event.target.tagName,act:event.target.closest('[data-act]')?.dataset.act}),true);
+   card.querySelector('h3').click();
+   const state=window.P5App.getState();
+   return {modal:state.ui.modal?.type,
+    a:!!document.querySelector('#modal-a'),b:!!document.querySelector('#modal-b'),
+    debug:{errors,clicks,toast:document.getElementById('toast')?.textContent,stage:state.stage,
+      view:state.viewRound,mode:state.mode,hasMatch:state.rounds[state.viewRound]?.matches[0]?.id,
+      card:card.getAttribute('data-act'),button:card.querySelector('button')?.getAttribute('data-act'),
+      modalState:state.ui.modal}};
+  });
+  if(opened.modal!=='score'||!opened.a||!opened.b)console.log('Court tap diagnostic:',JSON.stringify(opened.debug));
+  assert.deepEqual({modal:opened.modal,a:opened.a,b:opened.b},{modal:'score',a:true,b:true},'Court header opens native score modal');
+  const saved=await run(()=>{
+   document.querySelector('#modal-a').value='3';document.querySelector('#modal-b').value='2';
+   document.querySelector('[data-act="modal-save"]').click();
+   const s=window.P5App.getState();
+   return {confirmed:s.rounds[1].matches[0].confirmed,score:s.rounds[1].matches[0].score,
+    currentRound:s.currentRound,viewRound:s.viewRound,modal:s.ui.modal,
+    round1:s.rounds[0].matches[0].confirmed};
+  });
+  assert.equal(saved.confirmed,true,'Round 2 should score before Round 1');
+  assert.deepEqual(saved.score,[3,2]);
+  assert.equal(saved.currentRound,0,'Should not advance the engine');
+  assert.equal(saved.viewRound,1);
+  assert.equal(saved.round1,false);
+  assert.equal(saved.modal,null);
+  const footer=await run(()=>{
+   document.querySelectorAll('.p5sm-card .scorehint')[1].click();
+   return Boolean(document.querySelector('#modal-a')&&window.P5App.getState().ui.modal?.type==='score');
+  });
+  assert.equal(footer,true,'Tap to Score footer must open modal');
+  const second=await run(()=>{
+   document.querySelector('#modal-a').value='4';document.querySelector('#modal-b').value='1';
+   document.querySelector('[data-act="modal-save"]').click();
+   return window.P5App.getState().rounds[1].matches.map(m=>({confirmed:m.confirmed,score:m.score}));
+  });
+  assert.equal(second.every(x=>x.confirmed),true);
+  assert.deepEqual(second.map(x=>x.score),[[3,2],[4,1]]);
+  const history=await run(()=>{
+   document.querySelector('#americano .roundbuttons [data-round="0"]').click();
+   document.querySelector('#americano .roundbuttons [data-round="1"]').click();
+   const s=window.P5App.getState();
+   return {view:s.viewRound,score:s.rounds[1].matches[0].score,confirmed:s.rounds[1].matches[1].confirmed};
+  });
+  assert.equal(history.view,1);
+  assert.deepEqual(history.score,[3,2]);
+  assert.equal(history.confirmed,true);
+  console.log('PASS Chrome: Round 2 court header/footer open score modal; 3-2 + 4-1 saved; Round 1 pending; navigation intact; upper arrows removed.');
+ }finally{
+  try{ws?.close();}catch{}
+  if(proc&&!proc.killed)proc.kill('SIGTERM');
+  server.close();
+ }
+}
+main().catch(e=>{console.error('FAIL Chrome score entry:',e.stack||e);process.exitCode=1;server.close();});

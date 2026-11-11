@@ -1,0 +1,25 @@
+name: PADEL 5IVE · Cloud Viewer Leaderboard Regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/phase5814/view-only-v5814.js'
+      - 'public/phase5814/view-only-v5814.css'
+      - 'scripts/phase5814-integrate.cjs'
+      - 'scripts/qa-cloud-viewer-regression.cjs'
+      - 'scripts/qa-v5814-view-only.cjs'
+      - '.github/workflows/qa-cloud-viewer-diagnosis.yml'
+jobs:
+  cloud-viewer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save jsdom@26
+      - run: node scripts/qa-cloud-viewer-regression.cjs
+      - run: node scripts/qa-v5814-view-only.cjs
+      - run: node scripts/qa-v5820-viewer-round-stability.cjs

@@ -38,7 +38,7 @@ function testCase(query,existingMode){
  const ctx={s:{stage:'setup',mode:existingMode},window:{__P54_PREVIEW_QUERY:null},
   location:{search:query},URLSearchParams,Date,Number,Set,Boolean,
   P5EngineRegistry:{modes:()=>modes},$:id=>fields[id]||null,
-  document:{querySelector:selector=>selector==='.p5-b2-form'?form:selector==='[data-act="setup-next"]'?button:null}};
+  document:{getElementById:id=>fields[id]||null,querySelector:selector=>selector==='.p5-b2-form'?form:selector==='[data-act="setup-next"]'?button:null}};
  vm.createContext(ctx);vm.runInContext(src,ctx);
  vm.runInContext('syncSetup();p54SelectedMode();',ctx);
  return {ctx,form,button,game,pair};

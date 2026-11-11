@@ -3680,7 +3680,7 @@ main.wrap>.header .brand-identity>div{flex:1 1 auto;min-width:0}
  display:grid!important;
  grid-template-columns:repeat(var(--p5-form-cols,18),minmax(0,1fr));
  gap:3px 2px!important;
- width:min(100%,calc(var(--p5-form-cols,18)*13px));
+ width:min(100%,var(--p5-form-target,234px));
  max-width:100%!important;
  margin:6px 0 2px;
  align-items:center;
@@ -5977,8 +5977,8 @@ window.P5UI=(function(){'use strict';
    return '<span class="form-dot form-'+color+'" title="Game '+ordinal+': '+name+'" aria-label="Game '+ordinal+': '+name+'"></span>';
   }).join('');
   const label=total>36?'Last 36 of '+total+' match results':total+' match results';
-  const recent='<div class="match-form p5-adaptive-form" style="--p5-form-cols:'+columns+'" role="group" aria-label="'+label+'">'+dots(visible,offset)+'</div>';
-  const all=total>36?'<details class="p5-form-history"><summary>View all '+total+' games</summary><div class="match-form p5-adaptive-form p5-form-all" style="--p5-form-cols:18" role="group" aria-label="All '+total+' match results">'+dots(history,0)+'</div></details>':'';
+  const recent='<div class="match-form p5-adaptive-form" style="--p5-form-cols:'+columns+';--p5-form-target:'+(columns*13)+'px" role="group" aria-label="'+label+'">'+dots(visible,offset)+'</div>';
+  const all=total>36?'<details class="p5-form-history"><summary>View all '+total+' games</summary><div class="match-form p5-adaptive-form p5-form-all" style="--p5-form-cols:18;--p5-form-target:234px" role="group" aria-label="All '+total+' match results">'+dots(history,0)+'</div></details>':'';
   return recent+all;
  }
  function standing(s){const rows=statistics(s),live=s.stage==='stage1',name=live?'LEADERBOARD':'FINAL LEADERBOARD',pill=live?'LIVE':'FINAL';

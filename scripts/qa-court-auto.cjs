@@ -72,4 +72,14 @@ assert.equal(ctx.s.pendingCourts,null);
 assert.equal(ctx.s.viewRound,3);
 assert.equal(JSON.stringify(ctx.s.rounds[19]),old20);
 assert.equal(JSON.stringify(ctx.s.rounds[23]),old24);
+// A selected running round with no score is also protected, even if PR27's original checkpoint lags behind.
+const pendingRound=structuredClone(rounds);
+for(let i=0;i<3;i++)for(const m of pendingRound[i].matches){m.confirmed=true;m.score=[3,2]}
+for(const m of pendingRound[3].matches){m.confirmed=false;m.score=null}
+const protectedLive=JSON.stringify(pendingRound[3]);
+ctx.s={mode:'fp-americano',stage:'stage1',courts:2,pendingCourts:null,currentRound:0,viewRound:3,rounds:pendingRound,roster,sitout:[],ui:{modal:{type:'courts'}},matchFormat:'total5'};
+vm.runInContext('changeCourt()',ctx);
+assert.equal(ctx.s.courts,3);
+assert.equal(JSON.stringify(ctx.s.rounds[3]),protectedLive,'selected unscored live round must not change');
+assert(ctx.s.rounds.slice(4,19).some(r=>r.matches.length===3),'future after selected live round uses new capacity');
 console.log('PASS PR29 AUTO: select 2→3 during partial R1 → save last score → automatic future reschedule; R4/R20/R24 preserved; viewRound unchanged; court 3 filled.');

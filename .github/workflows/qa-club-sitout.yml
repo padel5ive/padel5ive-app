@@ -1,0 +1,26 @@
+name: Club Match Sit Out QA
+on:
+  pull_request:
+    paths:
+      - "public/assets/p5-showdown-engine.js"
+      - "public/modes/club-match/index.html"
+      - "scripts/qa-club-sitout.cjs"
+      - ".github/workflows/qa-club-sitout.yml"
+  push:
+    branches: [main]
+    paths:
+      - "public/assets/p5-showdown-engine.js"
+      - "public/modes/club-match/index.html"
+      - "scripts/qa-club-sitout.cjs"
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: node scripts/qa-club-sitout.cjs
+      - run: npm run build
+      - run: node scripts/qa-club-sitout.cjs

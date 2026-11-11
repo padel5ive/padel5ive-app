@@ -2441,7 +2441,12 @@ body.sd-public-only .sr-cover-venue {
 </style>
 <style id="p54-shell-style">
 .p54-app-nav{position:relative;z-index:35;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(18px,env(safe-area-inset-right));background:#0a1621;border-bottom:1px solid rgba(210,178,132,.28);color:#d4b58c;letter-spacing:.12em;font-size:10px;font-weight:700}.p54-app-nav a{color:#e1c7a3;text-decoration:none;border-radius:6px;padding:5px 0}.p54-app-nav a:focus-visible{outline:2px solid #f1d5aa;outline-offset:5px}.p54-app-nav .p54-app-context{font-size:9px;color:#8e9eab;font-weight:500;letter-spacing:.1em}.p54-selected-mode{grid-column:1/-1;background:rgba(209,174,125,.06);border:1px solid rgba(209,174,125,.3);border-radius:12px;padding:13px 16px;display:flex;gap:12px;justify-content:space-between;align-items:center}.p54-selected-mode b{font-size:14px;color:#f1dfc3;display:block;margin-top:5px}.p54-selected-mode small{color:#d1af80;letter-spacing:.15em;font-size:9px;font-weight:700}.p54-selected-mode a{color:#d1b792;font-size:11px;text-decoration:underline;text-underline-offset:3px}.p54-home-nav:focus-visible{outline:2px solid #c9ab82}.p54-app-nav button{color:inherit}.p54-selected-mode a:focus-visible{outline:2px solid #d1af80;outline-offset:4px}@media(max-width:570px){.p54-app-nav{font-size:9px;padding:13px 20px}.p54-app-context{font-size:8px!important}.p54-back-label{display:none}.p54-selected-mode{align-items:flex-start;gap:5px;flex-direction:column}}@media print{.p54-app-nav{display:none!important}}
-</style><script defer src="/assets/p5-direct-pdf.js"></script><link rel="stylesheet" href="/assets/p5-reporting-foundation.css"><script defer src="/assets/p5-reporting-foundation.js"></script><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="PADEL 5IVE"><link rel="stylesheet" href="/pwa-standalone-layout-v5601.css"></head>
+</style><script defer src="/assets/p5-direct-pdf.js"></script><link rel="stylesheet" href="/assets/p5-reporting-foundation.css"><script defer src="/assets/p5-reporting-foundation.js"></script><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="PADEL 5IVE"><link rel="stylesheet" href="/pwa-standalone-layout-v5601.css"><style id="p5-club-sitout-v5825">
+.leaderboard-card .p5-sitout-name{appearance:none;background:none;border:0;color:inherit;font:inherit;font-weight:inherit;text-align:left;padding:0;cursor:pointer;letter-spacing:inherit;line-height:inherit}
+.leaderboard-card .p5-sitout-name:not(:disabled):hover{text-decoration:underline;text-underline-offset:3px}
+.leaderboard-card .p5-sitout-name:not(:disabled):focus-visible{outline:2px solid #be9a62;outline-offset:4px;border-radius:2px}
+.leaderboard-card .p5-sitout-name:disabled{cursor:default;opacity:1}
+</style></head>
 <body data-team-showdown-version="0.8.49-P54"><nav class="p54-app-nav" aria-label="PADEL 5IVE platform navigation"><a href="../../" class="p54-back-home" id="p54-home-link"><span aria-hidden="true">←</span> PADEL 5IVE <span class="p54-back-label">/ HOME</span></a><span class="p54-app-context">TEAM SHOWDOWN · v5.5.16</span></nav><div class="wrap">
 <header class="brand-banner master-brand"><div class="hero-scrim"></div><div class="hero-heading"><div class="brand-logo" role="img" aria-label="Original PADEL 5IVE logo"></div><div class="hero-titles"><div class="over">PADEL 5IVE</div><h1>TEAM SHOWDOWN</h1><div class="hero-sub">TWO TEAMS. ONE CHAMPION.</div></div></div><div class="hero-right"><div class="signature" aria-label="Beyond 5IVE. Beyond Play."><span>BEYOND <strong>5IVE.</strong></span><span>BEYOND PLAY.</span></div><div class="pill" id="headerStatus">SETUP</div></div></header>
 <div class="global-dock" aria-label="Tournament settings">
@@ -2610,12 +2615,12 @@ function verdict(state){const s1=stage1Stats(state);if(!s1.complete)return {stat
  return {status:'final-needed',points:{A:pA,B:pB}};
 }
 function roster(n,club){return Array.from({length:n},(_,i)=>({id:`${club}${i}`,name:'',players:[{id:`${club}${i}p1`,name:''},{id:`${club}${i}p2`,name:''}]}));}
-function newState(){return {version:1,stage:'setup',setup:{sessionName:'',date:'',clubs:{A:'',B:''},pairs:8,courts:5,format:'total5',teamColors:{A:'#77b7ec',B:'#d9ac72'}},roster:{A:roster(8,'A'),B:roster(8,'B')},schedule:[],activeWave:0,arrival:{A:Array(8).fill(true),B:Array(8).fill(true)},openingShuffle:0,stage2:null,stage3:null,finalized:false};}
+function newState(){return {version:1,stage:'setup',setup:{sessionName:'',date:'',clubs:{A:'',B:''},pairs:8,courts:5,format:'total5',teamColors:{A:'#77b7ec',B:'#d9ac72'}},roster:{A:roster(8,'A'),B:roster(8,'B')},schedule:[],activeWave:0,arrival:{A:Array(8).fill(true),B:Array(8).fill(true)},sitOut:{A:Array(8).fill(false),B:Array(8).fill(false)},openingShuffle:0,stage2:null,stage3:null,finalized:false};}
 function createMatches(state){const {pairs,courts,format}=state.setup;if(!checkSetup(pairs,courts,format))throw Error('Invalid event setup');if(!state.setup.clubs.A?.trim()||!state.setup.clubs.B?.trim())throw Error('Enter both team names');for(const c of ['A','B'])for(const p of state.roster[c])if(!p.players[0].name.trim()||!p.players[1].name.trim())throw Error('Enter every player name');
  // A round-robin fixture pool. Court numbers are live resources, NOT fixed match assignments.
  state.schedule=[generateSchedule(pairs,courts).flat().map(m=>({ ...m,court:null,wave:null,status:'pending',sequence:null,completedSequence:null }))];
  state.activeWave=0;state.dispatchSequence=0;state.stage='stage1';state.stage2=null;state.stage3=null;state.finalized=false;
- state.arrival={A:Array(pairs).fill(true),B:Array(pairs).fill(true)};state.openingShuffle=0;
+ state.arrival={A:Array(pairs).fill(true),B:Array(pairs).fill(true)};state.sitOut={A:Array(pairs).fill(false),B:Array(pairs).fill(false)};state.openingShuffle=0;
  fillAvailableCourts(state);return state;}
 
 /* Dynamic court dispatcher. A fixture is assigned when a physical court becomes free.
@@ -2646,7 +2651,7 @@ function previewNextMatches(state,limit=5){
    const turnaround=(gapA<=state.setup.courts?1:0)+(gapB<=state.setup.courts?1:0);
    return imbalance*10000+sum*400+turnaround*75-Math.min(30,gapA+gapB);
  };
- const takenA=new Set(),takenB=new Set(),remaining=pending.filter(m=>isArrived(state,m)),chosen=[];
+ const takenA=new Set(),takenB=new Set(),remaining=pending.filter(m=>isEligible(state,m)),chosen=[];
  const count=Math.min(Math.max(0,Math.floor(Number(limit)||0)),remaining.length);
  for(let i=0;i<count;i++){
    remaining.sort((a,b)=>{
@@ -2674,8 +2679,20 @@ function ensureArrival(state){
  if(!Number.isInteger(state.openingShuffle)||state.openingShuffle<0)state.openingShuffle=0;
  return state.arrival;
 }
+/* Stage 1 Sit Out: optional in old backups; distinct from Not Arrived. */
+function ensureSitOut(state){
+ const n=state.setup.pairs;
+ if(!state.sitOut||typeof state.sitOut!=='object')state.sitOut={};
+ for(const c of ['A','B']){
+  const old=Array.isArray(state.sitOut[c])?state.sitOut[c]:[];
+  state.sitOut[c]=Array.from({length:n},(_,i)=>old[i]===true);
+ }
+ return state.sitOut;
+}
+function pairIsSitOut(state,club,index){return ensureSitOut(state)[club]?.[index]===true;}
 function hasOpeningScore(state){return matchPool(state).some(m=>m.status==='completed'||m.scoreA!==null||m.scoreB!==null);}
 function isArrived(state,m){const a=ensureArrival(state);return a.A[m.a]!==false&&a.B[m.b]!==false;}
+function isEligible(state,m){return isArrived(state,m)&&!pairIsSitOut(state,'A',m.a)&&!pairIsSitOut(state,'B',m.b);}
 function seededDrawRank(a,b,seed){
  let x=(Math.imul(a+1,0x9e3779b9)^Math.imul(b+1,0x85ebca6b)^Math.imul(seed,0xc2b2ae35))|0;
  x^=x>>>16;x=Math.imul(x,0x7feb352d);x^=x>>>15;x=Math.imul(x,0x846ca68b);x^=x>>>16;return x>>>0;
@@ -2683,7 +2700,7 @@ function seededDrawRank(a,b,seed){
 function reshuffleOpening(state,increment=true){
  if(state.stage!=='stage1'||state.stage2||hasOpeningScore(state))throw Error('Reshuffle is available only before the first Round 1 result');
  ensureArrival(state);
- const readyA=state.arrival.A.filter(Boolean).length,readyB=state.arrival.B.filter(Boolean).length;
+ const readyA=state.arrival.A.filter((v,i)=>v&&!pairIsSitOut(state,'A',i)).length,readyB=state.arrival.B.filter((v,i)=>v&&!pairIsSitOut(state,'B',i)).length;
  if(increment&&(readyA<1||readyB<1))throw Error('Mark at least one pair from each team Ready before reshuffling');
  const before=liveCourts(state).map(m=>m.id).join('|');
  const all=matchPool(state);
@@ -2700,6 +2717,14 @@ function reshuffleOpening(state,increment=true){
    }
  }
  return liveCourts(state);
+}
+function setPairSitOut(state,club,index,sitOut){
+ if(state.stage!=='stage1'||state.stage2||!['A','B'].includes(club)||!Number.isInteger(index)||index<0||index>=state.setup.pairs||typeof sitOut!=='boolean')throw Error('Sit Out is available only for registered pairs in Stage 1');
+ ensureSitOut(state)[club][index]=sitOut;
+ // Active games are preserved; only future court assignments are filtered.
+ const activeMatch=liveCourts(state).some(m=>m[club==='A'?'a':'b']===index);
+ fillAvailableCourts(state);
+ return {sitOut,activeMatch};
 }
 function toggleArrival(state,club,index){
  if(state.stage!=='stage1'||!['A','B'].includes(club)||!Number.isInteger(index)||index<0||index>=state.setup.pairs)throw Error('Invalid arrival selection');
@@ -2730,7 +2755,7 @@ function dispatchMatching(state,freeCount,busyA,busyB){
    prior.A[m.a].push(seq);prior.B[m.b].push(seq);
  }
  const current=(state.dispatchSequence||0)+1,remaining={A:Array(n).fill(0),B:Array(n).fill(0)};
- const pending=pendingMatches(state).filter(m=>isArrived(state,m)&&!busyA.has(m.a)&&!busyB.has(m.b));
+ const pending=pendingMatches(state).filter(m=>isEligible(state,m)&&!busyA.has(m.a)&&!busyB.has(m.b));
  for(const m of pending){remaining.A[m.a]++;remaining.B[m.b]++;}
  const minA=Math.min(...counts.A),minB=Math.min(...counts.B);
  function burden(side,index){
@@ -2895,6 +2920,7 @@ function validateSavedState(s){
  const t=s.setup;if(!t||!t.clubs||typeof t.clubs.A!=='string'||typeof t.clubs.B!=='string'||typeof t.date!=='string'||!(checkSetup(t.pairs,t.courts,t.format)||(s.stage==='setup'&&t.format===''&&Number.isInteger(t.pairs)&&t.pairs>=1&&t.pairs<=MAX_PAIRS&&Number.isInteger(t.courts)&&t.courts>=1&&t.courts<=MAX_COURTS&&Array.isArray(s.schedule)&&s.schedule.length===0)))return false;
  if(t.teamColors!==undefined&&(!t.teamColors||!['A','B'].every(c=>typeof t.teamColors[c]==='string'&&/^#[0-9a-fA-F]{6}$/.test(t.teamColors[c]))))return false;
  if(!s.roster||!['A','B'].every(c=>Array.isArray(s.roster[c])&&s.roster[c].length===t.pairs&&s.roster[c].every(p=>Array.isArray(p.players)&&p.players.length===2&&p.players.every(x=>typeof x.id==='string'&&typeof x.name==='string'))))return false;
+ if(s.sitOut!==undefined&&(!s.sitOut||!['A','B'].every(c=>Array.isArray(s.sitOut[c])&&s.sitOut[c].length===t.pairs&&s.sitOut[c].every(x=>typeof x==='boolean'))))return false;
  if(!Array.isArray(s.schedule)||s.schedule.length>t.pairs*t.pairs)return false;
  if(!Number.isInteger(s.activeWave)||s.activeWave<0||s.activeWave>Math.max(0,s.schedule.length-1))return false;
  const used=new Set(),onCourtA=new Set(),onCourtB=new Set(),courts=new Set();let count=0;
@@ -2938,7 +2964,7 @@ function validateSavedState(s){
  if(s.stage3&&!checkRestoredDuels(stage3Matches(s),s.stage3.format))return false;
  return true;
 }
-return {MAX_PAIRS,MAX_COURTS,formats,fmt,ensureArrival,toggleArrival,reshuffleOpening,hasOpeningScore,checkSetup,validateSavedState,generateSchedule,stage1Stats,stage2Stats,stage3Stats,stage3Matches,stage3AssignedPlayers,stage3DuplicateAssignments,stage3Match,verdict,allowedDuels,roster,newState,createMatches,matchPool,liveCourts,pendingMatches,courtStatus,fillAvailableCourts,previewNextMatches,assignCourtResult,amendCourtResult,migrateLegacySchedule,validateScore,scoreMatch,isValidLineup,setStage1Result,makeStage2,stage2AssignedPlayers,assertStage2DuelAvailable,stage2DuplicateAssignments,clearDuelLineup,setDuelLineup,setDuelScore,startFinal,setFinalLineup,setFinalScore,clearFinalLineup};
+return {MAX_PAIRS,MAX_COURTS,formats,fmt,ensureArrival,ensureSitOut,pairIsSitOut,setPairSitOut,toggleArrival,reshuffleOpening,hasOpeningScore,checkSetup,validateSavedState,generateSchedule,stage1Stats,stage2Stats,stage3Stats,stage3Matches,stage3AssignedPlayers,stage3DuplicateAssignments,stage3Match,verdict,allowedDuels,roster,newState,createMatches,matchPool,liveCourts,pendingMatches,courtStatus,fillAvailableCourts,previewNextMatches,assignCourtResult,amendCourtResult,migrateLegacySchedule,validateScore,scoreMatch,isValidLineup,setStage1Result,makeStage2,stage2AssignedPlayers,assertStage2DuelAvailable,stage2DuplicateAssignments,clearDuelLineup,setDuelLineup,setDuelScore,startFinal,setFinalLineup,setFinalScore,clearFinalLineup};
 });
 
 </script><script>
@@ -2971,7 +2997,7 @@ const app=document.getElementById('app');
   }else if(intent==='archive'){
    const id=q.get('id'),entry=p54ClubArchiveList().find(e=>e.id===id);
    if(entry&&E.validateSavedState(entry.state)&&p54ClubArchiveCurrent()){
-    state=E.migrateLegacySchedule(JSON.parse(JSON.stringify(entry.state)));E.ensureArrival(state);save();
+    state=E.migrateLegacySchedule(JSON.parse(JSON.stringify(entry.state)));E.ensureArrival(state);E.ensureSitOut(state);save();
     const rest=p54ClubArchiveList().filter(e=>e.id!==id);localStorage.setItem(P54_CLUB_ARCHIVE_KEY,JSON.stringify(rest));
    }else if(!entry)alert('Saved Club Match session was not found.');
    (void 0);
@@ -2988,7 +3014,7 @@ function save(){if(viewOnly)return;try{localStorage.setItem(KEY,JSON.stringify(s
 function freshState(){const s=E.newState();s.setup.format='';s.setup.formatManuallySelected=false;s.setup.pairsManuallySelected=false;s.setup.courtsManuallySelected=false;return s;}
 function isUnstartedBlankSetup(s){return s.stage==='setup'&&Array.isArray(s.schedule)&&s.schedule.length===0;}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||localStorage.getItem('padel5ive-team-showdown-state-v2')||localStorage.getItem(LEGACY_KEY));if(E.validateSavedState(v)){
- const restored=E.migrateLegacySchedule(v);E.ensureArrival(restored);
+ const restored=E.migrateLegacySchedule(v);E.ensureArrival(restored);E.ensureSitOut(restored);
  // v0.8.7/earlier stored the old engine default. Clear it on a truly blank setup.
  if(isUnstartedBlankSetup(restored)){
   if(restored.setup.formatManuallySelected!==true)restored.setup.format='';
@@ -3008,17 +3034,17 @@ function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||localStorage.g
  }}catch(e){console.warn('Saved Team Showdown unavailable',e);}return freshState();}
 function notify(msg,error=false){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.borderColor=error?'#d97870':'#ac8757';clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>el.style.display='none',3500);}
 // v0.8.35: all destructive actions and Restore use in-page confirmations (iOS-safe).
-let pendingConfirmation=null;
+let pendingConfirmation=null,pendingConfirmationStay=false;
 function hideConfirmation(){
  const layer=document.getElementById('confirmLayer');
  if(layer)layer.hidden=true;
  document.body.classList.remove('showdown-confirm-open');
  pendingConfirmation=null;
 }
-function confirmAction(msg,fn){
+function confirmAction(msg,fn,stay=false){
  const layer=document.getElementById('confirmLayer');
  if(!layer){notify('Confirmation dialog unavailable',true);return;}
- pendingConfirmation=fn;
+ pendingConfirmation=fn;pendingConfirmationStay=stay;
  document.getElementById('confirmMessage').textContent=msg;
  // v0.8.35: accurate action-specific confirmations for every stage and Restore.
  let title='Confirm Action',approve='Confirm';
@@ -3027,6 +3053,8 @@ function confirmAction(msg,fn){
  else if(msg.startsWith('Reset')){const stage=msg.match(/Stage [123]/i)?.[0];title=stage?`Reset ${stage}`:'Reset Scores';approve='Reset Scores';}
  else if(msg.startsWith('Cancel')){const stage=msg.match(/Stage [123]/i)?.[0];title=stage?`Cancel ${stage}`:'Cancel Stage';approve=title;}
  else if(msg.startsWith('Clear')){title='Clear Lineup';approve='Clear Lineup';}
+ else if(msg.startsWith('Set Sit Out')){title='Pair Availability';approve='SET SIT OUT';}
+ else if(msg.startsWith('Return to Play')){title='Pair Availability';approve='RETURN TO PLAY';}
  document.getElementById('confirmTitle').textContent=title;
  document.getElementById('confirmApprove').textContent=approve;
  layer.hidden=false;
@@ -3034,10 +3062,10 @@ function confirmAction(msg,fn){
  document.getElementById('confirmCancel').focus({preventScroll:true});
 }
 function resolveConfirmation(approved){
- const fn=pendingConfirmation;
- hideConfirmation();
+ const fn=pendingConfirmation,stay=pendingConfirmationStay;
+ hideConfirmation();pendingConfirmationStay=false;
  if(!approved||!fn)return;
- try{fn();save();render();closeMenu();window.scrollTo?.(0,0);notify('Changes applied');}
+ try{fn();save();render();closeMenu();if(!stay)window.scrollTo?.(0,0);notify('Changes applied');}
  catch(e){notify(e.message||String(e),true);}
 }
 function closeMenu(){const el=document.getElementById('mainMenu');if(!el)return;el.open=false;el.querySelectorAll?.('details[open]').forEach(d=>d.open=false);}
@@ -3149,7 +3177,7 @@ function leaderboard(){const st=E.stage1Stats(state),rows=st.overallRanking;
  const filters=[{id:'ALL',label:'ALL'},{id:'A',label:club('A')},{id:'B',label:club('B')}];
  return `<section class="card leaderboard-card" data-unified-leaderboard><div class="stage-label"><div><h2>LIVE STANDINGS</h2><p class="muted">Overall rankings · ${st.overallRanking.length} pairs</p></div><span class="badge">WINS → DIFF → P</span></div>
  <div class="leaderboard-filters" role="group" aria-label="Filter leaderboard by team">${filters.map(f=>`<button type="button" data-action="filter-leaderboard" data-value="${f.id}" class="leaderboard-filter ${leaderboardFilter===f.id?'active':''}" aria-pressed="${leaderboardFilter===f.id?'true':'false'}">${f.id==='ALL'?'':`<i class="team-dot" style="--team-accent:${teamColor(f.id)}"></i>`}${esc(f.label)}</button>`).join('')}</div>
- <div class="table-scroll"><table class="unified-table live-standings"><colgroup><col class="col-pair"><col class="col-wlt"><col class="col-diff"><col class="col-points"><col class="col-games"></colgroup><thead><tr><th>NAME / FORM</th><th>W–L–T</th><th>DIFF</th><th>P</th><th>G</th></tr></thead><tbody>${rows.map(p=>`<tr data-ranked-team="${p.team}" data-global-rank="${p.rank}" ${leaderboardFilter!=='ALL'&&p.team!==leaderboardFilter?'hidden':''}><td class="pair-cell"><div class="ranked-pair" style="--team-accent:${teamColor(p.team)}"><i class="team-stripe" aria-hidden="true"></i><div class="ranked-pair-details"><strong><span class="rank">${p.rank}.</span> ${esc(pairName(p.team,p.index))}</strong><small>${esc(club(p.team))}</small>${formDotsHTML(p.team,p.index)}</div></div></td><td class="wlt-cell">${p.w}–${p.l}–${p.d}</td><td>${p.diff>0?'+':''}${p.diff}</td><td>${p.p}</td><td>${p.played}</td></tr>`).join('')}</tbody></table></div>
+ <div class="table-scroll"><table class="unified-table live-standings"><colgroup><col class="col-pair"><col class="col-wlt"><col class="col-diff"><col class="col-points"><col class="col-games"></colgroup><thead><tr><th>NAME / FORM</th><th>W–L–T</th><th>DIFF</th><th>P</th><th>G</th></tr></thead><tbody>${rows.map(p=>`<tr data-ranked-team="${p.team}" data-global-rank="${p.rank}" ${leaderboardFilter!=='ALL'&&p.team!==leaderboardFilter?'hidden':''}><td class="pair-cell"><div class="ranked-pair" style="--team-accent:${teamColor(p.team)}"><i class="team-stripe" aria-hidden="true"></i><div class="ranked-pair-details"><strong><span class="rank">${p.rank}.</span> <button type="button" class="p5-sitout-name" data-action="pair-sitout" data-club="${p.team}" data-value="${p.index}" ${state.stage!=='stage1'||state.stage2||viewOnly||window.P5CloudSession?.getStatus?.().role==='viewer'?'disabled':''} aria-label="Manage Sit Out for ${esc(pairName(p.team,p.index))}">${esc(pairName(p.team,p.index))}</button></strong><small>${esc(club(p.team))}${E.pairIsSitOut(state,p.team,p.index)?' · SIT OUT':''}</small>${formDotsHTML(p.team,p.index)}</div></div></td><td class="wlt-cell">${p.w}–${p.l}–${p.d}</td><td>${p.diff>0?'+':''}${p.diff}</td><td>${p.p}</td><td>${p.played}</td></tr>`).join('')}</tbody></table></div>
  <p class="standings-legend">G = Games played · <span class="form-dot form-w">W</span> Win · <span class="form-dot form-t">T</span> Tie · <span class="form-dot form-l">L</span> Loss. Rank: Wins → DIFF → P.</p><div class="rank-note">Rankings stay global when filtered.</div></section>`;}
 function courtHTML(match){
  const f=E.fmt(state.setup.format),pA=pairName('A',match.a),pB=pairName('B',match.b);const rounds=assignedRounds(),round=rounds.findIndex(r=>r.includes(match))+1;
@@ -3743,7 +3771,7 @@ function printReport(){
  document.getElementById('printArea').innerHTML=pages.map((p,i)=>p.replace('<span class="pr-page-counter"></span>',`<span class="pr-page-counter">${String(i+1).padStart(2,'0')} / ${String(count).padStart(2,'0')}</span>`)).join('');
  window.print();
 }
-async function loadPublic(){const m=location.pathname.match(/^\/r\/([a-zA-Z0-9_-]{6,32})\/?$/);if(!m)return;viewOnly=true;document.body.classList.add('sd-public-only');try{const res=await fetch('/api/results?id='+encodeURIComponent(m[1]),{cache:'no-store'});if(!res.ok)throw Error(res.status===404?'Results not found':'Sharing server error');const d=await res.json();if(d.schema!=='padel5ive-team-showdown-results-v1')throw Error('Invalid shared results');const imported={...state,...d,version:1,activeWave:0,finalized:false};if(!E.validateSavedState(imported))throw Error('Corrupted shared results');state=E.migrateLegacySchedule(imported);render();}catch(e){app.innerHTML=`<section class="card"><h2>Results unavailable</h2><p class="error">${esc(e.message)}</p></section>`;}}
+async function loadPublic(){const m=location.pathname.match(/^\/r\/([a-zA-Z0-9_-]{6,32})\/?$/);if(!m)return;viewOnly=true;document.body.classList.add('sd-public-only');try{const res=await fetch('/api/results?id='+encodeURIComponent(m[1]),{cache:'no-store'});if(!res.ok)throw Error(res.status===404?'Results not found':'Sharing server error');const d=await res.json();if(d.schema!=='padel5ive-team-showdown-results-v1')throw Error('Invalid shared results');const imported={...state,...d,version:1,activeWave:0,finalized:false};if(!E.validateSavedState(imported))throw Error('Corrupted shared results');state=E.migrateLegacySchedule(imported);E.ensureSitOut(state);render();}catch(e){app.innerHTML=`<section class="card"><h2>Results unavailable</h2><p class="error">${esc(e.message)}</p></section>`;}}
 
 let pendingDuelReview=null;
 function validateLineupSelected(kind,id){
@@ -3996,6 +4024,16 @@ case 'cancel-stage1-amend':{
 }
 case 'jump-leaderboard':document.querySelector('[data-unified-leaderboard]')?.scrollIntoView({behavior:'smooth',block:'start'});break;
 
+case 'pair-sitout':{
+ if(window.P5CloudSession?.getStatus?.().role==='viewer')throw Error('View Only cannot edit pair availability');
+ const side=btn.dataset.club,index=Number(value);
+ if(!['A','B'].includes(side)||!Number.isInteger(index)||index<0||index>=state.setup.pairs)throw Error('Unknown pair');
+ if(state.stage!=='stage1'||state.stage2)throw Error('Sit Out is available only during Stage 1');
+ const next=!E.pairIsSitOut(state,side,index),name=pairName(side,index);
+ const message=next?'Set Sit Out · '+name+'? An active court match will finish; pending unique fixtures are retained.':'Return to Play · '+name+'? Unplayed fixtures rejoin automatic catch-up scheduling.';
+ confirmAction(message,()=>{E.setPairSitOut(state,side,index,next);pendingResult=null;},true);
+ break;
+}
 case 'filter-leaderboard':if(['ALL','A','B'].includes(value)){leaderboardFilter=value;applyLeaderboardFilter();}break;
 case 'view-round':roundDrawerOpen=true;inspectedRound=Number(value);render();document.querySelector('.rounds-drawer')?.scrollIntoView({block:'nearest'});break;
 case 'latest-round':inspectedRound=null;roundDrawerOpen=true;render();break;
@@ -4112,7 +4150,7 @@ document.addEventListener('input',e=>{const el=e.target;if(el.matches('[data-fie
 document.addEventListener('change',e=>{const el=e.target;if(el.matches('[data-lineup]'))refreshStage2LineupOptions(el.dataset.lineup);if(el.matches('[data-field="format"],[data-field="date"],[data-field="pairs"]')){setField(el);const wrap=el.closest('.setup-invalid');if(wrap){wrap.classList.remove('setup-invalid');wrap.querySelector('.setup-field-error')?.remove();el.removeAttribute('aria-invalid');}}});
 // Scores are committed ONLY by Finish Match, never on field blur; prevents double-dispatch.
 
-document.getElementById('restoreInput').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const obj=JSON.parse(await file.text());if(!E.validateSavedState(obj))throw Error('Invalid or unsupported Team Showdown backup');confirmAction('Restore this backup and replace the current Team Showdown? The current session will be overwritten.',()=>{state=E.migrateLegacySchedule(obj);viewOnly=false;editRoster=false;rosterBeforeEdit=null;shareId=null;localStorage.removeItem('padel5ive-showdown-share-id');setupStep='session';registrationSide='A';roundDrawerOpen=false;inspectedRound=null;pendingResult=null;pendingDuelReview=null;});}catch(err){notify(err.message||'Invalid backup',true);}e.target.value='';});
+document.getElementById('restoreInput').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const obj=JSON.parse(await file.text());if(!E.validateSavedState(obj))throw Error('Invalid or unsupported Team Showdown backup');confirmAction('Restore this backup and replace the current Team Showdown? The current session will be overwritten.',()=>{state=E.migrateLegacySchedule(obj);E.ensureSitOut(state);viewOnly=false;editRoster=false;rosterBeforeEdit=null;shareId=null;localStorage.removeItem('padel5ive-showdown-share-id');setupStep='session';registrationSide='A';roundDrawerOpen=false;inspectedRound=null;pendingResult=null;pendingDuelReview=null;});}catch(err){notify(err.message||'Invalid backup',true);}e.target.value='';});
 try{shareId=localStorage.getItem('padel5ive-showdown-share-id')||null;}catch(e){}
 render();loadPublic();
 })();

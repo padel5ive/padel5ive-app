@@ -24,6 +24,8 @@ const created=await call('create',{kind:'unified',data:state});
 assert.equal(created.status,201);
 const owner=created.body,auth={code:owner.code,token:owner.token};
 assert.equal(owner.role,'controller');
+assert.equal((await call('release-control',auth)).status,409,'PIN Moderator cannot release without a verified transfer');
+assert.equal((await call('approve-control',auth)).status,409,'PIN Moderator cannot approve an unverified transfer');
 assert.match(owner.moderatorPin,/^\d{4}$/);
 // WhatsApp background suspends all JavaScript timers: no heartbeat for >5 minutes.
 clock+=5*60_000;

@@ -247,6 +247,26 @@ function viewerSessionSummary(){
  const description=$(':scope > p',panel);
  if(description)replaceText(description,'Browse the full match schedule and confirmed results. Only the active moderator can change scores.');
 }
+/* Native standings names are management buttons in the controller.
+ * Viewer guard hides those buttons; mirror their text as passive spans so
+ * ranks never become blank while retaining the original editing blockade.
+ * No server data or local session state is modified here.
+ */
+function viewerLeaderboardNames(){
+ if(kind!=='unified')return;
+ for(const button of $('#americano .p5-b41-leaderboard button[data-act="manage-participant"]')){
+  let passive=button.nextElementSibling;
+  if(!passive||!passive.classList.contains('p5814-standing-name')){
+   passive=make('span','p5814-standing-name');
+   passive.setAttribute('role','text');
+   button.insertAdjacentElement('afterend',passive);
+  }
+  const copy=button.cloneNode(true);
+  $('.p5-sitout-indicator',copy).forEach(el=>el.remove());
+  const text=copy.textContent.replace(/\s+/g,' ').trim();
+  if(passive.textContent!==text)passive.textContent=text;
+ }
+}
 function actions(){
  const roots=kind==='unified'?[$('#americano')]:[$('#app'),$('#mainMenu')];
  const attr=kind==='unified'?'act':'action';
@@ -286,7 +306,8 @@ function restore(){
  $$('.p5814-view-menu').forEach(x=>x.remove());
  showAllControls();
  $$('.p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-master-menu-hidden'));
- $$('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
+ $('.p5814-standing-name').forEach(x=>x.remove());
+ $('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
  $$('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }
 function run(){
@@ -295,7 +316,7 @@ function run(){
   if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
   return;
  }
- promoteCloud();menuView();scoreViewer();viewerSessionSummary();hideViewerDiagnostics();actions();
+ promoteCloud();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();
 }
 function schedule(){
  if(queued)return;

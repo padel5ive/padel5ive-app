@@ -199,10 +199,22 @@ for(let seed=1;seed<=10;seed++){
 }
 assert(firstRoundDraws.size>=7,'Fixed Mexicano opening draw lacks meaningful shuffle variety');
 
+
+const individualOpeningDraws=new Set();
+for(let seed=1;seed<=10;seed++){
+ const s=make('individual-mexicano',12,2);
+ const rankings=s.roster.map(p=>({id:p.id}));
+ const draw=env.P5EngineIndividualMX.next(s,rankings,rand(seed));
+ individualOpeningDraws.add(draw.matches.map(m=>fixture(...m.teams)).sort().join('|'));
+ assert(draw.matches.every(m=>!m.confirmed&&m.score===null),'Initial Mexicano score not blank');
+}
+assert(individualOpeningDraws.size>=7,'Individual Mexicano opening remains dependent on registration rank');
+
 // Stage 2 regression from full audit: Sit Out must be excluded from both the
 // qualification UI and the canonical KO start API, not just initial selection.
 scriptAt('window.P5KO=(function');
 execute(fs.readFileSync('public/assets/p5-ko-qualification-sitout-guard.js','utf8'),'KO Sit Out external guard');
+execute(fs.readFileSync('public/assets/p5-mexicano-individual-opening-lab.js','utf8'),'Mexicano Individual first draw adapter');
 env.P5UI={statistics:s=>s.roster.map(p=>({id:p.id}))};
 let koSitoutGuards=0;
 for(const mode of ['fp-americano','fp-mexicano','individual-americano','individual-mexicano']){
@@ -236,5 +248,5 @@ console.log(JSON.stringify({
  dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,
  observedDynamicMaximumGamesGap:maxDynamicGap,
  protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards,coachDiversityCases,worstCoachOpponentEncounter,minCoachUniqueOpponents,
- fixedMexFirstRoundUniqueDraws:firstRoundDraws.size
+ fixedMexFirstRoundUniqueDraws:firstRoundDraws.size,individualMexFirstRoundUniqueDraws:individualOpeningDraws.size
 }));

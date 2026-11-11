@@ -95,11 +95,21 @@ async function main(){
   assert.equal(nav.cardAction,'score','Court tile must open scoring');
   assert.equal(nav.role,false,'Must test editable controller session');
   const opened=await run(()=>{
-   document.querySelector('.p5sm-card h3').click();
-   return {modal:window.P5App.getState().ui.modal?.type,
-    a:!!document.querySelector('#modal-a'),b:!!document.querySelector('#modal-b')};
+   const errors=[];window.addEventListener('error',event=>errors.push(event.message));
+   const card=document.querySelector('.p5sm-card');
+   let clicks=[];
+   document.addEventListener('click',event=>clicks.push({tag:event.target.tagName,act:event.target.closest('[data-act]')?.dataset.act}),true);
+   card.querySelector('h3').click();
+   const state=window.P5App.getState();
+   return {modal:state.ui.modal?.type,
+    a:!!document.querySelector('#modal-a'),b:!!document.querySelector('#modal-b'),
+    debug:{errors,clicks,toast:document.getElementById('toast')?.textContent,stage:state.stage,
+      view:state.viewRound,mode:state.mode,hasMatch:state.rounds[state.viewRound]?.matches[0]?.id,
+      card:card.getAttribute('data-act'),button:card.querySelector('button')?.getAttribute('data-act'),
+      modalState:state.ui.modal}};
   });
-  assert.deepEqual(opened,{modal:'score',a:true,b:true},'Court header opens native score modal');
+  if(opened.modal!=='score'||!opened.a||!opened.b)console.log('Court tap diagnostic:',JSON.stringify(opened.debug));
+  assert.deepEqual({modal:opened.modal,a:opened.a,b:opened.b},{modal:'score',a:true,b:true},'Court header opens native score modal');
   const saved=await run(()=>{
    document.querySelector('#modal-a').value='3';document.querySelector('#modal-b').value='2';
    document.querySelector('[data-act="modal-save"]').click();

@@ -1,0 +1,18 @@
+name: Cloud Viewer Leaderboard Diagnosis
+on:
+  pull_request:
+    paths:
+      - 'scripts/qa-cloud-viewer-debug-inspect.cjs'
+      - '.github/workflows/qa-cloud-viewer-diagnosis.yml'
+      - 'scripts/qa-cloud-viewer-regression.cjs'
+      - 'public/phase58/cloud-dashboard.js'
+      - 'public/phase58/cloud-home.js'
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/qa-cloud-viewer-debug-inspect.cjs

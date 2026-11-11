@@ -3561,8 +3561,8 @@ main.wrap>.header .brand-identity>div{flex:1 1 auto;min-width:0}
 #americano .p5-b2-setup .p5-b2-form > label:has(#setup-date){grid-column:1/-1!important;min-width:0!important;}
 #americano .p5-b2-setup .p5-b2-form > label:has(#setup-courts){grid-column:1!important;}
 #americano .p5-b2-setup .p5-b2-form > label:has(#setup-format){grid-column:2!important;}
-#americano .p5-b2-setup .p5-b2-form > label:has(#setup-game),
-#americano .p5-b2-setup .p5-b2-form > label:has(#setup-pairing){display:none!important;}
+#americano .p5-b2-setup .p5-b2-form.p54-mode-locked > label:has(#setup-game),
+#americano .p5-b2-setup .p5-b2-form.p54-mode-locked > label:has(#setup-pairing){display:none!important;}
 #americano .p5-b2-setup .p5-b2-form > label{min-width:0!important;width:100%!important;}
 #americano .p5-b2-setup .p5-b2-date-wrap{width:100%!important;min-height:50px!important;height:50px!important;border-radius:11px!important;background:#111d29!important;border-color:rgba(210,196,170,.32)!important;padding:0 15px!important;}
 #americano .p5-b2-setup .p5-b2-form select,
@@ -7380,17 +7380,25 @@ Rounds: ${roundCount} · Confirmed: ${P5UI.done(s)} / ${P5UI.total(s)}`;
   }else if(candidate&&s.stage==='setup'&&!s.mode){s.mode=candidate.id;save();}
  }
  function p54SelectedMode(){
-  const q=new URLSearchParams(window.__P54_PREVIEW_QUERY || location.search),game=q.get('mode'),pair=q.get('pairing');
-  if(s.stage!=='setup'||!['Americano','Mexicano'].includes(game)||!['fixed','flexible','structured'].includes(pair))return;
+  if(s.stage!=='setup')return;
+  const q=new URLSearchParams(window.__P54_PREVIEW_QUERY || location.search);
+  const requestedGame=q.get('mode'),requestedPair=q.get('pairing');
+  const requestedKind=requestedPair==='flexible'?'individual':requestedPair;
+  const modes=P5EngineRegistry.modes();
+  const fromLink=modes.find(x=>x.game===requestedGame&&(requestedKind==='structured'?x.id==='structured-'+requestedGame.toLowerCase():x.kind===requestedKind&&!x.id.startsWith('structured-')));
+  // A branch preview, deep link or PWA navigation may omit the landing query.
+  // Recover the selected engine from the existing setup state; otherwise show
+  // the native Game Mode / Pairing Style selectors instead of hiding required
+  // fields and leaving Continue permanently disabled.
+  const selected=fromLink||modes.find(x=>x.id===s.mode);
   const selectGame=$('setup-game'),selectPair=$('setup-pairing'),form=document.querySelector('.p5-b2-form');
-  if(!selectGame||!selectPair||!form)return;
-  selectGame.value=game;
-  // Original sync rebuilds pairing options: run it before hiding the controls.
-  syncSetup();selectPair.value=pair==='flexible'?'individual':pair;
-  syncSetup();
-  selectGame.closest('label').style.display='none';selectPair.closest('label').style.display='none';
-  const label={fixed:'Fixed Partner',flexible:'Flexible Pairing',structured:'Structured Pairing'}[pair];
-  form.insertAdjacentHTML('afterbegin','<div class="p54-selected-mode"><div><small>SELECTED GAME MODE</small><b>'+game+' · '+label+'</b></div><a href="../../#setup">Change mode</a></div>');
+  if(!selectGame||!selectPair||!form||!selected)return;
+  const kind=selected.id.startsWith('structured-')?'structured':selected.kind;
+  selectGame.value=selected.game;
+  syncSetup();selectPair.value=kind;syncSetup();
+  form.classList.add('p54-mode-locked');
+  const label=kind==='structured'?'Structured Pairing':kind==='individual'?'Flexible Pairing':'Fixed Partner';
+  form.insertAdjacentHTML('afterbegin','<div class="p54-selected-mode"><div><small>SELECTED GAME MODE</small><b>'+selected.game+' · '+label+'</b></div><a href="../../#setup">Change mode</a></div>');
  }
  function init(){load();p54IntegrationBoot();attach();render();}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

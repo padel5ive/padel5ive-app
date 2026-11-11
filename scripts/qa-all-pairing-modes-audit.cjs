@@ -197,12 +197,22 @@ for(const incident of [
 // encounter a broad mix of opponents instead of repeatedly facing one player.
 // Metrics intentionally reported without pretending zero repetition is possible.
 let coachDiversityCases=0,worstCoachOpponentEncounter=0,minCoachUniqueOpponents=Infinity;
+let coachPairingImproved=0;
 for(const mode of ['individual-americano','individual-mexicano']){
  for(const seed of [41,97,133]){
   const s=make(mode,18,3,{fixedEnabled:true,pairs:[[2,3]],coachEnabled:true,coachIds:[1]});
   const opponents=new Map(),randSeed=rand(seed+(mode==='individual-mexicano'?2000:0));
   for(let r=0;r<10;r++){
    const rankings=s.roster.map((p,i)=>({id:p.id,points:(i*7+r*3)%23}));
+   const before=JSON.stringify(s.rounds);
+   const source=preCoachNativeCreate(s,s.rounds,rand(seed*10000+r+777),rankings);
+   const enhanced=env.P5HistorySmart.create(s,s.rounds,rand(seed*10000+r+777),rankings);
+   const partnerSet=rd=>rd.matches.filter(Boolean).flatMap(m=>m.teams.map(t=>key(...t))).sort().join('|');
+   const played=rd=>rd.matches.filter(Boolean).flatMap(m=>m.teams.flat()).sort((a,b)=>a-b).join(',');
+   assert.equal(partnerSet(enhanced),partnerSet(source),'Coach optimizer changed historical teammate assignment');
+   assert.equal(played(enhanced),played(source),'Coach optimizer changed selected players/rests');
+   assert.equal(JSON.stringify(s.rounds),before,'Coach optimizer rewrote old scores');
+   if(enhanced.coachOpponentDiversityOptimized)coachPairingImproved++;
    const rd=env.P5AdvancedRules.makeRound(s,s.rounds,randSeed,rankings);
    const coachMatch=rd.matches.find(m=>m.teams.flat().includes(1));
    assert(coachMatch,'Coach missed required active round');
@@ -243,6 +253,8 @@ assert(individualOpeningDraws.size>=7,'Individual Mexicano opening remains depen
 scriptAt('window.P5KO=(function');
 execute(fs.readFileSync('public/assets/p5-ko-qualification-sitout-guard.js','utf8'),'KO Sit Out external guard');
 execute(fs.readFileSync('public/assets/p5-mexicano-individual-opening-lab.js','utf8'),'Mexicano Individual first draw adapter');
+const preCoachNativeCreate=env.P5HistorySmart.create;
+execute(fs.readFileSync('public/assets/p5-coach-opponent-diversity-lab.js','utf8'),'Coach opponent diversity adapter');
 env.P5UI={statistics:s=>s.roster.map(p=>({id:p.id}))};
 let koSitoutGuards=0;
 for(const mode of ['fp-americano','fp-mexicano','individual-americano','individual-mexicano']){
@@ -276,6 +288,6 @@ console.log(JSON.stringify({
  productionFairCycles:certifiedNormalCycles,productionFairCyclePlayers:certifiedNormalPlayers,
  dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,
  observedDynamicMaximumGamesGap:maxDynamicGap,
- protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards,coachDiversityCases,worstCoachOpponentEncounter,minCoachUniqueOpponents,
+ protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards,coachDiversityCases,coachPairingImproved,worstCoachOpponentEncounter,minCoachUniqueOpponents,
  fixedMexFirstRoundUniqueDraws:firstRoundDraws.size,individualMexFirstRoundUniqueDraws:individualOpeningDraws.size
 }));

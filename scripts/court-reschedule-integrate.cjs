@@ -22,7 +22,7 @@ const helper=[
 '  for(let i=start;i<original.length||todo.length;i++){',
 '   if(locked.has(i)){out.push(original[i]);note(original[i],i);continue;}',
 '   const chosen=[],used=new Set();',
-'   const cap=Math.min(limit,Math.floor(ids.filter(id=>!(state.sitout||[]).includes(id)).length/(state.mode==="individual-americano"?4:2)));',
+'   const cap=Math.min(limit,Math.floor(ids.filter(id=>!(state.sitout||[]).includes(id)).length/((state.mode==="individual-americano"||state.mode==="structured-americano")?4:2)));',
 '   while(chosen.length<cap&&todo.length){',
 '    let pick=-1,best=Infinity;',
 '    for(let j=0;j<todo.length;j++){',
@@ -78,4 +78,8 @@ const panel=src.indexOf('<div class="card p5-v26-session-control">');
 const panelEnd=src.indexOf('</aside></div>'+tick,panel);
 assert(panel>=0&&panelEnd>panel,'missing Stage1 Session Control closing layout');
 src=src.slice(0,panelEnd)+'</div><aside>${standing(s)}</aside></div>'+src.slice(panelEnd+'</aside></div>'.length);
+replace('if(s.viewRound!==s.currentRound){s.viewRound=s.currentRound;render();return;}',
+ 'if(s.viewRound!==s.currentRound){s.viewRound=s.currentRound;if(!(forceAdvance&&flexibleRoundScoring(s))){render();return;}}');
+replace('active&&r<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?',
+ 's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?');
 fs.writeFileSync(file,src);console.log('PASS PR29 integrated');

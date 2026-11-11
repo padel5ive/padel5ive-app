@@ -33,6 +33,16 @@ body.p58-view-only #americano .p5-b3-ko-seeds{display:none!important}
 body.p58-view-only #americano .p5-v26-session-control [data-act="finish-stage1"],
 body.p58-view-only #americano .p5-v26-session-control [data-act="balance-check"]{display:none!important}
 
+/* Static names replace hidden Manage Player buttons in read-only standings. */
+body.p58-view-only #americano .p5-b41-leaderboard .p5814-standing-name{
+ display:inline!important;
+ font:inherit!important;
+ color:inherit!important;
+ white-space:normal!important;
+ cursor:text!important;
+ pointer-events:none!important;
+}
+
 body.p58-view-only #americano .p5sm-open-score{pointer-events:none!important;cursor:default!important}
 body.p58-view-only #americano .p5sm-card{cursor:default!important}
 body.p58-view-only #americano .p5-v26-round-card{margin-bottom:0}

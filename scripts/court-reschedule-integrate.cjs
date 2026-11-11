@@ -22,7 +22,9 @@ const helper=[
 '  for(let i=start;i<original.length||todo.length;i++){',
 '   if(locked.has(i)){out.push(original[i]);note(original[i],i);continue;}',
 '   const chosen=[],used=new Set();',
-'   const cap=Math.min(limit,Math.floor(ids.filter(id=>!(state.sitout||[]).includes(id)).length/((state.mode==="individual-americano"||state.mode==="structured-americano")?4:2)));',
+'   let futureOpen=0;for(let r=i+1;r<=lastLocked;r++)if(!locked.has(r))futureOpen++;',
+'   const available=Math.floor(ids.filter(id=>!(state.sitout||[]).includes(id)).length/((state.mode==="individual-americano"||state.mode==="structured-americano")?4:2));',
+'   const cap=Math.min(limit,available,Math.max(1,todo.length-futureOpen));',
 '   while(chosen.length<cap&&todo.length){',
 '    let pick=-1,best=Infinity;',
 '    for(let j=0;j<todo.length;j++){',
@@ -71,6 +73,7 @@ const branch=[
 ''].join("\n");
 src=src.slice(0,start)+branch+src.slice(end);
 replace("if(s.stage==='stage1'&&!currentDone())return alertModal('Finish Round First','Complete all scores in the active round before changing courts.');","// Stage 1 court changes can be queued before the current round is finished.");
+replace("if(next===s.courts){s.ui.modal=null;render();return toast('Court count unchanged');}","if(next===s.courts){s.pendingCourts=null;s.ui.modal=null;save();render();return toast('Court count unchanged · queued change cleared');}");
 replace('A running round must be scored before Stage 1 court changes; live Knockout assignments remain protected.','Court changes queue until the active round is finished. Protected later rounds retain their fixtures; untouched rounds are repacked.');
 replace('</div>\${arrivalPanel}</div><aside>\${standing(s)}<div class="card p5-v26-session-control">','</div>\${arrivalPanel}<div class="card p5-v26-session-control">');
 const tick=String.fromCharCode(96);

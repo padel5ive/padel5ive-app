@@ -1,0 +1,20 @@
+name: PADEL 5IVE · iPhone Stage 1 Session Order QA
+on:
+  pull_request:
+    paths:
+      - 'public/pwa/iphone-stage1-session-order-v1.css'
+      - 'scripts/iphone-session-control-integrate.cjs'
+      - 'scripts/qa-stage1-score-browser.cjs'
+      - 'package.json'
+      - '.github/workflows/qa-iphone-session-order.yml'
+jobs:
+  iphone-session-order:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-stage1-score-browser.cjs

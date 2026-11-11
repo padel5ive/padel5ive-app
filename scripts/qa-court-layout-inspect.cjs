@@ -1,18 +1,17 @@
 'use strict';
 const fs=require('node:fs');
 const html=fs.readFileSync('public/modes/unified/index.html','utf8');
-const look=['MANAGE COURTS','Manage Courts','Apply Court Changes','court change queued','Change active court','ACTIVE COURTS','SESSION CONTROL','Session Control','SESSION HISTORY','Session History','Pre-Match Setup','Arrival & Reshuffle','function nextRound(','function finish(','function render(','function renderDashboard('];
-for(const word of look){
- let loc=html.indexOf(word),count=0;
- while(loc>=0&&count<3){
-  console.log('\n=== CONTEXT '+JSON.stringify(word)+' #'+(count+1)+' offset='+loc+' ===');
-  console.log(html.slice(Math.max(0,loc-650),Math.min(html.length,loc+1100)).replace(/data:image\/[^\s"']+/g,'[INLINE-IMAGE]'));
-  loc=html.indexOf(word,loc+word.length);count++;
- }
+for(const [label,start,end] of [
+ ['COURT CHANGE',' function changeCourt(', ' function resetStage1('],
+ ['NEXT ROUND',' function nextRound(', ' function showBalance('],
+ ['STAGE1 UI',' function stage1(s)', ' function finished('],
+ ['RECOVERY','window.P5Recovery=', 'window.P5EngineRegistry='],
+ ['MODE REGISTRY','window.P5EngineRegistry=', 'window.P5UI=']
+]){
+ let a=html.indexOf(start);let b=html.indexOf(end,a+start.length);
+ console.log('===== '+label+' start='+a+' end='+b+' =====');
+ if(a>=0){let txt=html.slice(a,b>a?b:Math.min(a+15000,html.length));console.log(txt.slice(0,label==='RECOVERY'?20000:label==='MODE REGISTRY'?12500:label==='STAGE1 UI'?14000:30000).replace(/data:image\/[^\s"']+/g,'[INLINE-IMAGE]'))}
 }
-const fn=/\b(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/g;let m;
-while((m=fn.exec(html))){
- if(/court|round|regenerat|rebuild|schedul|layout|session|dashboard|history|stage|balance/i.test(m[1])) {
-  console.log('FUNCTION '+m[1]+' OFFSET '+m.index);
- }
+for(const p of ['p5-v26-session-control','session-history','p5-v24-arrival','class="stage1','<aside>','p5-v26-session-control']){
+ const a=html.indexOf(p);console.log('CSS_ANCHOR '+p+' '+a+' '+(a>=0?html.slice(Math.max(0,a-800),a+900):''));
 }

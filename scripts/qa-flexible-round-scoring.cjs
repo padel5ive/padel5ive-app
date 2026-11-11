@@ -16,12 +16,14 @@ function extract(from,to){
 for(const anchor of [
  'p5-v5825-flex-round-styles','ROUND NAVIGATION',
  'data-p5-status','if(!ko&&!flexibleRoundScoring(s)',
+ 'data-act="round" data-round="${r+1}">Next Round →',
  's.rounds=s.rounds.slice(0,endRound+1)',
  'if(flexible){for(const rd of s.rounds)'
 ])assert(html.includes(anchor),'Missing implementation: '+anchor);
 const source=[
  extract('flexibleRoundScoring','card'),
  extract('scoreModal','openHistoricalKO'),
+ extract('nextRound','showBalance'),
  extract('finish','promptKo')
 ].join('\n');
 new vm.Script(source,{filename:'americano-flexible-functions.js'});
@@ -58,6 +60,17 @@ ctx.s={
 };
 assert.equal(vm.runInContext('flexibleRoundScoring(s)',ctx),true);
 assert.equal(vm.runInContext('roundScoreState(s.rounds[23]).status',ctx),'pending');
+// Real nextRound handler must browse a precomputed schedule even with zero scores.
+ctx.s.viewRound=0;
+vm.runInContext('nextRound()',ctx);
+assert.equal(ctx.s.viewRound,1,'Next Round must browse without confirming scores');
+assert.equal(ctx.s.currentRound,0,'Browsing must not advance the engine currentRound');
+ctx.s.viewRound=19;
+vm.runInContext('nextRound()',ctx);
+assert.equal(ctx.s.viewRound,20,'Next Round must browse from Round 20 to 21');
+assert.equal(ctx.s.currentRound,0,'Browsing must not regenerate the schedule');
+ctx.s.viewRound=23;
+assert.throws(()=>vm.runInContext('nextRound()',ctx),/Finish Scheduled Matches First/,'Extension must not skip pending fixtures');
 vm.runInContext("scoreModal('r23c1',false)",ctx);
 assert.equal(ctx.s.ui.modal.match.id,'r23c1','Round 24 must allow input while currentRound=1');
 vm.runInContext('saveScore()',ctx);
@@ -83,7 +96,10 @@ assert.equal(vm.runInContext('P5UI.done(s)',ctx),1);
 assert.equal(ctx.s.stage,'stage1finished');
 ctx.s.stage='stage1';ctx.s.mode='fp-mexicano';ctx.s.currentRound=0;ctx.s.viewRound=23;ctx.s.ui.modal=null;
 assert.equal(vm.runInContext('flexibleRoundScoring(s)',ctx),false);
+vm.runInContext('nextRound()',ctx);
+assert.equal(ctx.s.viewRound,0,'Mexicano must keep its sequential navigation guard');
+ctx.s.viewRound=23;
 vm.runInContext("scoreModal('r23c1',false)",ctx);
 assert.equal(ctx.s.ui.modal,null,'Mexicano future scoring must remain gated');
 assert(notices.some(n=>n.includes('Mexicano round')),'Mexicano guard notice missing');
-console.log('PASS v5.8.25 flexible Americano: R24 3–2 → R20 pending → R24 4–1; no double-count; finish preserves; Mexicano gated.');
+console.log('PASS v5.8.26 flexible Americano: Next browses unscored rounds; R24 3–2 → R20 pending → R24 4–1; safe extension; finish preserves; Mexicano gated.');

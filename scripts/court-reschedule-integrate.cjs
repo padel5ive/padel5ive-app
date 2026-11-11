@@ -74,5 +74,8 @@ replace("if(s.stage==='stage1'&&!currentDone())return alertModal('Finish Round F
 replace('A running round must be scored before Stage 1 court changes; live Knockout assignments remain protected.','Court changes queue until the active round is finished. Protected later rounds retain their fixtures; untouched rounds are repacked.');
 replace('</div>\${arrivalPanel}</div><aside>\${standing(s)}<div class="card p5-v26-session-control">','</div>\${arrivalPanel}<div class="card p5-v26-session-control">');
 const tick=String.fromCharCode(96);
-replace('</button></div></aside></div>'+tick+';\n }\n function homeExistingSessions','</button></div></div><aside>\${standing(s)}</aside></div>'+tick+';\n }\n function homeExistingSessions');
+const panel=src.indexOf('<div class="card p5-v26-session-control">');
+const end=src.indexOf('</aside></div>'+tick,panel);
+assert(panel>=0&&end>panel,'missing Stage1 Session Control closing layout');
+src=src.slice(0,end)+'</div><aside>${standing(s)}</aside></div>'+src.slice(end+'</aside></div>'.length);
 fs.writeFileSync(file,src);console.log('PASS PR29 integrated');

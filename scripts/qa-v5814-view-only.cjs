@@ -13,8 +13,8 @@ for(const page of ['public/modes/unified/index.html','public/modes/club-match/in
 const pages=['public/modes/unified/index.html','public/modes/club-match/index.html'];
 for(const page of pages){
  const built=fs.readFileSync(page,'utf8');
- assert(built.includes('view-only-v5814.css?v=5829.1'),'Safari must receive newly versioned stylesheet');
- assert(built.includes('view-only-v5814.js?v=5829.1'),'Safari must receive newly versioned viewer script');
+ assert(built.includes('view-only-v5814.css?v=5831.1'),'Safari must receive newly versioned stylesheet');
+ assert(built.includes('view-only-v5814.js?v=5831.1'),'Safari must receive newly versioned viewer script');
  assert.equal(built.split('view-only-v5814.css?v=').length-1,1,'Only one viewer stylesheet reference');
  assert(built.includes('cloud-dashboard.js?v=5829.1'),'Safari receives latest Cloud moderator controller UI');
  assert(built.includes('cloud-session.css?v=5829.1'),'Safari receives latest Cloud Session modal sizing');
@@ -50,7 +50,7 @@ assert(cloud.includes("SHARE VIEWER ACCESS · WHATSAPP"),
 
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details><details data-submenu="share" data-menu-section="Share & Export"><summary>Session & Results</summary><div class="p5-4852-content"><button type="button" data-p58-cloud>Cloud Session</button></div></details>';
-const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section><div class="p5-v26-session-control"><h2>SESSION CONTROL</h2><p>Moderator may finish Stage 1 at any time.</p><button data-act="view-schedule">View Full Schedule</button><button data-act="finish-stage1">Finish Americano</button></div></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section></aside></div></main>';
+const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section><div class="p5-v26-session-control"><h2>SESSION CONTROL</h2><p>Moderator may finish Stage 1 at any time.</p><button data-act="view-schedule">View Full Schedule</button><button data-act="finish-stage1">Finish Americano</button></div></div><aside><section class="p5-b41-leaderboard">LEADERBOARD<table class="live-standings"><tbody><tr><td><b>1. <button type="button" class="mc38-rename" data-act="manage-participant" data-id="1">Agung<span class="p5-sitout-indicator"> · ⌄</span></button></b></td><td>0–0–0</td></tr><tr><td><b>2. <button type="button" class="mc38-rename" data-act="manage-participant" data-id="2">Teo<span class="p5-v24-sitout-label"> · COACH</span><span class="p5-sitout-indicator"> · ⌄</span></button></b></td><td>0–0–0</td></tr></tbody></table></section></aside></div></main>';
 const club='<details id="mainMenu"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><button id="club-global-admin">New Tournament</button></div></details><main id="app"><div class="p5-stage-head">GAME MODE</div><div class="master-stats">STATS</div><div class="layout stage1-layout"><div class="stage1-main"><section class="match-center"><button data-action="toggle-rounds">History</button><div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div><button data-action="view-round">Round 2</button><div class="court"><input data-stage1-score value="3"><input data-stage1-score value="2"><button data-action="complete-stage1">Review Score</button><button id="viewer-untagged">Reset Court</button></div></section></div><aside><section class="leaderboard-card">LEADERBOARD</section></aside></div></main>';
 async function one(kind){
  const isU=kind==='unified';
@@ -118,6 +118,16 @@ async function one(kind){
   assert.equal(staticScore.tagName,'DIV','Read-only card is not a button');
   assert.equal(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Unlabelled moderator button hidden');
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5');
+  const nameButtons=Array.from(doc.querySelectorAll('#americano .p5-b41-leaderboard button.mc38-rename'));
+  assert.equal(nameButtons.length,2,'Leaderboard includes live editable participant-name buttons');
+  for(const button of nameButtons)assert.equal(button.style.getPropertyValue('display'),'none','Editor-only player-name buttons hidden');
+  const passiveNames=Array.from(doc.querySelectorAll('#americano .p5-b41-leaderboard span.p5814-static-participant'));
+  assert.equal(passiveNames.length,2,'Each hidden leaderboard name mirrored exactly once as read-only text');
+  assert(passiveNames[0].textContent.includes('Agung')&&passiveNames[1].textContent.includes('Teo'),'Real player names visible for viewers');
+  assert(passiveNames[1].textContent.includes('COACH'),'Coach label remains visible for viewers');
+  assert(!passiveNames.some(n=>n.textContent.includes('⌄')),'No edit chevron shown on static labels');
+  assert(passiveNames.every(n=>n.tagName==='SPAN'&&!n.hasAttribute('data-act')),'No mutable action on passive name');
+
   const left=doc.querySelector('#americano .layout > div:first-child');
   const panel=left?.querySelector(':scope > .p5-v26-session-control');
   assert(panel,'Viewer Session Control must be under left scoring column, not Leaderboard');
@@ -163,6 +173,8 @@ async function one(kind){
  if(isU){
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5 · Tap to Score');
   assert(!doc.querySelector('.p5814-score-static'),'Passive score surface removed on controller switch');
+  assert.equal(doc.querySelectorAll('.p5814-static-participant').length,0,'Static names removed after restoring moderator');
+  assert.notEqual(doc.querySelector('.mc38-rename[data-act="manage-participant"]').style.getPropertyValue('display'),'none','Moderator player-name editor restored');
   assert.notEqual(doc.querySelector('[data-act=score]').style.getPropertyValue('display'),'none','Native scoring restored');
   assert.notEqual(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Other controller controls restored');
  }else{

@@ -4,6 +4,9 @@ on:
     branches: [fix/structured-pairing-fairness-20261111]
   pull_request:
     branches: [main]
+concurrency:
+  group: structured-pairing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

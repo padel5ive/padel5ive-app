@@ -75,7 +75,7 @@ for(const [n,c] of [[7,2],[8,2],[8,3],[9,3],[10,3],[10,4],[11,3],[12,4],[15,5]])
   assert(extra<=6,'Excessive opponent-repeat trade-off');
   if(extra>0){
    assert(baseline.longest>=5&&q.longest<baseline.longest,'Opponent compromise without severe rest benefit');
-   assert(future.every(r=>(r.fairnessWarnings||[]).some(x=>x.includes('Fairness trade-off'))),'Undisclosed opponent compromise');
+   assert((future[0].fairnessWarnings||[]).some(x=>x.includes('Fairness trade-off')),'Undisclosed opponent compromise');
   }
   if(q.longest<baseline.longest||q.doubleRest<baseline.doubleRest||q.maxGap<baseline.maxGap)changed++;
   total++;

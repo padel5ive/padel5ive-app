@@ -50,9 +50,36 @@
   // A newly added/absent player cannot be assessed fairly in a differently eligible future row.
   if(baseline.some(r=>r.eligibleIds&&active.some(id=>!r.eligibleIds.includes(id))))return baseline;
   const rows=teamRounds(baseline),pfx=prefix||[];
-  // Evaluate raw team rows directly: no 10,000s of temporary objects on iPad Safari.
-  const evalCost=()=>assess(rows,pfx,active).cost;
+  // Pre-encode active players as 32-bit masks for fast whole-session scoring.
+  // This keeps large randomized searches responsive on an iPad; >30 uses exact fallback.
+  const bitIndex=new Map(active.map((id,i)=>[id,i]));
+  const fast=active.length<=30;
+  const toMask=teams=>{let mask=0;for(const team of teams)for(const id of team){const i=bitIndex.get(id);if(i!==undefined)mask|=(1<<i);}return mask;};
+  const masks=fast?rows.map(toMask):null;
+  const historyMasks=fast?pfx.map(r=>({
+    mask:toMask((r.matches||[]).filter(Boolean).flatMap(m=>m.teams)),
+    eligible:r.eligibleIds?toMask([r.eligibleIds]):(1<<active.length)-1
+  })):null;
+  function fastScore(){
+   const counts=new Uint16Array(active.length),streak=new Uint16Array(active.length),rest=new Uint16Array(active.length);
+   let doubleRest=0,play3=0,longest=0,gapMax=0,gapSum=0;
+   for(let k=0;k<historyMasks.length+masks.length;k++){
+    const row=k<historyMasks.length?historyMasks[k]:{mask:masks[k-historyMasks.length],eligible:(1<<active.length)-1};
+    let min=Infinity,max=-Infinity;
+    for(let i=0;i<active.length;i++){
+     const bit=1<<i;if(!(row.eligible&bit))continue;
+     if(row.mask&bit){counts[i]++;streak[i]++;rest[i]=0;if(streak[i]>=3)play3++;}
+     else{streak[i]=0;rest[i]++;if(rest[i]>=2)doubleRest++;}
+     if(streak[i]>longest)longest=streak[i];
+     if(counts[i]<min)min=counts[i];if(counts[i]>max)max=counts[i];
+    }
+    if(max!==-Infinity){const gap=max-min;if(gap>gapMax)gapMax=gapMax<gap?gap:gapMax;gapSum+=gap*gap;}
+   }
+   return doubleRest*1400+play3*180+Math.max(0,longest-2)**2*2200+gapMax**2*3300+gapSum*160;
+  }
+  const evalCost=()=>fast?fastScore():assess(rows,pfx,active).cost;
   const baselineStats=assess(rows,pfx,active);
+  if(fast&&Math.abs(fastScore()-baselineStats.cost)>1e-7)throw Error('Structured fast fairness scorer disagrees with reference');
   let cost=baselineStats.cost,bestCost=cost,best=rows.map(x=>x.map(t=>t.slice()));
   const budget=rows.length<=24?11000:8000;
   for(let trial=0;trial<budget;trial++){
@@ -74,12 +101,15 @@
    }
    if(left.length!==rows[a].length||right.length!==rows[b].length)continue;
    if(coaches.length){const l=new Set(left.flat()),r=new Set(right.flat());if(!coaches.every(id=>l.has(id)&&r.has(id)))continue;}
-   const prevA=rows[a],prevB=rows[b];rows[a]=left;rows[b]=right;
+   const prevA=rows[a],prevB=rows[b],maskA=fast?masks[a]:0,maskB=fast?masks[b]:0;
+   rows[a]=left;rows[b]=right;
+   if(fast){masks[a]=toMask(left);masks[b]=toMask(right);}
    const next=evalCost(),temp=Math.max(.1,80*Math.pow(.02,trial/budget));
    if(next<=cost||random()<Math.exp((cost-next)/temp)){cost=next;if(next<bestCost){bestCost=next;best=rows.map(x=>x.map(t=>t.slice()));}}
-   else{rows[a]=prevA;rows[b]=prevB;}
+   else{rows[a]=prevA;rows[b]=prevB;if(fast){masks[a]=maskA;masks[b]=maskB;}}
   }
   const newStats=assess(best,pfx,active);
+  if(Math.abs(bestCost-newStats.cost)>1e-6)throw Error('Structured fairness metric mismatch after search');
   if(bestCost>=baselineStats.cost-1e-7||newStats.longest>baselineStats.longest||newStats.doubleRest>baselineStats.doubleRest||newStats.gapMax>baselineStats.gapMax)return baseline;
   // Re-match intact teams to minimize repeated opponent encounters against immutable past.
   const history=new Map(),fixture=new Map();

@@ -23,6 +23,12 @@ for(const page of pages){
 const sw=fs.readFileSync('public/sw.js','utf8');
 assert(sw.includes("'/phase5814/view-only-v5814.js'")&&sw.includes("'/phase5814/view-only-v5814.css'"));
 assert(css.includes('body.p58-view-only'));
+assert(css.includes('@media (min-width:780px)')&&css.includes('.layout > div:first-child > .p5-v26-session-control'),
+ 'View Only iPad must display Session Control beneath court scoring');
+assert(css.includes('.p5-v26-session-control [data-act="finish-stage1"]'),
+ 'View Only must hide moderator Finish action');
+assert(css.includes('@media (max-width:779px)'),
+ 'Keep iPhone-specific compact viewer layout unchanged');
 assert(!css.includes('grid-template-columns'),'Master iPad split layout must not change');
 assert(cloud.includes("['cloud','refresh','leave'].includes(viewerButton.dataset.p5814ViewerAction)"));
 assert(cloud.includes("if(isSession(current)&&identity(current)===meta.localId)localStorage.removeItem(KEY)"));
@@ -44,7 +50,7 @@ assert(cloud.includes("SHARE VIEWER ACCESS · WHATSAPP"),
 
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details><details data-submenu="share" data-menu-section="Share & Export"><summary>Session & Results</summary><div class="p5-4852-content"><button type="button" data-p58-cloud>Cloud Session</button></div></details>';
-const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section><div class="p5-v26-session-control">SESSION CONTROL</div></aside></div></main>';
+const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section><div class="p5-v26-session-control"><h2>SESSION CONTROL</h2><p>Moderator may finish Stage 1 at any time.</p><button data-act="view-schedule">View Full Schedule</button><button data-act="finish-stage1">Finish Americano</button></div></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section></aside></div></main>';
 const club='<details id="mainMenu"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><button id="club-global-admin">New Tournament</button></div></details><main id="app"><div class="p5-stage-head">GAME MODE</div><div class="master-stats">STATS</div><div class="layout stage1-layout"><div class="stage1-main"><section class="match-center"><button data-action="toggle-rounds">History</button><div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div><button data-action="view-round">Round 2</button><div class="court"><input data-stage1-score value="3"><input data-stage1-score value="2"><button data-action="complete-stage1">Review Score</button><button id="viewer-untagged">Reset Court</button></div></section></div><aside><section class="leaderboard-card">LEADERBOARD</section></aside></div></main>';
 async function one(kind){
  const isU=kind==='unified';
@@ -112,7 +118,14 @@ async function one(kind){
   assert.equal(staticScore.tagName,'DIV','Read-only card is not a button');
   assert.equal(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Unlabelled moderator button hidden');
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5');
-  assert.equal(w.getComputedStyle(doc.querySelector('.p5-v26-session-control')).display,'none');
+  const left=doc.querySelector('#americano .layout > div:first-child');
+  const panel=left?.querySelector(':scope > .p5-v26-session-control');
+  assert(panel,'Viewer Session Control must be under left scoring column, not Leaderboard');
+  assert(!doc.querySelector('#americano .layout > aside .p5-v26-session-control'),'Right sidebar contains only leaderboard');
+  assert.equal(w.getComputedStyle(panel).display,'block','Viewer Session Control visible in iPad layout');
+  assert.equal(doc.querySelector('[data-act="view-schedule"]').style.getPropertyValue('display'),'','Read-only full schedule stays accessible');
+  assert.equal(doc.querySelector('[data-act="finish-stage1"]').style.getPropertyValue('display'),'none','View Only cannot finish Stage 1');
+  assert.equal(panel.querySelector('p').textContent,'Browse the full match schedule and confirmed results. Only the active moderator can change scores.');
   assert.equal(doc.querySelector('#viewer-edit').style.getPropertyValue('display'),'none','Free-form player edits hidden');
   assert.equal(doc.querySelector('[data-act=round]').style.getPropertyValue('display'),'','Round navigation remains enabled');
   // The original controls can be dynamically added by the master after a round update.

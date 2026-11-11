@@ -4,6 +4,7 @@ on:
     paths:
       - 'scripts/court-reschedule-integrate.cjs'
       - 'scripts/qa-court-reschedule.cjs'
+      - 'scripts/qa-court-auto.cjs'
       - 'scripts/qa-court-layout-inspect.cjs'
       - '.github/workflows/qa-court-reschedule.yml'
       - 'package.json'
@@ -19,5 +20,6 @@ jobs:
       - run: node scripts/qa-court-layout-inspect.cjs
       - run: npm run build
       - run: node scripts/qa-court-reschedule.cjs
+      - run: node scripts/qa-court-auto.cjs
       - run: node scripts/qa-flexible-round-scoring.cjs
       - run: node scripts/qa-stage1-score-browser.cjs

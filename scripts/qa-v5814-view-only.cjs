@@ -50,7 +50,7 @@ assert(cloud.includes("SHARE VIEWER ACCESS · WHATSAPP"),
 
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 const commonMenu='<details data-submenu="roster"><summary>Manage Players</summary></details><details data-submenu="match"><summary>Match Management</summary></details><details data-submenu="share" data-menu-section="Share & Export"><summary>Session & Results</summary><div class="p5-4852-content"><button type="button" data-p58-cloud>Cloud Session</button></div></details>';
-const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section><div class="p5-v26-session-control"><h2>SESSION CONTROL</h2><p>Moderator may finish Stage 1 at any time.</p><button data-act="view-schedule">View Full Schedule</button><button data-act="finish-stage1">Finish Americano</button></div></div><aside><section class="p5-b41-leaderboard">LEADERBOARD</section></aside></div></main>';
+const unified='<main id="americano"><details class="compact-controls"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><div class="p5-4857-new-row"><button data-act="new-tournament">New Session</button></div></div></details><div class="p5-stage-head">GAME MODE</div><div class="stats">stats</div><div class="bars"></div><div class="layout"><div><section class="card p5-v26-round-card"><button data-act="round">Round 2</button><div class="p5sm-card"><button data-act="score" class="p5sm-open-score">Andry vs Diki</button><div class="scorehint">Total of 5 · Tap to Score</div></div><div class="tools"><button data-act="next-round">Next Round</button><button id="viewer-untagged">Undo Score</button><input id="viewer-edit" placeholder="Change Player"></div></section><div class="p5-v26-session-control"><h2>SESSION CONTROL</h2><p>Moderator may finish Stage 1 at any time.</p><button data-act="view-schedule">View Full Schedule</button><button data-act="finish-stage1">Finish Americano</button></div></div><aside><section class="p5-b41-leaderboard">LEADERBOARD<table class="live-standings"><tbody><tr><td><b>1. <button class="mc38-rename" data-act="manage-participant" data-id="1">Andry<span class="p5-sitout-indicator"> · ⌄</span></button></b></td><td>1–0–0</td><td>1</td><td>3</td><td>1</td></tr><tr><td><b>2. <button class="mc38-rename" data-act="manage-participant" data-id="2">Diki<span class="p5-sitout-indicator"> · ⌄</span></button></b></td><td>0–1–0</td><td>-1</td><td>2</td><td>1</td></tr></tbody></table></section></aside></div></main>';
 const club='<details id="mainMenu"><summary>Menu &amp; Settings</summary><div class="ops-actions"><section class="p5-4852-menu">'+commonMenu+'</section><button id="club-global-admin">New Tournament</button></div></details><main id="app"><div class="p5-stage-head">GAME MODE</div><div class="master-stats">STATS</div><div class="layout stage1-layout"><div class="stage1-main"><section class="match-center"><button data-action="toggle-rounds">History</button><div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div><button data-action="view-round">Round 2</button><div class="court"><input data-stage1-score value="3"><input data-stage1-score value="2"><button data-action="complete-stage1">Review Score</button><button id="viewer-untagged">Reset Court</button></div></section></div><aside><section class="leaderboard-card">LEADERBOARD</section></aside></div></main>';
 async function one(kind){
  const isU=kind==='unified';
@@ -110,6 +110,13 @@ async function one(kind){
  assert(doc.querySelector(isU?'.p5-b41-leaderboard':'.leaderboard-card'));
  assert(doc.querySelector('.layout'),'Master split layout retained');
  if(isU){
+  const visibleNames=Array.from(doc.querySelectorAll('#americano .p5814-standing-name')).map(n=>n.textContent);
+  assert.deepEqual(visibleNames,['Andry','Diki'],'View Only must render participant names, never blank ranks');
+  assert.equal(doc.querySelectorAll('#americano .p5-b41-leaderboard button[data-act="manage-participant"]').length,2);
+  for(const button of doc.querySelectorAll('#americano .p5-b41-leaderboard button[data-act="manage-participant"]'))
+   assert.equal(button.style.getPropertyValue('display'),'none','View Only still hides Manage Player controls');
+  assert(doc.querySelector('#americano .live-standings').textContent.includes('1–0–0'),
+   'Cloud leaderboard confirmed stats remain available after View Only presentation');
   assert(doc.querySelector('[data-act=next-round]').classList.contains('p5814-hide-action'));
   assert(!doc.querySelector('[data-act=round]').classList.contains('p5814-hide-action'));
   assert.equal(doc.querySelector('[data-act=score]').style.getPropertyValue('display'),'none','Editable score button must actually disappear');
@@ -163,6 +170,9 @@ async function one(kind){
  if(isU){
   assert.equal(doc.querySelector('.scorehint').textContent,'Total of 5 · Tap to Score');
   assert(!doc.querySelector('.p5814-score-static'),'Passive score surface removed on controller switch');
+  assert.equal(doc.querySelectorAll('#americano .p5814-standing-name').length,0,'Passive name mirrors cleared on moderator takeover');
+  for(const button of doc.querySelectorAll('#americano .p5-b41-leaderboard button[data-act="manage-participant"]'))
+   assert.notEqual(button.style.getPropertyValue('display'),'none','Manage Player button restored for moderator');
   assert.notEqual(doc.querySelector('[data-act=score]').style.getPropertyValue('display'),'none','Native scoring restored');
   assert.notEqual(doc.querySelector('#viewer-untagged').style.getPropertyValue('display'),'none','Other controller controls restored');
  }else{

@@ -51,4 +51,34 @@ for(let seed=1;seed<=20;seed++){
  }
  const q=audit(m.rounds,m.roster);assert(Object.values(q.games).every(x=>x===6));assert.equal(q.play3,0);assert.equal(q.rest2,0);mexPass++;
 }
-console.log(JSON.stringify({integration:'PASS',americanSeeds:amerPass,mexicanSeeds:mexPass,mexicanoRoundsImproved:improved}));
+
+let dynamicCases=0,dynamicRounds=0;
+for(let seed=1;seed<=4;seed++){
+ const state=create('structured-mexicano'),points=Object.fromEntries(state.roster.map(p=>[p.id,0]));
+ for(let ri=0;ri<12;ri++){
+  const rankings=state.roster.map(p=>({id:p.id,points:points[p.id]||0})).sort((a,b)=>b.points-a.points||a.id-b.id);
+  const before=JSON.stringify(state.rounds),seedValue=10000+seed*100+ri;
+  const baseline=nativeMX(state,rankings,rnd(seedValue)),enhanced=ctx.P5StructuredMX.next(state,rankings,rnd(seedValue));
+  assert.equal(JSON.stringify(state.rounds),before,'Mexicano touched confirmed history after a roster change');
+  const originalIds=baseline.matches.flatMap(m=>m.teams.flat()).sort((a,b)=>a-b);
+  const optimizedIds=enhanced.matches.flatMap(m=>m.teams.flat()).sort((a,b)=>a-b);
+  assert.deepEqual(optimizedIds,originalIds,'Mexicano changed selected players or rest when optimizing opponents');
+  const seen=new Set();
+  for(const m of enhanced.matches){
+   assert(m.court>=1&&m.court<=state.courts,'Invalid Mexicano court');
+   for(const team of m.teams){
+    assert.equal(state.roster.find(p=>p.id===team[0]).group,'A');
+    assert.equal(state.roster.find(p=>p.id===team[1]).group,'B');
+    for(const id of team){assert(!state.sitout.includes(id),'Sit Out player scheduled');assert(!seen.has(id),'Mexicano double booking');seen.add(id);}
+   }
+   m.score=ri%2?[2,3]:[3,2];m.confirmed=true;
+   for(const id of m.teams[0])points[id]=(points[id]||0)+m.score[0];
+   for(const id of m.teams[1])points[id]=(points[id]||0)+m.score[1];
+  }
+  state.rounds.push(enhanced);dynamicRounds++;
+  if(ri===2)state.sitout=[9,18];
+  if(ri===5){state.sitout=[];state.roster.push({id:19,group:'A',names:['Late A']},{id:20,group:'B',names:['Late B']});state.courts=4;}
+ }
+ dynamicCases++;
+}
+console.log(JSON.stringify({integration:'PASS',americanSeeds:amerPass,mexicanSeeds:mexPass,mexicanoRoundsImproved:improved,dynamicRosterMexicanoCases:dynamicCases,dynamicRounds:dynamicRounds}));

@@ -6,7 +6,8 @@ const marker = '<!-- P5 STRUCTURED FAIRNESS LAB 20261111 -->';
 const assets = [
   'p5-structured-fairness-lab.js',
   'p5-structured-irregular-lab.js',
-  'p5-structured-mexicano-diversity-lab.js'
+  'p5-structured-mexicano-diversity-lab.js',
+  'p5-ko-qualification-sitout-guard.js'
 ];
 const insert = marker + assets.map(name => '<script src="/assets/' + name + '"></script>').join('');
 if (!html.includes('window.P5StructuredCycle534=') ||
@@ -45,13 +46,10 @@ function installGuard(original, guarded, label) {
   html = html.replace(original, guarded);
   fs.writeFileSync(file, html, 'utf8');
 }
-const koInput = "const input=selectedIds===null?ranking.filter(id=>!(s.sitout||[]).includes(id)):selectedIds;";
-installGuard(koInput,
- koInput+"\n  if(Array.isArray(input)&&input.some(id=>(s.sitout||[]).includes(id)))throw Error('Sit Out participants cannot enter Knockout. Return Active first.');",
- 'KO qualifier API');
+// Locked KO engine stays byte-identical. The separate asset wraps only its public start() API.
 const koToggle = "const selected=new Set(m.selectedIds),group=pairedIds(id),enable=!group.every(pid=>selected.has(pid));";
 installGuard(koToggle,
  koToggle+"\n  if(enable&&group.some(pid=>(s.sitout||[]).includes(pid)))return toast('Sit Out participants cannot qualify for KO. Return Active first.');",
  'KO qualification UI');
-console.log('PASS: KO eligibility blocked for Sit Out in UI and KO core API.');
+console.log('PASS: KO Sit Out qualification guarded in UI and external adapter; locked KO untouched.');
 

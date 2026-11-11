@@ -51,7 +51,7 @@ assert.equal(ctx.s.pendingCourts,3,'court selection queues during current partia
 assert.equal(ctx.s.courts,2,'current partial round protected');
 assert.equal(ctx.s.currentRound,0,'current round does not auto-advance until completed');
 ctx.s.ui.modal={type:'score',match:ctx.s.rounds[0].matches[1],ko:false};
-vm.runInContext(fn('saveScore','openHistoricalKO'),ctx);
+vm.runInContext(fn('saveScore','openHistoricalKO')+'\nsaveScore();',ctx);
 assert.equal(ctx.s.courts,3,'saving final score auto-applies court change · notices: '+JSON.stringify(notices));
 assert.equal(ctx.s.pendingCourts,null,'queue clears automatically');
 assert.equal(ctx.s.currentRound,4,'scheduler checkpoint moves past 4 completed rounds');

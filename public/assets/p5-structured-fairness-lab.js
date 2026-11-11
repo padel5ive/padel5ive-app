@@ -148,6 +148,22 @@
       if(gap>1)throw Error('Structured fair-cycle running G gap '+gap+' in round '+(i+1));
       if((i+1)%3===0&&i<Math.floor(n/2)*3&&gap!==0)throw Error('Structured 3-round fairness failed at '+(i+1));
     }
+    // Explicit acceptance gate for the WED MEX incident profile: 9+9 / 3 courts.
+    // No seed may produce 5-7 Games Played after Round 9 or consecutive rests.
+    if(n===9&&c===3){
+     const firstNine=best.rounds.slice(0,9),g9=Object.fromEntries(ids.map(id=>[id,0]));
+     const states=Object.fromEntries(ids.map(id=>[id,[]]));
+     for(const teams of firstNine){
+      if(teams.length!==3)throw Error('18-player three-court fixture density invalid');
+      const active=new Set(teams.flat(2));
+      for(const id of ids){
+       const now=active.has(id),seq=states[id];
+       if(!now&&seq.at(-1)===false)throw Error('Structured 18-player fairness: consecutive rests');
+       seq.push(now);if(now)g9[id]++;
+      }
+     }
+     if(Object.values(g9).some(count=>count!==6))throw Error('Structured 18-player fairness: Round 9 Games Played must equal 6 for every player');
+    }
     if(seen.size!==n*n)throw Error('Structured partner coverage '+seen.size+'/'+n*n);
     if([...seen.values()].reduce((z,v)=>z+v-1,0)!==n%2)throw Error('Structured partner repeat count invalid');
     return best.rounds.map((matches,i)=>({index:i,structuredFairCycleCertified:true,matches:matches.map((teams,j)=>({id:`R${i}C${j}`,court:j+1,teams,score:null,confirmed:false})),eligibleIds:ids.slice(),groupSnapshot:{A:n,B:n},completePartnerCycle:true}));

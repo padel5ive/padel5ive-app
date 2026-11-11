@@ -239,6 +239,14 @@ function scoreViewer(){
   }
  }
 }
+/* Viewer panel keeps master layout, with read-only explanation only. */
+function viewerSessionSummary(){
+ if(kind!=='unified')return;
+ const panel=$('#americano .layout > div:first-child > .p5-v26-session-control');
+ if(!panel)return;
+ const description=$(':scope > p',panel);
+ if(description)replaceText(description,'Browse the full match schedule and confirmed results. Only the active moderator can change scores.');
+}
 function actions(){
  const roots=kind==='unified'?[$('#americano')]:[$('#app'),$('#mainMenu')];
  const attr=kind==='unified'?'act':'action';
@@ -287,7 +295,7 @@ function run(){
   if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
   return;
  }
- promoteCloud();menuView();scoreViewer();hideViewerDiagnostics();actions();
+ promoteCloud();menuView();scoreViewer();viewerSessionSummary();hideViewerDiagnostics();actions();
 }
 function schedule(){
  if(queued)return;

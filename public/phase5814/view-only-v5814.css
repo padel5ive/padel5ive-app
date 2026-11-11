@@ -13,13 +13,26 @@ body.p58-view-only #americano .bars,
 body.p58-view-only #americano .p5-v26-utilization,
 body.p58-view-only #americano .p5-v26-flow-combo,
 body.p58-view-only #americano .prematch-setup,
-body.p58-view-only #americano .p5-v26-session-control,
 body.p58-view-only #americano .p5-v26-round-card > .tools,
 body.p58-view-only #americano .p5-b2-fairness-warning,
 body.p58-view-only #americano .p5-b2-fairness-ok,
 body.p58-view-only #americano .p5-b44-balance-note,
 body.p58-view-only #americano .p5-v24-extra-note,
 body.p58-view-only #americano .p5-b3-ko-seeds{display:none!important}
+/* View Only iPad: shared master layout, SESSION CONTROL below court scoring.
+   Only viewer-safe actions are exposed; on iPhone preserve compact historical presentation. */
+@media (min-width:780px){
+ body.p58-view-only #americano .layout > div:first-child > .p5-v26-session-control{
+  display:block!important;visibility:visible!important;margin:12px 0 0!important
+ }
+}
+@media (max-width:779px){
+ body.p58-view-only #americano .p5-v26-session-control{display:none!important}
+}
+/* Defense-in-depth: never display moderator-only Finish in View Only. */
+body.p58-view-only #americano .p5-v26-session-control [data-act="finish-stage1"],
+body.p58-view-only #americano .p5-v26-session-control [data-act="balance-check"]{display:none!important}
+
 body.p58-view-only #americano .p5sm-open-score{pointer-events:none!important;cursor:default!important}
 body.p58-view-only #americano .p5sm-card{cursor:default!important}
 body.p58-view-only #americano .p5-v26-round-card{margin-bottom:0}

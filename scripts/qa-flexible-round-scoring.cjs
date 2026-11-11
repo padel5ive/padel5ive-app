@@ -23,6 +23,7 @@ for(const anchor of [
 const source=[
  extract('flexibleRoundScoring','card'),
  extract('scoreModal','openHistoricalKO'),
+ extract('p5AppendExtendedRound','nextRound'),
  extract('nextRound','showBalance'),
  extract('finish','promptKo')
 ].join('\n');
@@ -70,7 +71,17 @@ vm.runInContext('nextRound()',ctx);
 assert.equal(ctx.s.viewRound,20,'Next Round must browse from Round 20 to 21');
 assert.equal(ctx.s.currentRound,0,'Browsing must not regenerate the schedule');
 ctx.s.viewRound=23;
-assert.throws(()=>vm.runInContext('nextRound()',ctx),/Finish Scheduled Matches First/,'Extension must not skip pending fixtures');
+const baseline=ctx.s;
+ctx.s=structuredClone(baseline);
+ctx.random=()=>0.42;
+ctx.P5Recovery={extend:state=>({index:state.rounds.length,matches:[{id:'R'+state.rounds.length+'C0',court:1,teams:[[1],[2]],confirmed:false,score:null}]})};
+ctx.P5EngineRegistry={validateFreshRound:()=>true};
+vm.runInContext('nextRound()',ctx);
+assert.equal(ctx.s.rounds.length,25,'Final round can be extended despite older unconfirmed matches');
+assert.equal(ctx.s.viewRound,24,'New extra round is immediately displayed');
+assert.equal(ctx.s.currentRound,0,'Extra round must not move flexible-scoring checkpoint');
+assert.equal(ctx.s.rounds[19].matches[0].score,null,'Unscored Round 20 remains pending after extension');
+ctx.s=baseline;
 vm.runInContext("scoreModal('r23c1',false)",ctx);
 assert.equal(ctx.s.ui.modal.match.id,'r23c1','Round 24 must allow input while currentRound=1');
 vm.runInContext('saveScore()',ctx);
@@ -102,4 +113,4 @@ ctx.s.viewRound=23;
 vm.runInContext("scoreModal('r23c1',false)",ctx);
 assert.equal(ctx.s.ui.modal,null,'Mexicano future scoring must remain gated');
 assert(notices.some(n=>n.includes('Mexicano round')),'Mexicano guard notice missing');
-console.log('PASS v5.8.26 flexible Americano: Next browses unscored rounds; R24 3–2 → R20 pending → R24 4–1; safe extension; finish preserves; Mexicano gated.');
+console.log('PASS v5.8.26 flexible Americano: Next browses unscored rounds; R24 3–2 → R20 pending → R24 4–1; unscored-cycle extension; finish preserves; Mexicano gated.');

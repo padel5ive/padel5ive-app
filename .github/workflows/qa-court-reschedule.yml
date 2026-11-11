@@ -1,0 +1,26 @@
+name: PR29 · Protected Court Rescheduling QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/court-reschedule-integrate.cjs'
+      - 'scripts/qa-court-reschedule.cjs'
+      - 'scripts/qa-court-auto.cjs'
+      - 'scripts/qa-extra-rounds.cjs'
+      - 'scripts/qa-flexible-round-scoring.cjs'
+      - '.github/workflows/qa-court-reschedule.yml'
+      - 'package.json'
+jobs:
+  protected-reschedule:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-court-reschedule.cjs
+      - run: node scripts/qa-court-auto.cjs
+      - run: node scripts/qa-extra-rounds.cjs
+      - run: node scripts/qa-flexible-round-scoring.cjs
+      - run: node scripts/qa-stage1-score-browser.cjs

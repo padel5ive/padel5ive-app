@@ -31,7 +31,7 @@ function testCase(query,existingMode){
  const button={disabled:true};
  const dateDisplay={textContent:'',classList:{toggle(){}}};
  const fields={
-  'setup-session':{value:'Test'},'setup-date':{value:'2026-11-11'},
+  'setup-session':{value:'Test'},'setup-date':{value:'2026-11-11'},'setup-time':{value:'12:00'},
   'setup-game':game,'setup-pairing':pair,'setup-courts':{value:'1'},
   'setup-format':{value:'total5'},'setup-date-display':dateDisplay
  };

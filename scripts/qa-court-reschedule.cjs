@@ -30,6 +30,30 @@ for(const rd of result){const used=new Set();assert(rd.matches.length<=3);
   for(const id of m.teams.flat()){assert(!used.has(id),'Same player twice in round');used.add(id);}
  }
 }
+// Realistic 15-player / 2-court -> 3-court growth, with Round 20 and 24 protected.
+const largeRoster=Array.from({length:15},(_,i)=>({id:i+1,names:['P'+(i+1)]}));
+const largeRows=Array.from({length:27},(_,i)=>{
+ const names=Array.from({length:4},(_,j)=>(i*3+j)%15+1);
+ return {index:i,matches:[
+  make('x',names[0],names[1],i,1),
+  make('y',names[2],names[3],i,2)]};
+});
+largeRows[0].matches.forEach(m=>{m.confirmed=true;m.score=[3,2]});
+largeRows[19].matches[0].confirmed=true;largeRows[19].matches[0].score=[4,1];
+largeRows[23].matches[0].confirmed=true;largeRows[23].matches[0].score=[4,1];
+const bigState={mode:'fp-americano',currentRound:0,courts:3,roster:largeRoster,rounds:largeRows,sitout:[]};
+ctx.bigState=bigState;
+const big=vm.runInContext('p5ProtectedCourtReschedule(bigState,()=>0.5)',ctx);
+assert(big.some(rd=>rd.matches.length===3),'An added third court must actually receive matches');
+assert(!big.slice(1,23).some(rd=>rd.protectedGap),'Avoid empty gaps before Round 24 when enough fixtures remain');
+assert.equal(JSON.stringify(big[19]),JSON.stringify(largeRows[19]));
+assert.equal(JSON.stringify(big[23]),JSON.stringify(largeRows[23]));
+assert.equal(big.reduce((n,r)=>n+r.matches.length,0),54);
+const unique=new Set();
+for(const rd of big){const participants=new Set();for(const m of rd.matches){
+ assert(!unique.has(m.id));unique.add(m.id);
+ for(const p of m.teams.flat()){assert(!participants.has(p));participants.add(p);}
+}}
 const down={...state,courts:1};ctx.down=down;
 assert.throws(()=>vm.runInContext('p5ProtectedCourtReschedule(down,()=>0.5)',ctx),/Protected Round/,'Downsizing blocked if scored future round exceeds capacity');
 assert(html.includes('if(courtOnly){s.rounds=p5ProtectedCourtReschedule(s,random);}') ,'nextRound uses new rescheduler');

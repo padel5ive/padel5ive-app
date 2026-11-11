@@ -114,7 +114,15 @@
    return {opponentRepeat,fixtureRepeat};
   }
   const oldRepetition=repetitions(baseline),freshRepetition=repetitions(output);
-  if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat||freshRepetition.fixtureRepeat>oldRepetition.fixtureRepeat)return baseline;
+  // Allow a small, explicit diversity trade-off ONLY to prevent long play streaks.
+  // All normal improvements must keep opponent repetition no worse than baseline.
+  const severeStreak=baselineStats.longest>=5&&newStats.longest<baselineStats.longest;
+  const permittedExtra=severeStreak?Math.min(6,Math.max(3,Math.ceil(oldRepetition.opponentRepeat*0.12))):0;
+  if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat+permittedExtra||freshRepetition.fixtureRepeat>oldRepetition.fixtureRepeat)return baseline;
+  if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat){
+   for(const r of output){r.fairnessWarnings=[...(r.fairnessWarnings||[]).filter(x=>!String(x).startsWith('Fairness trade-off:')),
+    'Fairness trade-off: '+(freshRepetition.opponentRepeat-oldRepetition.opponentRepeat)+' extra opponent encounters across the future schedule to prevent long consecutive-play streaks'];}
+  }
   // Historical cross-group partner multiset and court loads must remain identical.
   const partnerTally=rows=>{const tally=new Map();for(const r of rows)for(const m of r.matches||[])if(m)for(const team of m.teams){const k=key(team[0],team[1]);tally.set(k,(tally.get(k)||0)+1);}return [...tally.entries()].sort(([a],[b])=>a.localeCompare(b));};
   if(JSON.stringify(partnerTally(baseline))!==JSON.stringify(partnerTally(output)))throw Error('Structured optimizer changed partner coverage');

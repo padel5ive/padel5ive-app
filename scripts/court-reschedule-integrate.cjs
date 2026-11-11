@@ -75,7 +75,7 @@ replace('A running round must be scored before Stage 1 court changes; live Knock
 replace('</div>\${arrivalPanel}</div><aside>\${standing(s)}<div class="card p5-v26-session-control">','</div>\${arrivalPanel}<div class="card p5-v26-session-control">');
 const tick=String.fromCharCode(96);
 const panel=src.indexOf('<div class="card p5-v26-session-control">');
-const end=src.indexOf('</aside></div>'+tick,panel);
-assert(panel>=0&&end>panel,'missing Stage1 Session Control closing layout');
-src=src.slice(0,end)+'</div><aside>${standing(s)}</aside></div>'+src.slice(end+'</aside></div>'.length);
+const panelEnd=src.indexOf('</aside></div>'+tick,panel);
+assert(panel>=0&&panelEnd>panel,'missing Stage1 Session Control closing layout');
+src=src.slice(0,panelEnd)+'</div><aside>${standing(s)}</aside></div>'+src.slice(panelEnd+'</aside></div>'.length);
 fs.writeFileSync(file,src);console.log('PASS PR29 integrated');

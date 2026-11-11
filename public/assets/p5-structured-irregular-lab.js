@@ -56,6 +56,9 @@
   for(let trial=0;trial<budget;trial++){
    const a=Math.floor(random()*rows.length),b=Math.floor(random()*rows.length);
    if(a===b)continue;
+   // Never swap scheduled teams across different eligibility snapshots.
+   const ea=baseline[a].eligibleIds||active,eb=baseline[b].eligibleIds||active;
+   if(active.some(id=>ea.includes(id)!==eb.includes(id)))continue;
    const {edges,out}=components(rows[a],rows[b]);
    const good=out.filter(c=>!c.delta),plus=out.filter(c=>c.delta===1),minus=out.filter(c=>c.delta===-1);
    let selected=null;
@@ -97,6 +100,28 @@
    matches.forEach(add);
    return {...r,matches,eligibleIds:r.eligibleIds||active.slice(),structuredRestOptimized:true};
   });
+  // Optimizing rest is not permission to worsen opponent/fixture diversity.
+  function repetitions(rounds){
+   const pairs=new Map(),fixtures=new Map();let opponentRepeat=0,fixtureRepeat=0;
+   for(const row of pfx.concat(rounds))for(const m of row.matches||[])if(m&&m.teams?.length===2){
+    const [a,b]=m.teams,signature=sig(a,b);
+    if(fixtures.has(signature))fixtureRepeat++;
+    fixtures.set(signature,(fixtures.get(signature)||0)+1);
+    for(const x of a)for(const y of b){const k=key(x,y);if(pairs.has(k))opponentRepeat++;pairs.set(k,(pairs.get(k)||0)+1);}
+   }
+   return {opponentRepeat,fixtureRepeat};
+  }
+  const oldRepetition=repetitions(baseline),freshRepetition=repetitions(output);
+  if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat||freshRepetition.fixtureRepeat>oldRepetition.fixtureRepeat)return baseline;
+  // Historical cross-group partner multiset and court loads must remain identical.
+  const partnerTally=rows=>{const tally=new Map();for(const r of rows)for(const m of r.matches||[])if(m)for(const team of m.teams){const k=key(team[0],team[1]);tally.set(k,(tally.get(k)||0)+1);}return [...tally.entries()].sort(([a],[b])=>a.localeCompare(b));};
+  if(JSON.stringify(partnerTally(baseline))!==JSON.stringify(partnerTally(output)))throw Error('Structured optimizer changed partner coverage');
+  for(let i=0;i<output.length;i++){
+   if(output[i].matches.length!==baseline[i].matches.length)throw Error('Court capacity changed');
+   const players=output[i].matches.flatMap(m=>m.teams.flat());
+   if(new Set(players).size!==players.length)throw Error('Double booking after irregular optimization');
+   if(players.some(id=>!(output[i].eligibleIds||active).includes(id)))throw Error('Ineligible player scheduled');
+  }
   return output;
  }
  root.P5Fair532=Object.freeze({...original,optimize});

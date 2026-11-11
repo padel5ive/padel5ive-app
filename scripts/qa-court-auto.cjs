@@ -52,7 +52,7 @@ assert.equal(ctx.s.courts,2,'current partial round protected');
 assert.equal(ctx.s.currentRound,0,'current round does not auto-advance until completed');
 ctx.s.ui.modal={type:'score',match:ctx.s.rounds[0].matches[1],ko:false};
 vm.runInContext(fn('saveScore','openHistoricalKO'),ctx);
-assert.equal(ctx.s.courts,3,'saving final score auto-applies court change');
+assert.equal(ctx.s.courts,3,'saving final score auto-applies court change · notices: '+JSON.stringify(notices));
 assert.equal(ctx.s.pendingCourts,null,'queue clears automatically');
 assert.equal(ctx.s.currentRound,4,'scheduler checkpoint moves past 4 completed rounds');
 assert.equal(ctx.s.viewRound,3,'PR27 freely selected round is preserved');

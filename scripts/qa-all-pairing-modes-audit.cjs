@@ -163,6 +163,24 @@ for(const [mode,rosters] of [
   }
  }
 }
+
+// Stage 2 regression from full audit: Sit Out must be excluded from both the
+// qualification UI and the canonical KO start API, not just initial selection.
+scriptAt('window.P5KO=(function');
+env.P5UI={statistics:s=>s.roster.map(p=>({id:p.id}))};
+let koSitoutGuards=0;
+for(const mode of ['fp-americano','fp-mexicano','individual-americano','individual-mexicano']){
+ const s=make(mode,mode.startsWith('fp-')?8:12,2);
+ s.sitout=[s.roster.at(-1).id];
+ s.koMatchFormat='first4';s.koFinalFormat='first6';
+ assert.throws(()=>env.P5KO.start(s,'single',s.roster.map(p=>p.id)),
+  /Sit Out participants cannot enter Knockout/,'KO incorrectly admitted Sit Out: '+mode);
+ assert.equal(s.ko,undefined,'Rejected KO must not mutate Stage 2 state');
+ koSitoutGuards++;
+}
+assert(html.includes("if(enable&&group.some(pid=>(s.sitout||[]).includes(pid)))"),
+ 'Qualification UI does not block manual Sit Out selection');
+
 // Structured group validation rejects unequal A/B before next-round scheduling.
 const bad=make('structured-mexicano',12,2);bad.sitout=[1];
 assert.throws(()=>env.P5Structured.validate(bad),/Balance both groups/);
@@ -181,5 +199,5 @@ console.log(JSON.stringify({
  productionFairCycles:certifiedNormalCycles,productionFairCyclePlayers:certifiedNormalPlayers,
  dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,
  observedDynamicMaximumGamesGap:maxDynamicGap,
- protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true
+ protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards
 }));

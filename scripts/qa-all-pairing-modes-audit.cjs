@@ -197,6 +197,7 @@ for(let seed=1;seed<=10;seed++){
  const rd=env.P5EngineMX.next(s,rank,rand(seed));
  firstRoundDraws.add(rd.matches.map(m=>key(m.teams[0][0],m.teams[1][0])).sort().join('|'));
 }
+assert(firstRoundDraws.size>=7,'Fixed Mexicano opening draw lacks meaningful shuffle variety');
 
 // Stage 2 regression from full audit: Sit Out must be excluded from both the
 // qualification UI and the canonical KO start API, not just initial selection.

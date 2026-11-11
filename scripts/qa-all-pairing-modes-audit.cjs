@@ -167,6 +167,7 @@ for(const [mode,rosters] of [
 // Stage 2 regression from full audit: Sit Out must be excluded from both the
 // qualification UI and the canonical KO start API, not just initial selection.
 scriptAt('window.P5KO=(function');
+execute(fs.readFileSync('public/assets/p5-ko-qualification-sitout-guard.js','utf8'),'KO Sit Out external guard');
 env.P5UI={statistics:s=>s.roster.map(p=>({id:p.id}))};
 let koSitoutGuards=0;
 for(const mode of ['fp-americano','fp-mexicano','individual-americano','individual-mexicano']){

@@ -8,3 +8,12 @@ show('current-mode stage1','function stage1(s){','function homeExistingSessions(
 show('event dispatch','case \'next-round\'','case \'',2600);
 show('advanced make round',' function makeRound(s,rounds,random)',' function ',3000);
 for(const t of ['case \'next-round\'','case \'advance-schedule\'','case \'fill-empty-court\'','function flexibleRoundScoring(']){let at=s.indexOf(t);console.log('### '+t+'\n'+s.slice(Math.max(0,at-150),at+450));}
+
+console.log('=== EXTENSION ENGINE HISTORY INSPECTION ===');
+const recStart=s.indexOf('window.P5Recovery='),recEnd=s.indexOf('window.P5EngineRegistry=',recStart);
+const rec=s.slice(recStart,recEnd);
+for(const term of ['function history(s)','function eligible(s)','function extendedFP(s','function extendedIndividual(s','function extend(s,random)']){
+ const i=rec.indexOf(term);console.log('== '+term+' == '+i+' '+(i>=0?rec.slice(i,i+3200):''));
+}
+console.log('=== SAVE IMPLEMENTATION ===');
+let i=s.indexOf(' function save(){');console.log(i>=0?s.slice(i,i+1250):'not found');

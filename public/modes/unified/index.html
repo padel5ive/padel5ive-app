@@ -3673,7 +3673,53 @@ main.wrap>.header .brand-identity>div{flex:1 1 auto;min-width:0}
 .p5-v2-modal-score .p5-v2-score-pairname{display:block;min-height:2.7em;overflow-wrap:anywhere;word-break:normal}
 .p5-v2-modal-score input{width:100%;box-sizing:border-box;margin-top:8px}
 @media(max-width:420px){.p5-v2-modal-score{gap:9px}.p5-v2-modal-score label{font-size:12px}}
-</style><style id='p5-v5825-flex-round-styles'>
+</style>
+<style id="p5-adaptive-form-v1">
+/* PADEL 5IVE · adaptive W/L/T indicators · no impact on ranking logic. */
+#americano .live-standings .match-form.p5-adaptive-form{
+ display:grid!important;
+ grid-template-columns:repeat(var(--p5-form-cols,18),minmax(0,1fr));
+ gap:3px 2px!important;
+ width:min(100%,var(--p5-form-target,234px));
+ max-width:100%!important;
+ margin:6px 0 2px;
+ align-items:center;
+ justify-items:center;
+ line-height:0;
+}
+#americano .live-standings .match-form.p5-adaptive-form .form-dot{
+ box-sizing:border-box;
+ display:block!important;
+ width:100%!important;
+ height:auto!important;
+ max-width:11px!important;
+ max-height:11px!important;
+ min-width:0!important;
+ min-height:0!important;
+ margin:0!important;
+ padding:0!important;
+ flex:none!important;
+ aspect-ratio:1/1;
+ border-radius:3px!important;
+ cursor:default;
+}
+#americano .live-standings .p5-form-history{margin-top:5px;max-width:100%}
+#americano .live-standings .p5-form-history>summary{
+ color:#c8ac83;
+ font-size:9px;
+ font-weight:650;
+ letter-spacing:.02em;
+ line-height:1.5;
+ cursor:pointer;
+ list-style-position:inside;
+}
+#americano .live-standings .p5-form-history[open]>.p5-form-all{margin-top:6px}
+@media(max-width:560px){
+ #americano .live-standings .match-form.p5-adaptive-form{gap:3px 2px!important}
+ #americano .live-standings .p5-form-history>summary{font-size:9px}
+}
+</style>
+<style id='p5-v5825-flex-round-styles'>
 /* Non-sequential Americano score navigation. Matchmaking & Mexicano remain unchanged. */
 #americano .p5-flex-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 8px;color:#d7b786;font-size:10px;letter-spacing:.09em}
 #americano .p5-flex-heading span{font-size:10px;letter-spacing:0;color:#b9c5ca}
@@ -5937,11 +5983,28 @@ window.P5UI=(function(){'use strict';
   const progress=stage2?`KO ${s.ko?.history?.length||0} confirmed · ${s.ko?.active?.length||0} active`:`Round ${Math.min(s.currentRound+1,s.rounds.length)}/${s.rounds.length} · ${done(s)}/${total(s)} scored`;
   return `<div class="p5-stage-head p5-si-card p5-b3-stable-header ${P5Structured.is(s)?'p5-51-structured':''}"><div class="p5-si-top"><div class="p5-si-identity"><div class="p5-si-identity-cell p5-si-session-name"><span>SESSION NAME</span><strong title="${esc(s.session)}">${esc(s.session)}</strong></div><div class="p5-si-identity-cell"><span>GAME MODE</span><strong>${stage2?'Knockout':mode(s)}</strong></div><div class="p5-si-identity-cell"><span>PAIRING STYLE</span><strong>${kind(s)}</strong></div></div><span class="pill p5-si-status" data-state="${esc(statusLabel)}" aria-label="Tournament status: ${esc(statusLabel)}">${esc(statusLabel)}</span></div><div class="p5-si-details"><span><b>Match Format</b> ${esc(fmt)}</span><span><b>Date</b> ${esc(s.date||'—')}</span><span><b>${term(s)}</b> ${s.roster.length}</span><span><b>Courts</b> ${s.courts}</span><span><b>Progress</b> ${esc(progress)}</span>${P5Structured.is(s)?`<span><b>Groups</b> ${esc(P5Structured.labels(s).join(' + '))}</span>`:''}</div></div>`;
  }
+ function matchForm(r){
+  // Presentation only; the confirmed score sequence and ranking are unchanged.
+  const history=Array.isArray(r.form)?r.form:[],total=history.length;
+  const visible=total>36?history.slice(-36):history;
+  const offset=total-visible.length,columns=Math.max(1,Math.min(18,total));
+  const dots=(items,from)=>items.map((result,i)=>{
+   const value=String(result).toUpperCase();
+   const name=value==='W'?'Win':value==='L'?'Loss':'Tie';
+   const color=value==='W'?'w':value==='L'?'l':'t';
+   const ordinal=from+i+1;
+   return '<span class="form-dot form-'+color+'" title="Game '+ordinal+': '+name+'" aria-label="Game '+ordinal+': '+name+'"></span>';
+  }).join('');
+  const label=total>36?'Last 36 of '+total+' match results':total+' match results';
+  const recent='<div class="match-form p5-adaptive-form" style="--p5-form-cols:'+columns+';--p5-form-target:'+(columns*13)+'px" role="group" aria-label="'+label+'">'+dots(visible,offset)+'</div>';
+  const all=total>36?'<details class="p5-form-history"><summary>View all '+total+' games</summary><div class="match-form p5-adaptive-form p5-form-all" style="--p5-form-cols:18;--p5-form-target:234px" role="group" aria-label="All '+total+' match results">'+dots(history,0)+'</div></details>':'';
+  return recent+all;
+ }
  function standing(s){const rows=statistics(s),live=s.stage==='stage1',name=live?'LEADERBOARD':'FINAL LEADERBOARD',pill=live?'LIVE':'FINAL';
   // A ranking method is not a live-game status. Show tie resolution ONLY after
   // Stage 1 is officially finished, never during active play or before scores.
   const tieLabel=r=>(!live&&r.tieBreak)?`<button type="button" class="p5-b42-tie-note" data-act="rank-tie-info" data-id="${r.id}" aria-label="Ranking explanation for ${esc(r.name)}" title="Tap for tie-break details">${r.tieBreak==='H2H'?'Head-to-head':r.tieBreak==='MINI'?'H2H mini-league':'Seeded draw'}<span class="p5-b42-tie-info-icon" aria-hidden="true">ⓘ</span></button>`:'';
-  return `<section class="card p5-b41-leaderboard" aria-label="Stage 1 leaderboard"><div class="row between"><h2>${name}</h2><span class="pill">${pill}</span></div><div id="a-standings"><table class="live-standings"><thead><tr><th>NAME / FORM</th><th>W–L–T</th><th>DIFF</th><th>P</th><th>G</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td><b style="color:#edc899">${i+1}. ${live?`<button type="button" class="mc38-rename" data-act="manage-participant" data-id="${r.id}">${esc(r.name)}${P5AdvancedRules.coachIds(s).includes(r.id)?'<span class="p5-v24-sitout-label"> · COACH</span>':''}${P5AdvancedRules.pairFor(s,r.id)?'<span class="p5-v24-sitout-label"> · FIXED</span>':''}${(s.sitout||[]).includes(r.id)?'<span class="p5-v24-sitout-label"> · SIT OUT</span>':''}<span class="p5-sitout-indicator"> · ⌄</span></button>`:`<span class="p5-b41-static-name">${esc(r.name)}${(s.sitout||[]).includes(r.id)?' · SIT OUT':''}</span>`}</b>${tieLabel(r)}<div class="match-form" aria-label="Last ${r.form.length} results">${r.form.slice(-12).map(x=>`<span class="form-dot form-${x.toLowerCase()}" title="${x}"></span>`).join('')}</div></td><td class="wlt-cell">${r.w}–${r.l}–${r.t}</td><td>${r.diff}</td><td>${r.p}</td><td>${r.g}</td></tr>`).join('')}</tbody></table><p class="muted p5-b41-ranking-legend">W = Wins · L = Losses · T = Ties · G = Matches played. Form: <span class="form-dot form-w" aria-label="Win"></span> Win · <span class="form-dot form-l" aria-label="Loss"></span> Loss · <span class="form-dot form-t" aria-label="Tie"></span> Tie.<br>Ranked: Wins → DIFF → Points → H2H → seeded draw.${live?'':' Tap the subtle note beneath a tied name for details.'}</p></div></section>`;}
+  return `<section class="card p5-b41-leaderboard" aria-label="Stage 1 leaderboard"><div class="row between"><h2>${name}</h2><span class="pill">${pill}</span></div><div id="a-standings"><table class="live-standings"><thead><tr><th>NAME / FORM</th><th>W–L–T</th><th>DIFF</th><th>P</th><th>G</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td><b style="color:#edc899">${i+1}. ${live?`<button type="button" class="mc38-rename" data-act="manage-participant" data-id="${r.id}">${esc(r.name)}${P5AdvancedRules.coachIds(s).includes(r.id)?'<span class="p5-v24-sitout-label"> · COACH</span>':''}${P5AdvancedRules.pairFor(s,r.id)?'<span class="p5-v24-sitout-label"> · FIXED</span>':''}${(s.sitout||[]).includes(r.id)?'<span class="p5-v24-sitout-label"> · SIT OUT</span>':''}<span class="p5-sitout-indicator"> · ⌄</span></button>`:`<span class="p5-b41-static-name">${esc(r.name)}${(s.sitout||[]).includes(r.id)?' · SIT OUT':''}</span>`}</b>${tieLabel(r)}${matchForm(r)}</td><td class="wlt-cell">${r.w}–${r.l}–${r.t}</td><td>${r.diff}</td><td>${r.p}</td><td>${r.g}</td></tr>`).join('')}</tbody></table><p class="muted p5-b41-ranking-legend">W = Wins · L = Losses · T = Ties · G = Matches played. Form: <span class="form-dot form-w" aria-label="Win"></span> Win · <span class="form-dot form-l" aria-label="Loss"></span> Loss · <span class="form-dot form-t" aria-label="Tie"></span> Tie.<br>Ranked: Wins → DIFF → Points → H2H → seeded draw.${live?'':' Tap the subtle note beneath a tied name for details.'}</p></div></section>`;}
  // Americano schedule is precomputed; round browsing does not change scheduling.
  function flexibleRoundScoring(session){return session.stage==='stage1'&&typeof session.mode==='string'&&session.mode.endsWith('-americano');}
  function roundScoreState(round){const matches=(round?.matches||[]).filter(Boolean),completed=matches.filter(m=>m.confirmed).length;return {completed,total:matches.length,status:completed===0?'pending':completed===matches.length?'completed':'partial'};}

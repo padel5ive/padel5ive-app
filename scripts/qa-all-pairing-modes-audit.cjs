@@ -164,6 +164,40 @@ for(const [mode,rosters] of [
  }
 }
 
+
+// Diversity telemetry: a Coach is required every eligible round, but should
+// encounter a broad mix of opponents instead of repeatedly facing one player.
+// Metrics intentionally reported without pretending zero repetition is possible.
+let coachDiversityCases=0,worstCoachOpponentEncounter=0,minCoachUniqueOpponents=Infinity;
+for(const mode of ['individual-americano','individual-mexicano']){
+ for(const seed of [41,97,133]){
+  const s=make(mode,18,3,{fixedEnabled:true,pairs:[[2,3]],coachEnabled:true,coachIds:[1]});
+  const opponents=new Map(),randSeed=rand(seed+(mode==='individual-mexicano'?2000:0));
+  for(let r=0;r<10;r++){
+   const rankings=s.roster.map((p,i)=>({id:p.id,points:(i*7+r*3)%23}));
+   const rd=env.P5AdvancedRules.makeRound(s,s.rounds,randSeed,rankings);
+   const coachMatch=rd.matches.find(m=>m.teams.flat().includes(1));
+   assert(coachMatch,'Coach missed required active round');
+   const coachTeam=coachMatch.teams.find(team=>team.includes(1));
+   const opponentsNow=coachMatch.teams.find(team=>team!==coachTeam);
+   for(const id of opponentsNow)opponents.set(id,(opponents.get(id)||0)+1);
+   score(rd,seed+r);s.rounds.push(rd);
+  }
+  const values=[...opponents.values()];
+  worstCoachOpponentEncounter=Math.max(worstCoachOpponentEncounter,Math.max(...values));
+  minCoachUniqueOpponents=Math.min(minCoachUniqueOpponents,opponents.size);
+  coachDiversityCases++;
+ }
+}
+// Detect accidental first-round de-randomization of Mexicano when no ranks
+// or confirmed results exist. Product review can use draw-variety telemetry.
+const firstRoundDraws=new Set();
+for(let seed=1;seed<=10;seed++){
+ const s=make('fp-mexicano',10,5),rank=s.roster.map(p=>({id:p.id}));
+ const rd=env.P5EngineMX.next(s,rank,rand(seed));
+ firstRoundDraws.add(rd.matches.map(m=>key(m.teams[0][0],m.teams[1][0])).sort().join('|'));
+}
+
 // Stage 2 regression from full audit: Sit Out must be excluded from both the
 // qualification UI and the canonical KO start API, not just initial selection.
 scriptAt('window.P5KO=(function');
@@ -200,5 +234,6 @@ console.log(JSON.stringify({
  productionFairCycles:certifiedNormalCycles,productionFairCyclePlayers:certifiedNormalPlayers,
  dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,
  observedDynamicMaximumGamesGap:maxDynamicGap,
- protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards
+ protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards,coachDiversityCases,worstCoachOpponentEncounter,minCoachUniqueOpponents,
+ fixedMexFirstRoundUniqueDraws:firstRoundDraws.size
 }));

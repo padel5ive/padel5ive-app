@@ -79,6 +79,13 @@ function summary(data,kind){
  return {session:safe(session),date:safe(date),time:safe(time),kind};
 }
 function role(entry,id,ts){
+ // Modern PIN-protected sessions have durable moderator OWNERSHIP.
+ // A 90-second lease only signals online presence; it must never revoke
+ // the authorized moderator's access merely because iOS suspended the PWA
+ // while WhatsApp was open. Ownership changes only by a verified PIN transfer.
+ if(entry.moderatorPinHash)
+  return entry.controller?.id===id?'controller':'viewer';
+ // Keep the original lease model for legacy sessions without Moderator PIN.
  return entry.controller?.id===id&&entry.controller.expires>ts?'controller':'viewer';
 }
 function metadata(entry,id,ts,includeData){

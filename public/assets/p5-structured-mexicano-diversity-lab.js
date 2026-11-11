@@ -79,7 +79,8 @@
     best.sort((x,y)=>x.teams.flat().reduce((v,id)=>v+ranks[id],0)-y.teams.flat().reduce((v,id)=>v+ranks[id],0));
     const matches=best.map((m,i)=>({...base.matches[i],teams:m.teams}));
     const result={...base,matches,diversityOptimized:true};
-    if((base.fairnessWarnings||[]).length){
+    {
+      // Always recalculate warnings even when the native candidate had none.
       // The native warnings were calculated for the old fixtures; only keep warnings
       // independent of partner/opponent repetition. Recompute the teammate note.
       const warning=base.fairnessWarnings.filter(x=>!String(x).includes('teammate repeat')&&!String(x).startsWith('Ranking-band compromise'));

@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      - run: node scripts/qa-court-layout-inspect.cjs
       - run: npm run build
       - run: node scripts/qa-court-reschedule.cjs
       - run: node scripts/qa-flexible-round-scoring.cjs

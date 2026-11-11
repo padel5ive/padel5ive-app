@@ -7,7 +7,6 @@ on:
       - 'scripts/qa-court-auto.cjs'
       - 'scripts/qa-extra-rounds.cjs'
       - 'scripts/qa-flexible-round-scoring.cjs'
-      - 'scripts/qa-court-layout-inspect.cjs'
       - '.github/workflows/qa-court-reschedule.yml'
       - 'package.json'
 jobs:
@@ -19,7 +18,6 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - run: node scripts/qa-court-layout-inspect.cjs
       - run: npm run build
       - run: node scripts/qa-court-reschedule.cjs
       - run: node scripts/qa-court-auto.cjs

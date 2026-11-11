@@ -287,6 +287,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     return json(metadata(next,id,ts,false));
    }
    if(action==='approve-control'){
+    if(entry.moderatorPinHash)return error('PIN-protected sessions require Moderator PIN to transfer control',409);
     if(role(entry,id,ts)!=='controller')return error('Only the active controller can approve',423);
     const target=entry.request?.id;
     if(!target||entry.request.expires<ts||!entry.devices.some(d=>d.id===target))
@@ -297,6 +298,7 @@ export function makeCloudHandler({storeFactory=storeFor,clock=now}={}){
     return json(metadata(next,id,ts,false));
    }
    if(action==='release-control'){
+    if(entry.moderatorPinHash)return error('Moderator control stays assigned until a valid PIN transfer',409);
     if(role(entry,id,ts)!=='controller')return error('Not the active controller',423);
     const target=entry.request?.id&&entry.request.expires>ts?entry.request.id:null;
     const next={...entry,controller:target?{id:target,expires:ts+LEASE_MS}:null,request:null};

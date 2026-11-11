@@ -7,7 +7,8 @@ const assets = [
   'p5-structured-fairness-lab.js',
   'p5-structured-irregular-lab.js',
   'p5-structured-mexicano-diversity-lab.js',
-  'p5-ko-qualification-sitout-guard.js'
+  'p5-ko-qualification-sitout-guard.js',
+  'p5-mexicano-individual-opening-lab.js'
 ];
 const insert = marker + assets.map(name => '<script src="/assets/' + name + '"></script>').join('');
 if (!html.includes('window.P5StructuredCycle534=') ||

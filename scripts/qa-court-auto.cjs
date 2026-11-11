@@ -61,4 +61,15 @@ assert.equal(JSON.stringify(ctx.s.rounds[19]),old20,'partial Round 20 protected'
 assert.equal(JSON.stringify(ctx.s.rounds[23]),old24,'partial Round 24 protected');
 assert(ctx.s.rounds.slice(4,19).some(x=>x.matches.length===3),'third court populated automatically');
 assert(logs.some(x=>x.includes('automatically updated')),'auto action is logged');
+// When the currently scheduled round is already complete, Apply Court Changes must update immediately.
+const immediate=structuredClone(rounds);
+immediate[0].matches[0].confirmed=true;immediate[0].matches[0].score=[3,2];
+immediate[0].matches[1].confirmed=true;immediate[0].matches[1].score=[4,1];
+ctx.s={mode:'fp-americano',stage:'stage1',courts:2,pendingCourts:null,currentRound:0,viewRound:3,rounds:immediate,roster,sitout:[],ui:{modal:{type:'courts'}},matchFormat:'total5'};
+vm.runInContext('changeCourt()',ctx);
+assert.equal(ctx.s.courts,3,'already-complete round should apply court change at selection without extra click');
+assert.equal(ctx.s.pendingCourts,null);
+assert.equal(ctx.s.viewRound,3);
+assert.equal(JSON.stringify(ctx.s.rounds[19]),old20);
+assert.equal(JSON.stringify(ctx.s.rounds[23]),old24);
 console.log('PASS PR29 AUTO: select 2→3 during partial R1 → save last score → automatic future reschedule; R4/R20/R24 preserved; viewRound unchanged; court 3 filled.');

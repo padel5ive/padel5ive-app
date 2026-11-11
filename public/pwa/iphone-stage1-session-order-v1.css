@@ -1,0 +1,40 @@
+/* PADEL 5IVE · iPhone Stage 1 responsive reading order.
+ * Preserve the native scoring card, leaderboard and Session Control nodes.
+ * Only the visual order changes on phones; moderator actions and all engine
+ * scheduling/score/Cloud session behavior remain untouched.
+ */
+@media screen and (max-width: 779px) {
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) {
+    display: flex !important;
+    flex-flow: column nowrap !important;
+    grid-template-columns: none !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100%;
+  }
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child {
+    display: contents !important;
+  }
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child > .p5-v26-round-card {
+    order: 0 !important;
+  }
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child > .prematch-setup {
+    order: 1 !important;
+  }
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > aside {
+    order: 2 !important;
+  }
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child > .p5-v26-session-control {
+    order: 3 !important;
+    margin-top: 0 !important;
+  }
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child > .p5-v26-round-card,
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child > .prematch-setup,
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > div:first-child > .p5-v26-session-control,
+  #americano .layout:has(> div:first-child > .p5-v26-session-control) > aside {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+}

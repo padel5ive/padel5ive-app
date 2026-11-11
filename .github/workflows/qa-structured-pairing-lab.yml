@@ -21,4 +21,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run qa:structured
+      - run: node scripts/qa-all-pairing-modes-audit.cjs
       - run: git diff --check

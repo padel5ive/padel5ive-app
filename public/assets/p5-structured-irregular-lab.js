@@ -47,8 +47,22 @@
   const baseline=original.optimize(future,prefix,ids,random,options);
   if(baseline.length<3)return baseline;
   const active=(options.availableIds||ids).slice(),coaches=(options.coaches||[]).filter(x=>active.includes(x));
+  function annotate(schedule){
+   // Surface unavoidable or unresolved fairness risk to the moderator instead
+   // of presenting a problematic irregular schedule as silently perfect.
+   const stats=assess(teamRounds(schedule),prefix||[],active);
+   const maxCourts=Math.max(0,...schedule.map(r=>(r.matches||[]).filter(Boolean).length));
+   const groupSize=active.length/2,resting=groupSize-2*maxCourts;
+   const fairStreakLimit=resting>0?Math.ceil(2*maxCourts/resting):Infinity;
+   const warnings=[];
+   if(stats.longest>fairStreakLimit)warnings.push('Scheduling fairness watch: predicted consecutive-play streak up to '+stats.longest+' rounds. Adjust active players or court count if shorter streaks are required.');
+   if(stats.gapMax>1)warnings.push('Scheduling fairness watch: Games Played spread can temporarily reach '+stats.gapMax+' matches; avoid treating this roster/court combination as perfectly balanced.');
+   if(!warnings.length)return schedule;
+   return schedule.map((r,i)=>i===0?{...r,fairnessWarnings:[...(r.fairnessWarnings||[]).filter(w=>!String(w).startsWith('Scheduling fairness watch:')),...warnings]}:r);
+  }
+
   // A newly added/absent player cannot be assessed fairly in a differently eligible future row.
-  if(baseline.some(r=>r.eligibleIds&&active.some(id=>!r.eligibleIds.includes(id))))return baseline;
+  if(baseline.some(r=>r.eligibleIds&&active.some(id=>!r.eligibleIds.includes(id))))return annotate(baseline);
   const rows=teamRounds(baseline),pfx=prefix||[];
   // Pre-encode active players as 32-bit masks for fast whole-session scoring.
   // This keeps large randomized searches responsive on an iPad; >30 uses exact fallback.
@@ -110,7 +124,7 @@
   }
   const newStats=assess(best,pfx,active);
   if(Math.abs(bestCost-newStats.cost)>1e-6)throw Error('Structured fairness metric mismatch after search');
-  if(bestCost>=baselineStats.cost-1e-7||newStats.longest>baselineStats.longest||newStats.doubleRest>baselineStats.doubleRest||newStats.gapMax>baselineStats.gapMax)return baseline;
+  if(bestCost>=baselineStats.cost-1e-7||newStats.longest>baselineStats.longest||newStats.doubleRest>baselineStats.doubleRest||newStats.gapMax>baselineStats.gapMax)return annotate(baseline);
   // Re-match intact teams to minimize repeated opponent encounters against immutable past.
   const history=new Map(),fixture=new Map();
   const sig=(a,b)=>[a.slice().sort((x,y)=>x-y).join(':'),b.slice().sort((x,y)=>x-y).join(':')].sort().join('|');
@@ -148,7 +162,7 @@
   // All normal improvements must keep opponent repetition no worse than baseline.
   const severeStreak=baselineStats.longest>=5&&newStats.longest<baselineStats.longest;
   const permittedExtra=severeStreak?Math.min(6,Math.max(3,Math.ceil(oldRepetition.opponentRepeat*0.12))):0;
-  if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat+permittedExtra||freshRepetition.fixtureRepeat>oldRepetition.fixtureRepeat)return baseline;
+  if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat+permittedExtra||freshRepetition.fixtureRepeat>oldRepetition.fixtureRepeat)return annotate(baseline);
   if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat){
    for(const r of output){r.fairnessWarnings=[...(r.fairnessWarnings||[]).filter(x=>!String(x).startsWith('Fairness trade-off:')),
     'Fairness trade-off: '+(freshRepetition.opponentRepeat-oldRepetition.opponentRepeat)+' extra opponent encounters across the future schedule to prevent long consecutive-play streaks'];}
@@ -162,7 +176,7 @@
    if(new Set(players).size!==players.length)throw Error('Double booking after irregular optimization');
    if(players.some(id=>!(output[i].eligibleIds||active).includes(id)))throw Error('Ineligible player scheduled');
   }
-  return output;
+  return annotate(output);
  }
  root.P5Fair532=Object.freeze({...original,optimize});
  root.P5StructuredIrregularLab=Object.freeze({components,assess,optimize,version:'lab0.2'});

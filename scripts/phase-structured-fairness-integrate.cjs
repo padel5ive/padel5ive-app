@@ -47,6 +47,23 @@ function installGuard(original, guarded, label) {
   fs.writeFileSync(file, html, 'utf8');
 }
 // Locked KO engine stays byte-identical. The separate asset wraps only its public start() API.
+// Fixed Partner Mexicano opening draw must be shuffled; ranking is meaningful
+// only AFTER confirmed results. Never modify the restored/prior round pathway.
+const mxOpening = "  const byId=new Map(standings.map((x,i)=>[x.id,{...x,rank:i}]));";
+const mxRandomized = [
+ "  /* PR34 FIXED MEXICANO RANDOM OPENING */",
+ "  if((state.rounds||[]).length===0){",
+ "   const shuffled=eligible.slice();",
+ "   for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}",
+ "   const players=shuffled.slice(0,2*cap);",
+ "   const matches=Array.from({length:cap},(_,court)=>({",
+ "    id:'R0C'+court,court:court+1,teams:[[players[2*court]],[players[2*court+1]]],score:null,confirmed:false",
+ "   }));",
+ "   return {index:0,eligibleIds:eligible.slice(),matches,openingRandomized:true};",
+ "  }"
+].join('\n')+'\n'+mxOpening;
+installGuard(mxOpening,mxRandomized,'Fixed Partner Mexicano randomized opening round');
+
 const koToggle = "const selected=new Set(m.selectedIds),group=pairedIds(id),enable=!group.every(pid=>selected.has(pid));";
 installGuard(koToggle,
  koToggle+"\n  if(enable&&group.some(pid=>(s.sitout||[]).includes(pid)))return toast('Sit Out participants cannot qualify for KO. Return Active first.');",

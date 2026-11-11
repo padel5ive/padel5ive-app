@@ -11,6 +11,9 @@ scriptAt('const rr9=');
 scriptAt('window.P5EngineFP=(function');
 scriptAt('window.P5EngineMX=(function');
 scriptAt('window.P5EngineIndividual=(function');
+// Production also loads this defer asset. Without it, 18/3 and 30/5
+// tests would silently exercise the fallback instead of the live fair-cycle.
+execute(fs.readFileSync('public/assets/p5-fair-cycle-v5515.js','utf8'),'P5FairCycle production asset');
 until('window.P5Fair532=(function','/* PADEL 5IVE Phase 5.0.4');
 until('window.P5HistorySmart=(function','/* PADEL 5IVE Phase 5.0 · OPTIONAL ADVANCED RULES');
 until('window.P5AdvancedRules=(function','/* Phase 5.0: isolated Mexicano');
@@ -112,6 +115,18 @@ for(const [n,c] of [[8,2],[12,1],[12,2],[12,3],[16,2]]){
   completedNormal++;normalPartnerChecks+=want;
  }
 }
+
+// Real production 6-players-per-court fair cycles, including the full 5-court case.
+let certifiedNormalCycles=0,certifiedNormalPlayers=0;
+for(const [n,c] of [[6,1],[18,3],[24,4],[30,5]]){
+ const s=make('individual-americano',n,c),rounds=env.P5EngineIndividual.build(s.roster.map(p=>p.id),c,rand(500+n));
+ const a=metrics(s,rounds),want=n*(n-1)/2;
+ assert.equal(Object.keys(a.partners).length,want,'Production fair-cycle missing teammate: '+n+'/'+c);
+ assert.equal(a.repeatPartner,n/2%2,'Production fair-cycle repeat count invalid: '+n+'/'+c);
+ assert(a.maxGap<=1,'Production fair-cycle running G gap exceeded one: '+n+'/'+c);
+ for(const id of Object.keys(a.gp))assert(a.gp[id]>0,'Player never played');
+ certifiedNormalCycles++;certifiedNormalPlayers+=n;
+}
 // Flexible Americano: dynamic hard-constraint changes are already exercised
 // with score confirmation and historic invariance in qa-structured-pairing-lab.
 let mexicanModes=0,mexicanRounds=0,maxDynamicGap=0;
@@ -163,6 +178,7 @@ console.log(JSON.stringify({
  fullModeAudit:'PASS',schedulerEngines:expectedIds.length,conceptualVariants:8,
  fixedAmericanoFullCycles:completedFP,normalAmericanoFullCycles:completedNormal,
  distinctNormalTeammatePairsAudited:normalPartnerChecks,
+ productionFairCycles:certifiedNormalCycles,productionFairCyclePlayers:certifiedNormalPlayers,
  dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,
  observedDynamicMaximumGamesGap:maxDynamicGap,
  protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true

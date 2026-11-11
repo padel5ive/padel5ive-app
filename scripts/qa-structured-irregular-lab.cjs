@@ -65,6 +65,12 @@ for(const [n,c] of [[7,2],[8,2],[8,3],[9,3],[10,3],[10,4],[11,3],[12,4],[15,5]])
   assert(q.doubleRest<=baseline.doubleRest,'Double-rest regression');
   assert(q.maxGap<=baseline.maxGap,'Game-count gap regression');
   assert(q.exactRepeats<=baseline.exactRepeats,'Repeated exact fixture regression');
+  if(!future.every(r=>r.structuredFairCycleCertified)){
+   const target=n-2*c>0?Math.ceil(2*c/(n-2*c)):Infinity;
+   if(q.longest>target||q.maxGap>1){
+    assert((future[0].fairnessWarnings||[]).some(w=>w.startsWith('Scheduling fairness watch:')),'Residual fairness risk not disclosed');
+   }
+  }
   const extra=q.oppRepeats-baseline.oppRepeats;
   assert(extra<=6,'Excessive opponent-repeat trade-off');
   if(extra>0){

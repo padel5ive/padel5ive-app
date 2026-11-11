@@ -5566,7 +5566,7 @@ window.P5StructuredMX534=(function(){'use strict';
    const repeat=(h.partners[key(...x)]||0)+(h.partners[key(...y)]||0);
    const exact=h.fixtures[fixture(x,y)]||0;
    const spread=Math.max(...ranks)-Math.min(...ranks);
-   const score=imbalance*165+partnerRank*90+spread*50+repeat*180+opp*55+exact*800+rnd()*.02;
+   const score=imbalance*165+partnerRank*90+spread*50+repeat*1700+opp*240+exact*3500+rnd()*.02;
    if(!best||score<best.score)best={teams,score,opp,repeat,exact,strength:ranks.reduce((a,b)=>a+b,0)/4,spread};
   }
   return best;
@@ -5592,7 +5592,7 @@ window.P5StructuredMX534=(function(){'use strict';
   if(cap<1)throw Error('At least two players in each active group are needed.');
   const h=confirmed(s.rounds||[]),first=!(s.rounds||[]).some(r=>(r.matches||[]).some(m=>m?.confirmed));
   const rank=groupRanks(g,standings,random,first);let best=null;
-  for(let attempt=0;attempt<32;attempt++){
+  for(let attempt=0;attempt<48;attempt++){
    let A=pick(g.A,cap*2,h,ri,rank,random,attempt);
    let B=pickAligned(g.B,A,cap*2,h,ri,rank,random,attempt);
    if(attempt>0&&attempt%2===1){A=pickAligned(g.A,B,cap*2,h,ri,rank,random,attempt);B=pickAligned(g.B,A,cap*2,h,ri,rank,random,attempt);}
@@ -5632,6 +5632,7 @@ window.P5StructuredMX534=(function(){'use strict';
  return merged;
 })();
 
+</script><script src="/assets/p5-structured-matchmaking-v600.js"></script><script>
 /* PADEL 5IVE 5.4.13.5 — Americano COURT ALLOCATION FAIRNESS
  * Intentionally ONLY reassigns courts, never who plays whom, pairing, scoring,
  * or established history. Run AFTER the scheduling / recovery optimizers.
@@ -6823,7 +6824,7 @@ window.P5App=(function(){'use strict';
   const seen=new Set();for(const p of s.roster){if(p.names.some(x=>!x?.trim()))return toast('Fill every participant name first');for(const name of p.names){const k=name.trim().toLowerCase();if(seen.has(k))return toast('Duplicate player name: '+name);seen.add(k);}}
   const engine=ENG[s.mode];snapshot();try{
    if(engine.dynamic){s.rounds=[];const next=engine.next(s,P5UI.statistics(s),random);s.rounds.push(next);}else if(P5AdvancedRules.constrained(s))s.rounds=P5AdvancedRules.build(s,random);else s.rounds=P5Structured.is(s)?P5Structured.build(s,random):engine.build(s.roster.map(p=>p.id),s.courts,random);
-    if(!engine.dynamic)s.rounds=P5Fair532.optimize(s.rounds,[],s.roster.map(p=>p.id),random,
+    if(!engine.dynamic && !(s.mode==='structured-americano' && window.P5StructuredFair6?.applies(s)))s.rounds=P5Fair532.optimize(s.rounds,[],s.roster.map(p=>p.id),random,
      {coaches:P5AdvancedRules.coachIds(s),structured:s.mode==='structured-americano',availableIds:s.roster.map(p=>p.id).filter(id=>!s.sitout.includes(id))});
     if(P5CourtRotation.applies(s))P5CourtRotation.allocate(s,s.rounds);
     P5EngineRegistry.validateSchedule(s.rounds,s);

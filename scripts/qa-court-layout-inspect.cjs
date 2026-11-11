@@ -1,17 +1,12 @@
 'use strict';
-const fs=require('node:fs');
-const html=fs.readFileSync('public/modes/unified/index.html','utf8');
-for(const [label,start,end] of [
- ['COURT CHANGE',' function changeCourt(', ' function resetStage1('],
- ['NEXT ROUND',' function nextRound(', ' function showBalance('],
- ['STAGE1 UI',' function stage1(s)', ' function finished('],
- ['RECOVERY','window.P5Recovery=', 'window.P5EngineRegistry='],
- ['MODE REGISTRY','window.P5EngineRegistry=', 'window.P5UI=']
-]){
- let a=html.indexOf(start);let b=html.indexOf(end,a+start.length);
- console.log('===== '+label+' start='+a+' end='+b+' =====');
- if(a>=0){let txt=html.slice(a,b>a?b:Math.min(a+15000,html.length));console.log(txt.slice(0,label==='RECOVERY'?20000:label==='MODE REGISTRY'?12500:label==='STAGE1 UI'?14000:30000).replace(/data:image\/[^\s"']+/g,'[INLINE-IMAGE]'))}
-}
-for(const p of ['p5-v26-session-control','session-history','p5-v24-arrival','class="stage1','<aside>','p5-v26-session-control']){
- const a=html.indexOf(p);console.log('CSS_ANCHOR '+p+' '+a+' '+(a>=0?html.slice(Math.max(0,a-800),a+900):''));
+const fs=require('node:fs'),s=fs.readFileSync('public/modes/unified/index.html','utf8');
+function print(label,first,last,max=12000){const i=s.indexOf(first),j=last?s.indexOf(last,i+first.length):-1;console.log('==== '+label+' offset '+i+' ===');console.log(s.slice(i,j>i?Math.min(j,i+max):i+max));}
+print('SAVE SCORE', ' function saveScore(', ' function openHistoricalKO(', 13000);
+print('SCORE MODAL', ' function scoreModal(', ' function openHistoricalKO(', 9500);
+print('CURRENT DONE', ' function currentDone(', ' function ', 3500);
+print('COURT CHANGE', ' function changeCourt(', ' function resetStage1(', 3500);
+print('ROUND DISPATCH', "case 'advance-schedule'", "case '",2500);
+print('STAGE1 ADVANCE BUTTON', 'Apply Pending Changes · Advance Schedule',null,700);
+for(const word of ['saveScore()','changeCourt()','currentDone()','case \'modal-save\'','case \'score-save\'','case \'advance-schedule\'','data-act="advance-schedule"']){
+ let at=s.indexOf(word);console.log('=== '+word+' === '+at+' '+(at>=0?s.slice(at-350,at+950):''));
 }

@@ -35,3 +35,23 @@ if (html.slice(lastBody - insert.length, lastBody) !== insert) {
   throw Error('Structured lab scripts not immediately before final body close');
 }
 console.log('PASS: Structured lab scripts inserted once at final HTML body, outside embedded JS/PDF templates.');
+// Stage 2 hard safety: the default qualification set already excludes Sit Out,
+// but manual qualifier toggling previously allowed those participants back in.
+// Enforce the rule in both the UI action and the canonical KO start API.
+function installGuard(original, guarded, label) {
+  if (html.includes(guarded)) return;
+  const occurrences = html.split(original).length - 1;
+  if (occurrences !== 1) throw Error('Expected one '+label+' insertion site, found '+occurrences);
+  html = html.replace(original, guarded);
+  fs.writeFileSync(file, html, 'utf8');
+}
+const koInput = "const input=selectedIds===null?ranking.filter(id=>!(s.sitout||[]).includes(id)):selectedIds;";
+installGuard(koInput,
+ koInput+"\n  if(Array.isArray(input)&&input.some(id=>(s.sitout||[]).includes(id)))throw Error('Sit Out participants cannot enter Knockout. Return Active first.');",
+ 'KO qualifier API');
+const koToggle = "const selected=new Set(m.selectedIds),group=pairedIds(id),enable=!group.every(pid=>selected.has(pid));";
+installGuard(koToggle,
+ koToggle+"\n  if(enable&&group.some(pid=>(s.sitout||[]).includes(pid)))return toast('Sit Out participants cannot qualify for KO. Return Active first.');",
+ 'KO qualification UI');
+console.log('PASS: KO eligibility blocked for Sit Out in UI and KO core API.');
+

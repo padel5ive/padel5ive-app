@@ -82,8 +82,10 @@
     if((base.fairnessWarnings||[]).length){
       // The native warnings were calculated for the old fixtures; only keep warnings
       // independent of partner/opponent repetition. Recompute the teammate note.
-      const warning=base.fairnessWarnings.filter(x=>!String(x).includes('teammate repeat'));
+      const warning=base.fairnessWarnings.filter(x=>!String(x).includes('teammate repeat')&&!String(x).startsWith('Ranking-band compromise'));
       if(bestMetric.partnerRepeat)warning.push(`${bestMetric.partnerRepeat} teammate repeat encounter(s) within close-ranked groups`);
+      const distance=Math.max(0,...matches.flatMap(m=>m.teams.map(t=>Math.abs(ranks[t[0]]-ranks[t[1]]))));
+      if(distance>Math.max(2,Math.ceil(groups.A.length/3)))warning.push(`Ranking-band compromise: group-relative partner gap up to ${distance} while balancing Games Played and rest`);
       if(warning.length)result.fairnessWarnings=warning;else delete result.fairnessWarnings;
     }
     return result;

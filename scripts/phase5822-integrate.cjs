@@ -23,7 +23,7 @@ let home=fs.readFileSync(homePath,'utf8');
 const scriptRx=/<script\s+defer\s+src="\/phase58\/cloud-home\.js(?:\?[^"]*)?"\s*><\/script>/g;
 const matching=home.match(scriptRx)||[];
 if(matching.length!==1)throw Error('v5823: expected exactly one Cloud Home script');
-home=home.replace(scriptRx,'<script defer src="/phase58/cloud-home.js?v=5824.0"></script>');
+home=home.replace(scriptRx,'<script defer src="/phase58/cloud-home.js?v=5833.1"></script>');
 fs.writeFileSync(homePath,home);
 const swPath='public/sw.js';
 let worker=fs.readFileSync(swPath,'utf8');

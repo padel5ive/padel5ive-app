@@ -1,0 +1,18 @@
+name: PADEL 5IVE · Americano Flexible Round Scoring QA
+on:
+  pull_request:
+    paths:
+      - 'public/modes/unified/index.html'
+      - 'scripts/qa-flexible-round-scoring.cjs'
+      - '.github/workflows/qa-flexible-round-scoring.yml'
+jobs:
+  flexible-round-scoring:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-flexible-round-scoring.cjs

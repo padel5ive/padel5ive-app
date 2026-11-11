@@ -11,6 +11,7 @@ scriptAt('const rr9=');
 scriptAt('window.P5EngineFP=(function');
 scriptAt('window.P5EngineMX=(function');
 scriptAt('window.P5EngineIndividual=(function');
+scriptAt('window.P5Recovery=(function');
 // Production also loads this defer asset. Without it, 18/3 and 30/5
 // tests would silently exercise the fallback instead of the live fair-cycle.
 execute(fs.readFileSync('public/assets/p5-fair-cycle-v5515.js','utf8'),'P5FairCycle production asset');
@@ -165,6 +166,33 @@ for(const [mode,rosters] of [
 }
 
 
+
+// Historical production incidents: Fixed Partner mid-session roster/court growth.
+// Old confirmed fixtures are immutable; future RR covers every opponent exactly
+// once, and new pairs must not all play only each other.
+let fpRecoveryIncidents=0;
+for(const incident of [
+ {initial:6,beginCourts:2,added:3,endCourts:3,playedRounds:2},
+ {initial:9,beginCourts:3,added:3,endCourts:4,playedRounds:2}
+]){
+ const n=incident.initial,c=incident.beginCourts,s=make('fp-americano',n,c);
+ s.rounds=env.P5EngineFP.build(s.roster.map(p=>p.id),c,rand(355+n));
+ for(let i=0;i<incident.playedRounds;i++)score(s.rounds[i],i+1);
+ s.currentRound=incident.playedRounds-1;
+ const prefix=s.rounds.slice(0,incident.playedRounds),locked=JSON.stringify(prefix);
+ for(let i=0;i<incident.added;i++)s.roster.push({id:n+i+1,names:['Late Pair '+(i+1)]});
+ s.courts=incident.endCourts;
+ const pending=env.P5Recovery.rebuild(s,rand(555+n));
+ assert(pending.length,'No matches generated after FP mid-session join');
+ assert.equal(JSON.stringify(prefix),locked,'Fixed Partner recovery mutated confirmed scores');
+ const all=prefix.concat(pending),res=metrics(s,all),target=(n+incident.added)*(n+incident.added-1)/2;
+ assert.equal(Object.keys(res.fixtures).length,target,'Fixed Partner recovery lost opponent coverage');
+ assert.equal(res.repeatFixture,0,'Fixed Partner recovery repeated an old opponent pair');
+ const matchIds=all.flatMap(rd=>rd.matches.filter(Boolean).map(m=>m.id));
+ assert.equal(new Set(matchIds).size,matchIds.length,'Fixed Partner recovery duplicated match IDs');
+ fpRecoveryIncidents++;
+}
+
 // Diversity telemetry: a Coach is required every eligible round, but should
 // encounter a broad mix of opponents instead of repeatedly facing one player.
 // Metrics intentionally reported without pretending zero repetition is possible.
@@ -243,6 +271,7 @@ assert.throws(()=>env.P5AdvancedRules.validate(advanced),/coach cannot also be a
 console.log(JSON.stringify({
  fullModeAudit:'PASS',schedulerEngines:expectedIds.length,conceptualVariants:8,
  fixedAmericanoFullCycles:completedFP,normalAmericanoFullCycles:completedNormal,
+ fixedPartnerMidSessionRecoveryCases:fpRecoveryIncidents,
  distinctNormalTeammatePairsAudited:normalPartnerChecks,
  productionFairCycles:certifiedNormalCycles,productionFairCyclePlayers:certifiedNormalPlayers,
  dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,

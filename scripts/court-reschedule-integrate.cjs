@@ -141,4 +141,35 @@ replace('s.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||
  's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length)?');
 replace('Apply Pending Changes · Advance Schedule','Apply Participant Changes · Advance Schedule');
 
+/* Flexible Americano appends new rounds without finishing or requiring all old scores. */
+const extension=[
+' /* P5-PR29-FLEX-EXTRA-ROUND */',
+' function p5AppendExtendedRound(){',
+'  if(s.stage!=="stage1"||!flexibleRoundScoring(s))return false;',
+'  if(s.viewRound!==s.rounds.length-1)return toast("Select the final round to add an extra round.");',
+'  const before=clone(s);snapshot();',
+'  try{',
+'   const ext=P5Structured.is(s)?P5Structured.extend(s,random):P5AdvancedRules.constrained(s)?P5AdvancedRules.makeRound(s,s.rounds,random):P5Recovery.extend(s,random);',
+'   if(!ext||!(ext.matches||[]).filter(Boolean).length)throw Error("Not enough eligible participants to build an extra round.");',
+'   P5EngineRegistry.validateFreshRound(ext,s.rounds,s);',
+'   s.rounds.push(ext);',
+'   s.viewRound=s.rounds.length-1;',
+'   if(!save())throw Error("Save failed. Export a Backup JSON before adding more rounds.");',
+'   render();toast("Extra Round "+s.rounds.length+" added · existing results and fixtures preserved.");',
+'   return true;',
+'  }catch(error){s=before;undo.pop();save();render();alertModal("Unable to Add Extra Round",error.message);return false;}',
+' }',
+''].join("\n");
+replace(' function nextRound(forceAdvance=false){',extension+' function nextRound(forceAdvance=false){');
+const guardStart=src.indexOf('   const unconfirmed=s.rounds.reduce((n,rd)=>n+(rd.matches||[]).filter(m=>m&&!m.confirmed).length,0);');
+const guardEnd=src.indexOf('  }\n  if(s.viewRound!==s.currentRound){',guardStart);
+assert(guardStart>=0&&guardEnd>guardStart,'Flexible round completion guard drift');
+assert(src.slice(guardStart,guardEnd).includes('return nextRound(true)'), 'Unexpected extension flow');
+src=src.slice(0,guardStart)+'   return p5AppendExtendedRound();\n'+src.slice(guardEnd);
+const q=String.fromCharCode(96);
+const oldButton='active&&r===s.rounds.length-1?'+q+'<button type="button" class="p5-537-extra-round" data-act="next-round">+ Continue Playing · Extended Round</button>'+q+':';
+const newButton='r===s.rounds.length-1?'+q+'<button type="button" class="p5-537-extra-round" data-act="next-round">+ Add Extra Round</button>'+q+':';
+replace(oldButton,newButton);
+
+
 fs.writeFileSync(file,src);console.log('PASS PR29 integrated');

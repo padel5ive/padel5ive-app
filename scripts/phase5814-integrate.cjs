@@ -3,9 +3,10 @@
  */
 'use strict';
 const fs=require('node:fs');
-const assetVersion='5829.1'; // fresh viewer navigation code for Safari/PWA; all Cloud asset URLs are versioned
-const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${assetVersion}">`;
-const js=`<script defer src="/phase5814/view-only-v5814.js?v=${assetVersion}"></script>`;
+const assetVersion='5829.1'; // Cloud asset version remains stable
+const viewerVersion='5831.1'; // new read-only leaderboard labels; bust iOS Safari/PWA browser cache
+const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${viewerVersion}">`;
+const js=`<script defer src="/phase5814/view-only-v5814.js?v=${viewerVersion}"></script>`;
 function insert(path,anchor,tag){
  let s=fs.readFileSync(path,'utf8');
  // Remove any earlier cache-keyed or unversioned tags before adding exactly

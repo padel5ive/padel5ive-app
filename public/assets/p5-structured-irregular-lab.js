@@ -47,12 +47,14 @@
   const baseline=original.optimize(future,prefix,ids,random,options);
   if(baseline.length<3)return baseline;
   const active=(options.availableIds||ids).slice(),coaches=(options.coaches||[]).filter(x=>active.includes(x));
+  // A newly added/absent player cannot be assessed fairly in a differently eligible future row.
+  if(baseline.some(r=>r.eligibleIds&&active.some(id=>!r.eligibleIds.includes(id))))return baseline;
   const rows=teamRounds(baseline),pfx=prefix||[];
-  // Keep the historical prefix exactly; evaluate all history in fair counters.
-  const evalCost=()=>assess(rows.map((teams,i)=>({eligibleIds:baseline[i].eligibleIds, matches:teams.map(team=>({teams:[team]}))})),pfx,active).cost;
-  const baselineStats=assess(rows.map((teams,i)=>({eligibleIds:baseline[i].eligibleIds,matches:teams.map(team=>({teams:[team]}))})),pfx,active);
+  // Evaluate raw team rows directly: no 10,000s of temporary objects on iPad Safari.
+  const evalCost=()=>assess(rows,pfx,active).cost;
+  const baselineStats=assess(rows,pfx,active);
   let cost=baselineStats.cost,bestCost=cost,best=rows.map(x=>x.map(t=>t.slice()));
-  const budget=rows.length<=24?26000:18000;
+  const budget=rows.length<=24?11000:8000;
   for(let trial=0;trial<budget;trial++){
    const a=Math.floor(random()*rows.length),b=Math.floor(random()*rows.length);
    if(a===b)continue;
@@ -77,7 +79,7 @@
    if(next<=cost||random()<Math.exp((cost-next)/temp)){cost=next;if(next<bestCost){bestCost=next;best=rows.map(x=>x.map(t=>t.slice()));}}
    else{rows[a]=prevA;rows[b]=prevB;}
   }
-  const newStats=assess(best.map((teams,i)=>({eligibleIds:baseline[i].eligibleIds,matches:teams.map(team=>({teams:[team]}))})),pfx,active);
+  const newStats=assess(best,pfx,active);
   if(bestCost>=baselineStats.cost-1e-7||newStats.longest>baselineStats.longest||newStats.doubleRest>baselineStats.doubleRest||newStats.gapMax>baselineStats.gapMax)return baseline;
   // Re-match intact teams to minimize repeated opponent encounters against immutable past.
   const history=new Map(),fixture=new Map();

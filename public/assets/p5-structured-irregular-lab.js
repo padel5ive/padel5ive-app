@@ -164,8 +164,9 @@
   const permittedExtra=severeStreak?Math.min(6,Math.max(3,Math.ceil(oldRepetition.opponentRepeat*0.12))):0;
   if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat+permittedExtra||freshRepetition.fixtureRepeat>oldRepetition.fixtureRepeat)return annotate(baseline);
   if(freshRepetition.opponentRepeat>oldRepetition.opponentRepeat){
-   for(const r of output){r.fairnessWarnings=[...(r.fairnessWarnings||[]).filter(x=>!String(x).startsWith('Fairness trade-off:')),
-    'Fairness trade-off: '+(freshRepetition.opponentRepeat-oldRepetition.opponentRepeat)+' extra opponent encounters across the future schedule to prevent long consecutive-play streaks'];}
+   const first=output[0];
+   first.fairnessWarnings=[...(first.fairnessWarnings||[]).filter(x=>!String(x).startsWith('Fairness trade-off:')),
+    'Fairness trade-off: '+(freshRepetition.opponentRepeat-oldRepetition.opponentRepeat)+' extra opponent encounters across the future schedule to prevent long consecutive-play streaks'];
   }
   // Historical cross-group partner multiset and court loads must remain identical.
   const partnerTally=rows=>{const tally=new Map();for(const r of rows)for(const m of r.matches||[])if(m)for(const team of m.teams){const k=key(team[0],team[1]);tally.set(k,(tally.get(k)||0)+1);}return [...tally.entries()].sort(([a],[b])=>a.localeCompare(b));};

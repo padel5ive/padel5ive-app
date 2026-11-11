@@ -94,6 +94,9 @@ jobs:
             console.log('PASS locked '+label);
           }
           NODE
-          test "$(git show HEAD:public/modes/club-match/index.html | git hash-object --stdin)" = "06afd32f08497b39297d31a04a0eff23bb690e72"
+          # Club Match source changes are intentional in PR #28: verified Sit Out and Return only.
+          # The new checkpoint SHA replaces the pre-feature frozen Club Match source.
+          test "$(git show HEAD:public/modes/club-match/index.html | git hash-object --stdin)" = "b4328a7cd61f7739d9cb6c04f5d1c95d46c10ace"
+          node scripts/qa-club-sitout.cjs
           test "$(grep -Fc 'data-p58-cloud' public/modes/club-match/index.html)" -eq 1
           node scripts/qa-flexible-round-scoring.cjs

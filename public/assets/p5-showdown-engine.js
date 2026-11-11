@@ -130,7 +130,7 @@ function verdict(state){const s1=stage1Stats(state);if(!s1.complete)return {stat
  return {status:'final-needed',points:{A:pA,B:pB}};
 }
 function roster(n,club){return Array.from({length:n},(_,i)=>({id:`${club}${i}`,name:'',players:[{id:`${club}${i}p1`,name:''},{id:`${club}${i}p2`,name:''}]}));}
-function newState(){return {version:1,stage:'setup',setup:{sessionName:'',date:'',clubs:{A:'',B:''},pairs:8,courts:5,format:'total5',teamColors:{A:'#77b7ec',B:'#d9ac72'}},roster:{A:roster(8,'A'),B:roster(8,'B')},schedule:[],activeWave:0,arrival:{A:Array(8).fill(true),B:Array(8).fill(true)},sitOut:{A:Array(8).fill(false),B:Array(8).fill(false)},openingShuffle:0,stage2:null,stage3:null,finalized:false};}
+function newState(){return {version:1,stage:'setup',setup:{sessionName:'',date:'',clubs:{A:'',B:''},pairs:8,courts:5,format:'total5',teamColors:{A:'#77b7ec',B:'#d9ac72'}},roster:{A:roster(8,'A'),B:roster(8,'B')},schedule:[],activeWave:0,arrival:{A:Array(8).fill(true),B:Array(8).fill(true)},openingShuffle:0,stage2:null,stage3:null,finalized:false};}
 function createMatches(state){const {pairs,courts,format}=state.setup;if(!checkSetup(pairs,courts,format))throw Error('Invalid event setup');if(!state.setup.clubs.A?.trim()||!state.setup.clubs.B?.trim())throw Error('Enter both team names');for(const c of ['A','B'])for(const p of state.roster[c])if(!p.players[0].name.trim()||!p.players[1].name.trim())throw Error('Enter every player name');
  // A round-robin fixture pool. Court numbers are live resources, NOT fixed match assignments.
  state.schedule=[generateSchedule(pairs,courts).flat().map(m=>({ ...m,court:null,wave:null,status:'pending',sequence:null,completedSequence:null }))];

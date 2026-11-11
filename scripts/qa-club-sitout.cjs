@@ -6,6 +6,8 @@ const html=fs.readFileSync(path.join(root,'public/modes/club-match/index.html'),
 const engine=fs.readFileSync(path.join(root,'public/assets/p5-showdown-engine.js'),'utf8');
 assert(html.includes(engine),'production inline engine and JS module must remain identical');
 for(const marker of ['data-action="pair-sitout"','case \'pair-sitout\'','E.setPairSitOut(state,side,index,next)','E.ensureSitOut(state)','View Only cannot edit pair availability'])assert(html.includes(marker),marker);
+const fresh=E.newState();fresh.setup.pairs=3;fresh.roster={A:E.roster(3,'A'),B:E.roster(3,'B')};
+assert(E.validateSavedState(fresh),'changing pair count in Setup must not invalidate saved forms');
 const s=E.newState();s.setup.pairs=3;s.setup.courts=2;s.setup.clubs={A:'Alpha',B:'Beta'};s.setup.format='total5';s.setup.date='2026-11-11';
 s.roster={A:E.roster(3,'A'),B:E.roster(3,'B')};
 for(const c of ['A','B'])for(let i=0;i<3;i++)for(let p=0;p<2;p++)s.roster[c][i].players[p].name=c+i+'-'+p;

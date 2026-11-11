@@ -21,10 +21,12 @@ const ctx={
  ENG:{'fp-americano':{dynamic:false},'fp-mexicano':{dynamic:true},'individual-americano':{dynamic:false},'structured-americano':{dynamic:false}},
  P5Structured:{is:s=>s.mode==='structured-americano',extend(s){
   structuredExtensions++;
+  assert.equal(s.currentRound,s.rounds.length-1,'Structured extension should use newest round for fairness');
   return {index:s.rounds.length,matches:[{id:'R'+s.rounds.length+'C0',court:1,teams:[[1,2],[3,4]],score:null,confirmed:false}]};
  }},
  P5AdvancedRules:{constrained:s=>s.mode==='individual-americano'&&s.coachId===1,makeRound(s,rows){
   coachExtensions++;
+  assert.equal(s.currentRound,s.rounds.length-1,'Coach rest recovery uses latest round, not PR27 browser checkpoint');
   const eligible=s.roster.map(p=>p.id).filter(id=>!(s.sitout||[]).includes(id));
   assert(!s.sitout.includes(s.coachId),'Coach cannot be Sit Out in this scenario');
   const others=eligible.filter(id=>id!==s.coachId);
@@ -32,6 +34,7 @@ const ctx={
  }},
  P5Recovery:{extend(s){
   extensions++;
+  assert.equal(s.currentRound,s.rounds.length-1,'Recovery engine must use most recent round for rest fairness');
   const active=s.roster.map(p=>p.id).filter(id=>!(s.sitout||[]).includes(id));
   if(active.length<2)throw Error('Not enough active pairs');
   return {index:s.rounds.length,matches:[{id:'R'+s.rounds.length+'C0',court:1,teams:[[active[0]],[active[1]]],score:null,confirmed:false}],extended:true};

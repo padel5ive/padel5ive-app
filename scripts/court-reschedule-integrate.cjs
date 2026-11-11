@@ -6,7 +6,7 @@ function replace(a,b){assert(src.includes(a),'Missing: '+a.slice(0,70));src=src.
 const helper=[
 ' /* P5-PR29-PROTECTED-COURT-RESCHEDULING */',
 ' function p5ProtectedCourtReschedule(state,random){',
-'  const start=state.currentRound+1,original=state.rounds,limit=state.courts,todo=[];',
+'  const start=arguments.length>2&&Number.isInteger(arguments[2])?arguments[2]:state.currentRound+1,original=state.rounds,limit=state.courts,todo=[];',
 '  const locked=new Set();let lastLocked=start-1;',
 '  for(let i=start;i<original.length;i++){',
 '   const rd=original[i],ms=(rd.matches||[]).filter(Boolean);',
@@ -85,4 +85,61 @@ replace('if(s.viewRound!==s.currentRound){s.viewRound=s.currentRound;render();re
  'if(s.viewRound!==s.currentRound){s.viewRound=s.currentRound;if(!(forceAdvance&&flexibleRoundScoring(s))){render();return;}}');
 replace('active&&r<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?',
  's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?');
+
+// Automatic court changes on Americano: preserve PR27 browse-any-round scoring.
+const auto=[
+' /* P5-PR29-AUTO-COURT-APPLY */',
+' function p5AutoApplyQueuedCourtChange(){',
+'  if(s.stage!=="stage1"||!flexibleRoundScoring(s)||!s.pendingCourts||!currentDone())return false;',
+'  const requested=s.pendingCourts,old=clone(s);',
+'  try{',
+'   let boundary=s.currentRound;',
+'   while(boundary<s.rounds.length){',
+'    const matches=(s.rounds[boundary]?.matches||[]).filter(Boolean);',
+'    if(!matches.length||!matches.every(m=>m.confirmed))break;',
+'    boundary++;',
+'   }',
+'   if(boundary>=s.rounds.length){s.pendingCourts=null;return false;}',
+'   s.courts=requested;',
+'   s.currentRound=boundary;',
+'   s.rounds=p5ProtectedCourtReschedule(s,random,boundary);',
+'   P5EngineRegistry.validateSchedule(s.rounds,s);',
+'   s.pendingCourts=null;',
+'   logAction("Court capacity automatically updated · "+requested+" courts · future schedule from Round "+(boundary+1));',
+'   return true;',
+'  }catch(error){',
+'   s=old;s.pendingCourts=null;',
+'   toast("Court change not applied · "+error.message);',
+'   return false;',
+'  }',
+' }',
+''].join("\n");
+replace(' function changeCourt(){',auto+' function changeCourt(){');
+replace('else{m.score=[a,b];m.confirmed=true;m.skipped=false;}',
+ 'else{m.score=[a,b];m.confirmed=true;m.skipped=false;if(s.pendingCourts&&typeof p5AutoApplyQueuedCourtChange==="function")p5AutoApplyQueuedCourtChange();}');
+const triggerStart=src.indexOf(' function changeCourt(){');
+const triggerEnd=src.indexOf(' function resetStage1(',triggerStart);
+assert(triggerStart>=0&&triggerEnd>triggerStart,'changeCourt boundaries');
+const block=src.slice(triggerStart,triggerEnd);
+const tick=String.fromCharCode(96);
+const pending="s.pendingCourts=next;s.ui.modal=null;logAction('Court change queued · '+next);save();render();toast("+tick+"$"+"{next} courts queued for the next round."+tick+");";
+assert(block.includes(pending),'expected court queue branch');
+const improved=[
+'if(flexibleRoundScoring(s)&&next<s.courts){',
+'   const invalid=s.rounds.findIndex((rd,i)=>i>s.currentRound&&(rd.matches||[]).some(m=>(m?.confirmed||m?.score!=null)&&(m.court||0)>next));',
+'   if(invalid>=0)return alertModal("Cannot Reduce Courts","Round "+(invalid+1)+" contains a scored fixture on a court above the requested capacity. Keep that court or finish the affected fixtures first.");',
+'  }',
+'  snapshot();s.pendingCourts=next;s.ui.modal=null;',
+'  const applied=typeof p5AutoApplyQueuedCourtChange==="function"&&p5AutoApplyQueuedCourtChange();',
+'  if(applied){save();render();return toast(next+" courts active · remaining unscored rounds updated automatically.");}',
+'  logAction("Court capacity queued automatically · "+next);save();render();',
+'  if(!s.pendingCourts&&s.courts!==next)return;',
+'  toast(flexibleRoundScoring(s)?next+" courts selected · future schedule updates automatically after the current round is complete.":next+" courts queued for the next round.");'
+].join('\n  ');
+src=src.slice(0,triggerStart)+block.replace(pending,improved)+src.slice(triggerEnd);
+replace(" 's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?');",
+" 's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length)?');",
+"remove extra court-only button");
+replace(beforeWrite,"replace('Apply Pending Changes · Advance Schedule','Apply Participant Changes · Advance Schedule');\n"+beforeWrite);
+
 fs.writeFileSync(file,src);console.log('PASS PR29 integrated');

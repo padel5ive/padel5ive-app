@@ -137,8 +137,8 @@ const improved=[
 '  toast(flexibleRoundScoring(s)?next+" courts selected · future schedule updates automatically after the current round is complete.":next+" courts queued for the next round.");'
 ].join('\n  ');
 src=src.slice(0,triggerStart)+block.replace(pending,improved)+src.slice(triggerEnd);
-replace(" 's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?');",
-" 's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length)?');",
+replace('s.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length||s.pendingCourts)?',
+ 's.currentRound<s.rounds.length-1&&((s.pendingParticipants||[]).length||Object.keys(s.sitoutPending||{}).length)?');
 "remove extra court-only button");
 replace(beforeWrite,"replace('Apply Pending Changes · Advance Schedule','Apply Participant Changes · Advance Schedule');\n"+beforeWrite);
 

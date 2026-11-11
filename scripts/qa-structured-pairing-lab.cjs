@@ -5,6 +5,8 @@ for(const path of ['/assets/p5-structured-fairness-lab.js','/assets/p5-structure
 assert.equal(html.split('<!-- P5 STRUCTURED FAIRNESS LAB 20261111 -->').length-1,1,'Duplicate integration marker');
 const ctx={};ctx.window=ctx;vm.createContext(ctx);
 function runBetween(from,to){const a=html.indexOf(from),b=html.indexOf(to,a+from.length);assert(a>=0&&b>a,from+' source missing');vm.runInContext(html.slice(a,b),ctx,{timeout:30000});}
+runBetween('window.P5HistorySmart=(function','/* PADEL 5IVE Phase 5.0 · OPTIONAL ADVANCED RULES');
+runBetween('window.P5AdvancedRules=(function','/* Phase 5.0: isolated Mexicano');
 runBetween('window.P5Structured=(function','window.P5EngineStructured=');
 runBetween('window.P5Fair532=(function','/* PADEL 5IVE Phase 5.0.4');
 runBetween('window.P5StructuredCycle534=(function','/* PADEL 5IVE Phase 5.3.4 | Structured Mexicano');
@@ -82,3 +84,117 @@ for(let seed=1;seed<=4;seed++){
  dynamicCases++;
 }
 console.log(JSON.stringify({integration:'PASS',americanSeeds:amerPass,mexicanSeeds:mexPass,mexicanoRoundsImproved:improved,dynamicRosterMexicanoCases:dynamicCases,dynamicRounds:dynamicRounds}));
+
+
+// PR34 release acceptance: all certified court configurations, plus flexible
+// fixed-partner/coach/sit-out lifecycle. Actual scheduling source is loaded above.
+let extendedAcceptanceCases=0;
+const makeStructured=(perGroup,courts)=>({
+ mode:'structured-americano',courts,sitout:[],rounds:[],currentRound:0,
+ groupConfig:{labels:['Left','Right']},
+ roster:Array.from({length:perGroup*2},(_,i)=>({
+   id:i+1,group:i<perGroup?'A':'B',names:['P'+(i+1)]
+ }))
+});
+for(const [perGroup,courts,seeds] of [[3,1,3],[9,3,3],[12,4,3],[15,5,2]]){
+ for(let seed=1;seed<=seeds;seed++){
+  const state=makeStructured(perGroup,courts);
+  const started=Date.now(),rounds=ctx.P5Structured.build(state,rnd(seed+4000));
+  assert(rounds.every(r=>r.structuredFairCycleCertified),'Certified roster returned fallback schedule');
+  const expected=Math.floor(perGroup/2)*3+(perGroup%2?2:0);
+  assert.equal(rounds.length,expected,'Complete group cycle length mismatch');
+  const counts=Object.fromEntries(state.roster.map(p=>[p.id,0]));
+  const partners=new Map(),playedHistory=Object.fromEntries(state.roster.map(p=>[p.id,[]]));
+  for(const [i,r] of rounds.entries()){
+   const used=new Set(),courtsUsed=new Set();
+   assert(r.matches.length>0&&r.matches.length<=courts,'Invalid court density');
+   for(const m of r.matches){
+    assert(m.court>=1&&m.court<=courts&&!courtsUsed.has(m.court),'Court collision');
+    courtsUsed.add(m.court);
+    assert.equal(m.teams.length,2,'Not a doubles fixture');
+    for(const team of m.teams){
+     assert.equal(team.length,2,'Not a doubles team');
+     assert(team[0]<=perGroup&&team[1]>perGroup,'Structured pairing group violation');
+     const k=teamKey(...team);partners.set(k,(partners.get(k)||0)+1);
+     for(const id of team){assert(!used.has(id),'Player booked twice');used.add(id);counts[id]++;}
+    }
+   }
+   for(const id of Object.keys(counts)){
+    const playing=used.has(Number(id)),history=playedHistory[id];
+    if(perGroup===9&&i<9&&!playing&&history.at(-1)===false)throw Error('9+9 double rest in opening nine rounds');
+    history.push(playing);
+   }
+   const games=Object.values(counts),spread=Math.max(...games)-Math.min(...games);
+   assert(spread<=1,'Certified running games-played spread >1');
+   if((i+1)%3===0&&i<Math.floor(perGroup/2)*3)
+    assert.equal(spread,0,'Three-round games-played fairness checkpoint missed');
+  }
+  assert.equal(partners.size,perGroup*perGroup,'Incomplete partner coverage');
+  const repeated=[...partners.values()].reduce((sum,n)=>sum+n-1,0);
+  assert.equal(repeated,perGroup%2,'Excess complete-cycle partner repeats');
+  if(perGroup===9){
+   for(const games of Object.values(playedHistory))assert.equal(games.slice(0,9).filter(Boolean).length,6);
+  }
+  extendedAcceptanceCases++;
+ }
+}
+
+// Flexible Pairing is separate from Structured Pairing. Its existing actual-source
+// scheduler must retain hard Coach/Fixed Partner constraints, even after Sit Out,
+// Return, and court-capacity changes while preserving confirmed historical rounds.
+let advancedRuleCases=0;
+for(const mode of ['individual-americano','individual-mexicano']){
+ for(const seed of [1,2]){
+  const state={
+   mode,courts:3,sitout:[],rounds:[],currentRound:0,
+   roster:Array.from({length:18},(_,i)=>({id:i+1,names:['P'+(i+1)]})),
+   rules:{fixedEnabled:true,pairs:[[1,2],[3,4]],coachEnabled:true,coachIds:[5]}
+  };
+  assert(ctx.P5AdvancedRules.validate(state));
+  const random=rnd(9000+seed+(mode==='individual-mexicano'?500:0));
+  let preserved=[];
+  for(let ri=0;ri<7;ri++){
+   if(ri===3)state.sitout=[1,2];
+   if(ri===4)state.sitout=[];
+   if(ri===5)state.courts=2;
+   const before=JSON.stringify(state.rounds);
+   const standings=state.roster.map((p,i)=>({id:p.id,points:(ri*7+i*3)%19}));
+   const round=ctx.P5AdvancedRules.makeRound(state,state.rounds,random,standings);
+   assert.equal(JSON.stringify(state.rounds),before,'Scheduler mutated prior confirmed rounds');
+   const on=new Set(),teamByPlayer=new Map();
+   assert(round.matches.length<=state.courts,'Flexible court overcapacity');
+   for(const match of round.matches){
+    assert.equal(match.teams.length,2);
+    for(const team of match.teams){
+     assert.equal(team.length,2);
+     for(const id of team){
+      assert(!on.has(id),'Flexible duplicate booking');
+      assert(!state.sitout.includes(id),'Sit Out participant scheduled');
+      on.add(id);teamByPlayer.set(id,team.slice());
+     }
+    }
+    match.score=[3,2];match.confirmed=true;
+   }
+   assert(on.has(5),'Active Coach must participate every round');
+   for(const [a,b] of [[1,2],[3,4]]){
+    assert.equal(on.has(a),on.has(b),'Fixed partners must play or rest together');
+    if(on.has(a))assert(teamByPlayer.get(a).includes(b),'Fixed partners split across teams');
+   }
+   state.rounds.push(round);
+   preserved.push(JSON.stringify(round));
+  }
+  for(let ri=0;ri<state.rounds.length;ri++)
+   assert.equal(JSON.stringify(state.rounds[ri]),preserved[ri],'Historical score/fixture modified');
+  // Invalid half-sitout is an explicit error, never a silent broken fixed team.
+  state.sitout=[1];
+  assert.throws(()=>ctx.P5AdvancedRules.makeRound(state,state.rounds,random),/Sit Out or Return together/);
+  state.sitout=[];
+  state.rules.coachIds=[1];
+  assert.throws(()=>ctx.P5AdvancedRules.validate(state),/coach cannot also be a Fixed Partner/);
+  advancedRuleCases++;
+ }
+}
+console.log(JSON.stringify({releaseAcceptance:'PASS',
+ certifiedCycleConfigurations:extendedAcceptanceCases,
+ flexibleCoachAndFixedPartnerCases:advancedRuleCases,
+ historyImmutable:true,sitoutReturnAndCourtChange:true}));

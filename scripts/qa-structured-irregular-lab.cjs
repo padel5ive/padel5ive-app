@@ -51,7 +51,7 @@ function audit(rows,s){
 }
 let total=0,changed=0,maxGenerationMs=0;
 for(const [n,c] of [[7,2],[8,2],[8,3],[9,3],[10,3],[10,4],[11,3],[12,4],[15,5]]){
- for(const seed of [1,2]){
+ for(const seed of [1,2,3,4,5,6]){
   const s=create(n,c),rng=random(seed),raw=ctx.P5Structured.build(s,rng);
   const originalHash=JSON.stringify(raw),ids=s.roster.map(p=>p.id);
   const ref=priorOptimize(raw,[],ids,random(seed+1000),opts(s)),baseline=audit(ref,s);

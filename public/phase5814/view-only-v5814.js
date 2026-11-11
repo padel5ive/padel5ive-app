@@ -306,7 +306,7 @@ function restore(){
  $$('.p5814-view-menu').forEach(x=>x.remove());
  showAllControls();
  $$('.p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-master-menu-hidden'));
- $('.p5814-standing-name').forEach(x=>x.remove());
+ $$('.p5814-standing-name').forEach(x=>x.remove());
  $('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
  $$('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }

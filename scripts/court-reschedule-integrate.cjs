@@ -121,8 +121,8 @@ const triggerStart=src.indexOf(' function changeCourt(){');
 const triggerEnd=src.indexOf(' function resetStage1(',triggerStart);
 assert(triggerStart>=0&&triggerEnd>triggerStart,'changeCourt boundaries');
 const block=src.slice(triggerStart,triggerEnd);
-const tick=String.fromCharCode(96);
-const pending="s.pendingCourts=next;s.ui.modal=null;logAction('Court change queued · '+next);save();render();toast("+tick+"$"+"{next} courts queued for the next round."+tick+");";
+const queueTick=String.fromCharCode(96);
+const pending="s.pendingCourts=next;s.ui.modal=null;logAction('Court change queued · '+next);save();render();toast("+queueTick+"$"+"{next} courts queued for the next round."+queueTick+");";
 assert(block.includes(pending),'expected court queue branch');
 const improved=[
 'if(flexibleRoundScoring(s)&&next<s.courts){',

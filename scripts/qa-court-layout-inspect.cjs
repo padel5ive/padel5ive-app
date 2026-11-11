@@ -1,12 +1,10 @@
 'use strict';
 const fs=require('node:fs'),s=fs.readFileSync('public/modes/unified/index.html','utf8');
-function print(label,first,last,max=12000){const i=s.indexOf(first),j=last?s.indexOf(last,i+first.length):-1;console.log('==== '+label+' offset '+i+' ===');console.log(s.slice(i,j>i?Math.min(j,i+max):i+max));}
-print('SAVE SCORE', ' function saveScore(', ' function openHistoricalKO(', 13000);
-print('SCORE MODAL', ' function scoreModal(', ' function openHistoricalKO(', 9500);
-print('CURRENT DONE', ' function currentDone(', ' function ', 3500);
-print('COURT CHANGE', ' function changeCourt(', ' function resetStage1(', 3500);
-print('ROUND DISPATCH', "case 'advance-schedule'", "case '",2500);
-print('STAGE1 ADVANCE BUTTON', 'Apply Pending Changes · Advance Schedule',null,700);
-for(const word of ['saveScore()','changeCourt()','currentDone()','case \'modal-save\'','case \'score-save\'','case \'advance-schedule\'','data-act="advance-schedule"']){
- let at=s.indexOf(word);console.log('=== '+word+' === '+at+' '+(at>=0?s.slice(at-350,at+950):''));
-}
+function show(label,a,b,max){let i=s.indexOf(a),j=b?s.indexOf(b,i+a.length):Math.min(s.length,i+(max||5000));console.log('### '+label+' @'+i);if(i>=0)console.log(s.slice(i,Math.min(j>i?j:s.length,i+(max||10000))))}
+show('nextRound',' function nextRound(',' function showBalance(',9000);
+show('fillEmptyCourts',' function fillEmptyCourts(',' function nextRound(',2500);
+show('extendRecovery',' function extend(s,random){',' function fillVacantIndividual(',3500);
+show('current-mode stage1','function stage1(s){','function homeExistingSessions(s){',7500);
+show('event dispatch','case \'next-round\'','case \'',2600);
+show('advanced make round',' function makeRound(s,rounds,random)',' function ',3000);
+for(const t of ['case \'next-round\'','case \'advance-schedule\'','case \'fill-empty-court\'','function flexibleRoundScoring(']){let at=s.indexOf(t);console.log('### '+t+'\n'+s.slice(Math.max(0,at-150),at+450));}

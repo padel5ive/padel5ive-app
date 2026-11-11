@@ -29,6 +29,8 @@ const registryEnd=html.indexOf('})();',registryStart);
 execute(html.slice(registryStart,registryEnd+5),'P5EngineRegistry');
 for(const name of ['p5-structured-fairness-lab.js','p5-structured-irregular-lab.js','p5-structured-mexicano-diversity-lab.js'])
  execute(fs.readFileSync('public/assets/'+name,'utf8'),name);
+const preCoachNativeCreate=env.P5HistorySmart.create;
+execute(fs.readFileSync('public/assets/p5-coach-opponent-diversity-lab.js','utf8'),'Coach opponent diversity adapter');
 const modes=env.P5EngineRegistry.modes(),expectedIds=[
  'fp-americano','fp-mexicano','individual-americano','individual-mexicano','structured-americano','structured-mexicano'
 ];
@@ -253,8 +255,6 @@ assert(individualOpeningDraws.size>=7,'Individual Mexicano opening remains depen
 scriptAt('window.P5KO=(function');
 execute(fs.readFileSync('public/assets/p5-ko-qualification-sitout-guard.js','utf8'),'KO Sit Out external guard');
 execute(fs.readFileSync('public/assets/p5-mexicano-individual-opening-lab.js','utf8'),'Mexicano Individual first draw adapter');
-const preCoachNativeCreate=env.P5HistorySmart.create;
-execute(fs.readFileSync('public/assets/p5-coach-opponent-diversity-lab.js','utf8'),'Coach opponent diversity adapter');
 env.P5UI={statistics:s=>s.roster.map(p=>({id:p.id}))};
 let koSitoutGuards=0;
 for(const mode of ['fp-americano','fp-mexicano','individual-americano','individual-mexicano']){

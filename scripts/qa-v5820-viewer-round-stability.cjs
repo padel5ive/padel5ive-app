@@ -75,7 +75,7 @@ vm.runInNewContext(refreshCode+'\nthis.poll=refresh;',pollCtx);
  for(const [index,html] of pageContent.entries()){
   assert(html.includes('cloud-dashboard.js?v=5829.1'),
    pages[index]+': browser must load fresh Cloud adapter');
-  assert(html.includes('view-only-v5814.js?v=5829.1'),
+  assert(html.includes('view-only-v5814.js?v=5831.1'),
    pages[index]+': browser must load fresh viewer adapter');
   assert.equal(html.split('cloud-dashboard.js?v=').length-1,1,'No duplicate Cloud JS');
  }

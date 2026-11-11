@@ -215,7 +215,22 @@ function scoreViewer(){
    if(display.innerHTML!==button.innerHTML)display.innerHTML=button.innerHTML;
    hideControl(button);
   }
-  for(const hint of $$('#americano .p5sm-card .scorehint')){
+  // Live leaderboard player names are master Manage Participant buttons.
+  // Viewer guard correctly hides those buttons; mirror their LABELS as passive
+  // spans so the player name itself remains visible without any editor access.
+  for(const button of $('#americano .p5-b41-leaderboard button.mc38-rename[data-act="manage-participant"]')){
+   let passive=button.nextElementSibling;
+   if(!passive||!passive.classList.contains('p5814-static-participant')){
+    passive=make('span','mc38-rename p5814-static-participant');
+    passive.setAttribute('aria-label','Player name · View Only');
+    button.insertAdjacentElement('afterend',passive);
+   }
+   const clone=button.cloneNode(true);
+   clone.querySelectorAll('.p5-sitout-indicator').forEach(node=>node.remove());
+   if(passive.innerHTML!==clone.innerHTML)passive.innerHTML=clone.innerHTML;
+   hideControl(button);
+  }
+  for(const hint of $('#americano .p5sm-card .scorehint')){
    const old=changed.get(hint)||hint.textContent;
    const neutral=old.replace(/\s*·\s*(?:Tap to Score|Edit)\s*$/i,'');
    replaceText(hint,neutral);
@@ -286,7 +301,7 @@ function restore(){
  $$('.p5814-view-menu').forEach(x=>x.remove());
  showAllControls();
  $$('.p5814-master-menu-hidden').forEach(x=>x.classList.remove('p5814-master-menu-hidden'));
- $$('.p5814-read-score, .p5814-score-static').forEach(x=>x.remove());
+ $('.p5814-read-score, .p5814-score-static, .p5814-static-participant').forEach(x=>x.remove());
  $$('.p5814-locked-editor').forEach(x=>{x.classList.remove('p5814-locked-editor');x.removeAttribute('aria-disabled');x.removeAttribute('tabindex')});
 }
 function run(){

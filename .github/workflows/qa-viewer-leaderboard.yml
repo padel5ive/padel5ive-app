@@ -1,0 +1,21 @@
+name: View Only Leaderboard Diagnosis
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/qa-viewer-leaderboard.yml'
+      - 'scripts/inspect-leaderboard-names.cjs'
+      - 'scripts/qa-viewer-leaderboard.cjs'
+      - 'public/phase5814/view-only-v5814.js'
+      - 'public/phase5814/view-only-v5814.css'
+jobs:
+  viewer-leaderboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/inspect-leaderboard-names.cjs
+      - run: node scripts/qa-v5814-view-only.cjs

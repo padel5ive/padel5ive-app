@@ -8,7 +8,7 @@ const modePages=['public/modes/unified/index.html','public/modes/club-match/inde
 assert(root.includes('cloud-home.js?v=5833.1'),'Cloud Home script must bypass stale Safari/PWA cache');
 for(const path of modePages){
  const page=fs.readFileSync(path,'utf8');
- assert(page.includes('cloud-dashboard.js?v=5833.1'),path+' must load persistent Moderator dashboard script');
+ assert(page.includes('cloud-dashboard.js?v=5834.1'),path+' must load persistent Moderator dashboard script');
  assert.equal(page.split('cloud-dashboard.js?v=').length-1,1,path+' must load only one Cloud script');
 }
 assert(d.includes('!meta.moderatorPinRequired&&r.role'),'No PIN-less reclaim of transferred PIN session');

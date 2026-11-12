@@ -29,7 +29,7 @@ const tests={
  'Moderator recovery honors actual PIN digits':dash.split("pin.length!==moderatorPinDigits").length===3,
  'Controller initializes PIN metadata':dash.includes('moderatorPinDigits:result.moderatorPinDigits||null'),
  'Only Cloud Home uses new asset version':index.includes('cloud-home.js?v=5833.1'),
- 'Both game dashboards load new Cloud JS':pages.every(path=>fs.readFileSync(path,'utf8').includes('cloud-dashboard.js?v=5833.1')),
+ 'Both game dashboards load new Cloud JS':pages.every(path=>fs.readFileSync(path,'utf8').includes('cloud-dashboard.js?v=5834.1')),
  'Keep private Viewer Link separate from PIN':dash.includes("if(m.viewerKey)return top+")&&dash.includes('SHARE VIEWER ACCESS · WHATSAPP'),
  'Cloud compact UI still applied':pages.every(path=>fs.readFileSync(path,'utf8').includes('cloud-modal-compact-v5822.css'))
 };

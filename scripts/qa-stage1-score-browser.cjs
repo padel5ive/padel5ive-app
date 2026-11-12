@@ -145,6 +145,37 @@ async function main(){
   assert.equal(history.view,1);
   assert.deepEqual(history.score,[3,2]);
   assert.equal(history.confirmed,true);
+  // PR36: changing live format must protect scored and currently viewed rounds.
+  const formatBefore=await run(()=>{
+    document.querySelector('#americano [data-act="edit-match-format"]').click();
+    return {type:window.P5App.getState().ui.modal?.type,options:document.querySelectorAll('#p5-change-match-format option').length};
+  });
+  assert.equal(formatBefore.type,'match-format','Session Info opens the live format editor');
+  assert.equal(formatBefore.options,6);
+  const formatChanged=await run(()=>{
+    document.querySelector('#p5-change-match-format').value='total4';
+    document.querySelector('[data-act="modal-save"]').click();
+    const confirm=window.P5App.getState().ui.modal?.type;
+    document.querySelector('[data-act="modal-save"]').click();
+    const s=window.P5App.getState();
+    return {confirm,format:s.matchFormat,currentRound:s.currentRound,viewRound:s.viewRound,
+      oldFormat:s.rounds[1].matches[0].matchFormat,
+      oldScore:s.rounds[1].matches[0].score,
+      nextFormat:s.rounds[2].matches[0].matchFormat};
+  });
+  assert.equal(formatChanged.confirm,'confirm','Mixed format requires moderator confirmation');
+  assert.equal(formatChanged.format,'total4');
+  assert.deepEqual(formatChanged.oldScore,[3,2],'Confirmed score remains unchanged');
+  assert.equal(formatChanged.oldFormat,'total5','Confirmed match retains original score format');
+  assert.equal(formatChanged.nextFormat,'total4','Only future untouched round gets new format');
+  const reedit=await run(()=>{
+    document.querySelector('.p5sm-card [data-act="score"]').click();
+    return {fmt:document.querySelector('.p5-score-dual')?.dataset.p5ScoreFormat,
+      scoreA:document.getElementById('p5-score-a')?.value};
+  });
+  assert.deepEqual(reedit,{fmt:'total5',scoreA:'3'},'Editing old score still uses original format');
+  await run(()=>document.querySelector('[data-act="modal-cancel"]').click());
+  console.log('PASS PR36 format edit: confirmed/viewed rounds protected, future format changed, old modal preserved.');
   // PR36 mobile layout: native stage-one cards are exclusive tabs, not stacked.
   // The legacy iPhone order assertions remain for builds without the PR36 tab feature.
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:3,mobile:true});

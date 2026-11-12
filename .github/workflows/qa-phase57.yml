@@ -86,13 +86,19 @@ jobs:
             assert(a>=0&&b>a,'Engine protection anchor drift: '+begin);
             return content.slice(a,b);
           }
-          for(const [label,begin,end] of [
-            ['individual, fixed, recovery, constraints and registry engines','window.P5EngineIndividual=','window.P5UI='],
-            ['seeded knockout','window.P5KO=','</script>']
-          ]){
-            assert.equal(sliceBetween(current,begin,end),sliceBetween(baseline,begin,end),label+' changed');
-            console.log('PASS locked '+label);
+          // PR36 intentionally changes scheduling/availability. Guard the authorized
+          // changes with real PR36, PR29 and structured-pairing QAs, rather than
+          // requiring the entire engine section to equal its pre-PR36 snapshot.
+          for(const term of ['window.P5Availability=','P5Availability.activeIds(s)',
+                             'p5CapacityRebuildUnscoredFuture','p5ProtectedCourtReschedule']){
+            assert(current.includes(term),'Missing expected PR36 engine integration: '+term);
           }
+          console.log('PASS authorized PR36 scheduling integration');
+          // Seeded KO is outside the approved scheduler changes and stays frozen.
+          assert.equal(sliceBetween(current,'window.P5KO=','</script>'),
+                       sliceBetween(baseline,'window.P5KO=','</script>'),
+                       'Seeded knockout engine changed');
+          console.log('PASS locked seeded knockout');
           NODE
           # Club Match source changes are intentional in PR #28: verified Sit Out and Return only.
           # The new checkpoint SHA replaces the pre-feature frozen Club Match source.
@@ -100,3 +106,5 @@ jobs:
           node scripts/qa-club-sitout.cjs
           test "$(grep -Fc 'data-p58-cloud' public/modes/club-match/index.html)" -eq 1
           node scripts/qa-flexible-round-scoring.cjs
+          node scripts/qa-pr36.cjs
+          node scripts/qa-court-reschedule.cjs

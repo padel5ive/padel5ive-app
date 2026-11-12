@@ -84,7 +84,7 @@ console.log('PASS PR36 leaderboard footer spacing matches Rounds without engine 
 assert(html.includes('PR36 IPAD LANDSCAPE REFINEMENT: compact session, linear rounds, aligned headers and scorecards'),'Landscape iPad refinement missing');
 assert(html.includes('PR36 IPAD LANDSCAPE ACTIVE ROUND RAIL'),'iPad selected round scroll controller missing');
 assert(html.includes('scroll-snap-type:x proximity'),'iPad horizontal round rail missing');
-assert(html.includes('p5-b41-leaderboard>.row.between>h2{transform:translateY(-3px)!important}'),'iPad heading alignment correction missing');
+assert(html.includes('display:flex!important;align-items:flex-start!important;min-height:23px!important'),'iPad headers must share top alignment');
 assert(html.includes('scorepair:nth-child(2) .p5sm-scorebox{grid-column:2!important;grid-row:2!important}'),'iPad score rows not aligned');
 console.log('PASS PR36 iPad landscape: compact session, one-row rounds, matched headings, symmetric scoring');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

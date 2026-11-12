@@ -90,4 +90,9 @@ console.log('PASS PR36 iPad landscape: compact session, one-row rounds, matched 
 assert(html.includes('PR36 PROTECTED ROUND DISTRIBUTION: reserve a future fixture before compaction'),'PR29 protected-round capacity fix missing');
 assert(html.includes('Math.max(1,todo.length-futureOpen)'),'PR29 fallback must reserve one fixture for each future open round before protected matches');
 console.log('PASS PR36 protected scheduling: fixture reservation before locked rounds');
+assert(html.includes('PR36 SHARED TYPOGRAPHY: resting and deck + iPhone court and leaderboard'),'Shared operational typography patch missing');
+assert(html.includes('font-size:12px!important;font-weight:750!important'),'Rest/On Court headings are not using their shared type scale');
+assert(html.includes('font-size:15px!important;font-weight:720!important'),'iPhone Court Scoring and Leaderboard typography diverged');
+assert(html.includes('div:first-child>.card.p5-v26-round-card>.row.between.p5-v26-round-title:first-child>h2'),'Mobile round title selector must override legacy 13px important rule');
+console.log('PASS PR36 heading typography guards: Rest/Next and mobile Scoring/Leaderboard');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

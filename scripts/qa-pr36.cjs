@@ -29,4 +29,10 @@ assert(html.includes('p5-v26-flow-combo>.p5-rest-card::before{content:none!impor
 assert(html.includes('p5-stage1-score-grid>.p5-v26-flow-combo::before'),'Flow accent must align with outer court cards');
 console.log('PASS PR36 Safari selector and Resting/On Deck alignment regression guards');
 
+assert(html.includes('PR36 iPhone Stage 1 Rounds / Leaderboard tab bar'),'PR36 mobile tab styles not integrated');
+assert(html.includes('PR36 iPhone Stage 1 tab runtime'),'PR36 iPhone mobile tab controller missing');
+assert(html.includes('data-p5-pr36-tab'),'PR36 mobile tab switching missing');
+assert(html.includes("content:'×'!important"),'PR36 centered score x marker missing');
+assert(html.includes('p5-pr36-mobile-active'),'PR36 mobile Stage 1 view guard missing');
+console.log('PASS PR36 mobile responsive tabs and × scoring separator');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

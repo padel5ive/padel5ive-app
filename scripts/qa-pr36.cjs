@@ -74,4 +74,8 @@ assert(html.includes('Historical score invalid for its saved match format'),'Bac
 assert(html.includes('p5-pr36-format-warning'),'Mixed-format fairness warning missing');
 assert(html.includes('#americano.p5-pr36-mobile-active+.brand-footer'),'Footer vertical rhythm fix missing');
 console.log('PASS PR36 historical-safe Match Format editing and bottom footer rhythm');
+assert(html.includes('PR36 FOOTER RHYTHM: move safe-area clearance from branding to main'),'iPhone compact footer integration missing');
+assert(html.includes('body main.wrap:has(> #americano.p5-pr36-mobile-active)>.brand-footer'),'Footer-only override selector absent');
+assert(html.includes('padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))!important'),'iPhone bottom safe-area clearance must be in main');
+console.log('PASS PR36 mobile footer: no giant decorative padding; safe-area clearance on scroll container');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

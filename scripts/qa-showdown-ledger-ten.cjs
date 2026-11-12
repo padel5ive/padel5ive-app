@@ -38,7 +38,7 @@ const data={
  const pages=12; // 64 => 7, 21 => 3, 12 => 2
  assert.equal(ledger.length,pages,'Exactly 12 match-history pages');
  const counts=ledger.map(p=>{
-   const m=p.match(/\((\d+) MATCHES ON THIS PAGE\) Tj ET/);
+   const m=p.match(/(\d+) MATCHES ON THIS PAGE\) Tj ET/);
    assert(m,'Missing match-count page subtitle');
    const count=Number(m[1]);
    const rows=[...p.matchAll(/\(PENDING\) Tj ET/g)].length;

@@ -74,7 +74,14 @@ for(const kind of ['unified','club']){
   assert.notEqual(st.legacyStable(roundState),legacy,'Old hash included viewRound');
  }else assert.notEqual(st.stable(roundState),before,'Club state remains unchanged semantics');
 }
-for(const term of ["case 'round':s.viewRound=","case 'view-schedule':s.ui.fullSchedule=","case 'tab-stage1':s.ui.stageTab='stage1'","case 'view-round':roundDrawerOpen=true;inspectedRound=","case 'toggle-rounds':roundDrawerOpen=!roundDrawerOpen","case 'latest-round':inspectedRound=null"]){
+// PR36 adds persistent-availability repair before viewRound changes. Confirm the
+// native action STILL updates only the viewed round, without advancing progress.
+const roundAction=/case 'round':([\\s\\S]*?)case 'next-round':/.exec(u);
+assert(roundAction,'Native unified round navigation handler is present');
+assert(roundAction[1].includes('s.viewRound=Math.max(0,Math.min(s.rounds.length-1,+el.dataset.round))'),'Round click must update viewed round only');
+assert(roundAction[1].includes('if(s.needsAvailabilityRebuild)')&&roundAction[1].includes('repairAvailabilitySchedule()'),'Round navigation must not bypass persistent availability reconciliation');
+assert(!roundAction[1].includes('s.currentRound++'),'Browsing history must never advance active round');
+for(const term of ["case 'view-schedule':s.ui.fullSchedule=","case 'tab-stage1':s.ui.stageTab='stage1'","case 'view-round':roundDrawerOpen=true;inspectedRound=","case 'toggle-rounds':roundDrawerOpen=!roundDrawerOpen","case 'latest-round':inspectedRound=null"]){
  assert((term.startsWith("case 'view-round'")||term.startsWith("case 'toggle-rounds'")||term.startsWith("case 'latest-round'")?c:u).includes(term),'Native safe navigation action missing '+term);
 }
 assert(!allowedC.includes('jump-stage'),'Club jump-stage changes saved state, must remain blocked');

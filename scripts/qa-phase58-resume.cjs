@@ -50,5 +50,24 @@ el=render(null,null,[{id:'old',state:{setup:{sessionName:'Active Archive'},stage
 assert.equal(el.hidden,true);cases++;
 const unified=fs.readFileSync('public/modes/unified/index.html','utf8');
 assert(unified.includes("function canReshuffle(){return s.stage==='stage1'&&s.currentRound===0&&!s.rounds.some(r=>r.matches.some(m=>m&&m.confirmed));}"),'Arrival must be locked after first score and only in Round 1');cases++;
-assert(unified.includes('Not Arrived applies to Round 1 only. All registered participants return to normal scheduling from Round 2.'),'Arrival must not silently sit out players after R1');cases++;
+// PR36 intentionally makes Not Arrived and Sit Out persistent until explicit Arrived/Return.
+assert(unified.includes('window.P5Availability=(function()'),'Persistent availability is available to all engines');
+assert(unified.includes('function activeIds(s)'),'Scheduling reads the shared eligibility state');
+assert(unified.includes('P5Availability.sync(s)'),'Schedule rebuilding must preserve persisted eligibility');
+assert(!unified.includes('All registered participants return to normal scheduling from Round 2.'),'Round 2 must not reactivate absent players');cases++;
+// Exercise the real built module: a missing player may not reappear after hydrate/next-round sync.
+const start=unified.indexOf('window.P5Availability=(function()'),stop=unified.indexOf('/* PADEL 5IVE Phase 5.1',start);
+assert(start>=0&&stop>start,'Availability module extraction anchors missing');
+const context={window:{}};vm.createContext(context);
+vm.runInContext(unified.slice(start,stop),context);
+const avail=context.window.P5Availability;
+assert(avail&&typeof avail.update==='function'&&typeof avail.activeIds==='function');
+const state={roster:[{id:1},{id:2},{id:3},{id:4}],sitout:[],sitoutPending:{},arrival:{1:true,2:true,3:true,4:true}};
+avail.hydrate(state);avail.update(state,[2],avail.NOT_ARRIVED);avail.update(state,[3],avail.SIT_OUT);
+assert.deepEqual(Array.from(avail.activeIds(state)),[1,4]);
+avail.hydrate(state);avail.sync(state);
+assert.equal(avail.status(state,2),avail.NOT_ARRIVED,'Not Arrived must persist through round/scheduler synchronization');
+assert.equal(avail.status(state,3),avail.SIT_OUT,'Sit Out must persist through round/scheduler synchronization');
+avail.update(state,[2],avail.ACTIVE);assert.deepEqual(Array.from(avail.activeIds(state)),[1,2,4],'Explicit Arrived restores eligibility');
+avail.update(state,[3],avail.ACTIVE);assert.deepEqual(Array.from(avail.activeIds(state)),[1,2,3,4],'Explicit Return restores eligibility');cases++;
 console.log('PASS v5.8 finished-session Resume and Round 1 Arrival/Reshuffle:',cases,'checks.');

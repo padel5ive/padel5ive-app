@@ -23,4 +23,9 @@ jobs:
         run: node scripts/qa-showdown-cover-spacing.cjs
       - name: Generate PDF smoke fixtures for all supported export types
         run: node scripts/phase55-pdf-smoke.mjs
+      - name: Save Club Match two-line cover review PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: club-match-cover-spacing-preview
+          path: QA_PREVIEW_CLUB_MATCH_COVER_SPACING.pdf
       - run: git diff --check

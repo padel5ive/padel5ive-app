@@ -72,7 +72,27 @@ function role(){return meta?.role||'none'}
 function view(){return role()==='viewer'}
 const liveKey=()=> 'p5814-follow-live-'+kind+'-'+(meta?.code||'');
 function isFollowingLive(){try{return sessionStorage.getItem(liveKey())!=='off'}catch{return true}}
-function setFollowingLive(value){try{sessionStorage.setItem(liveKey(),value?'on':'off')}catch{}}
+// Presentation-only viewer selection, scoped to this device and Cloud code.
+ // This must never enter the authoritative match snapshot or trigger a Cloud push.
+const viewedKey=()=> 'p5814-viewed-round-'+kind+'-'+(meta?.code||'');
+function getViewedRound(){
+ if(!view()||!meta)return null;
+ try{const raw=sessionStorage.getItem(viewedKey());if(raw===null)return null;
+  const n=Number(raw);return Number.isInteger(n)&&n>=(kind==='club'?1:0)?n:null;
+ }catch{return null}
+}
+function setViewedRound(value){
+ if(!view()||!meta)return false;
+ const n=Number(value),s=get(KEY);
+ if(!Number.isInteger(n)||n<(kind==='club'?1:0)||n>10000)return false;
+ if(kind==='unified'&&(!Array.isArray(s?.rounds)||n>=s.rounds.length))return false;
+ try{sessionStorage.setItem(viewedKey(),String(n));return true}catch{return false}
+}
+function clearViewedRound(){try{sessionStorage.removeItem(viewedKey())}catch{}}
+function setFollowingLive(value){
+ try{sessionStorage.setItem(liveKey(),value?'on':'off')}catch{}
+ if(value)clearViewedRound();
+}
 function latestRound(state){
  const max=Math.max(0,(state?.rounds?.length||1)-1);
  const current=Number(state?.currentRound);
@@ -264,7 +284,8 @@ function applyRemote(r,force=false){
  if(view()&&kind==='unified'){
   if(isFollowingLive())r.data={...r.data,viewRound:latestRound(r.data)};
   else{
-   const selected=Number(get(KEY)?.viewRound);
+   const preferred=typeof getViewedRound==='function'?getViewedRound():null;
+   const selected=preferred===null?Number(get(KEY)?.viewRound):preferred;
    if(Number.isInteger(selected)&&Array.isArray(r.data.rounds)&&r.data.rounds.length)
     r.data={...r.data,viewRound:Math.max(0,Math.min(selected,r.data.rounds.length-1))};
   }
@@ -425,6 +446,8 @@ window.P5CloudSession=Object.freeze({
   waiting:!!meta?.waiting}),
  open:()=>{if(!meta||!dialog)return false;dialog.hidden=false;render();return true},
  refreshNow:async()=>{if(!meta)return false;await refresh();return !offline&&!conflict},
+ rememberRound:(value)=>setViewedRound(value),
+ viewedRound:()=>getViewedRound(),
  setFollowLive:(enabled)=>{
   if(!view())return false;
   // Round buttons already update the native engine's in-memory viewRound and

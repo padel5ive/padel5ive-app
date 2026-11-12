@@ -145,27 +145,59 @@ async function main(){
   assert.equal(history.view,1);
   assert.deepEqual(history.score,[3,2]);
   assert.equal(history.confirmed,true);
-  // Mobile visual hierarchy: Court Scoring > Leaderboard > Session Control.
+  // PR36 mobile layout: native stage-one cards are exclusive tabs, not stacked.
+  // The legacy iPhone order assertions remain for builds without the PR36 tab feature.
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:3,mobile:true});
-  await delay(180);
+  await delay(250);
   const mobile=await run(()=>{
-    const root=document.querySelector('#americano .layout');
+    const app=document.querySelector('#americano'),root=app?.querySelector(':scope > .layout');
     const board=root?.querySelector(':scope > div:first-child > .p5-v26-round-card');
     const panel=root?.querySelector(':scope > div:first-child > .p5-v26-session-control');
     const leaderboard=root?.querySelector(':scope > aside');
+    const tabbar=app?.querySelector(':scope > .p5-pr36-mobile-tabs');
+    const rail=board?.querySelector('.round-picker .roundbuttons');
     const rect=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height}};
     return {viewport:innerWidth,layout:getComputedStyle(root).display,
       wrapper:getComputedStyle(root.firstElementChild).display,
       board:rect(board),leaderboard:rect(leaderboard),panel:rect(panel),
-      panelText:panel?.textContent};
+      panelText:panel?.textContent,tabs:!!tabbar&&getComputedStyle(tabbar).display!=='none',
+      view:app?.getAttribute('data-p5-pr36-view'),
+      rail:rail?{width:rail.clientWidth,scrollWidth:rail.scrollWidth,wrap:getComputedStyle(rail).flexWrap}:null};
   });
   assert(mobile.board&&mobile.leaderboard&&mobile.panel,'Stage 1 cards exist on iPhone');
-  assert.equal(mobile.layout,'flex','Phone Stage 1 layout is vertical');
-  assert.equal(mobile.wrapper,'contents','Phone first-column wrapper flattens for reordering');
-  assert(mobile.board.bottom<=mobile.leaderboard.top+2,'Court Scoring precedes Leaderboard: '+JSON.stringify(mobile));
-  assert(mobile.leaderboard.bottom<=mobile.panel.top+2,'Session Control must be BELOW complete Leaderboard on iPhone: '+JSON.stringify(mobile));
-  assert(mobile.panel.width>300&&mobile.leaderboard.width>300,'iPhone cards remain full-width');
+  assert.equal(mobile.layout,'flex','Phone Stage 1 layout retains vertical root');
+  assert.equal(mobile.wrapper,'contents','Phone first-column wrapper keeps native order');
   assert(mobile.panelText.includes('Finish Americano'),'Moderator Session Control content remains usable');
+  if(mobile.tabs){
+    assert.equal(mobile.view,'rounds','Rounds is default iPhone tab');
+    assert(mobile.board.width>300&&mobile.panel.width>300,'Rounds tab keeps scoring and session control full width');
+    assert.equal(mobile.leaderboard.width,0,'Leaderboard must not stack below Rounds tab');
+    assert.equal(mobile.rail.wrap,'nowrap','Mobile round navigation is one horizontal row');
+    assert(mobile.rail.scrollWidth>=mobile.rail.width,'Mobile round navigation remains scrollable');
+    const toggled=await run(()=>{
+      const app=document.querySelector('#americano');
+      const button=app.querySelector('[data-p5-pr36-tab="leaderboard"]');button?.click();
+      const root=app.querySelector(':scope > .layout');
+      const board=root?.querySelector(':scope > div:first-child > .p5-v26-round-card');
+      const leaderboard=root?.querySelector(':scope > aside');
+      const view=app.getAttribute('data-p5-pr36-view');
+      const state=window.P5App.getState();
+      const result={view,boardWidth:board?.getBoundingClientRect().width,leaderboardWidth:leaderboard?.getBoundingClientRect().width,
+        score:state.rounds[1].matches[0].score,confirmed:state.rounds[1].matches[0].confirmed};
+      app.querySelector('[data-p5-pr36-tab="rounds"]')?.click();
+      result.roundsReturned=app.getAttribute('data-p5-pr36-view')==='rounds';
+      return result;
+    });
+    assert.equal(toggled.view,'leaderboard','Leaderboard tab selectable');
+    assert.equal(toggled.boardWidth,0,'Rounds panel hidden when viewing Leaderboard');
+    assert(toggled.leaderboardWidth>300,'Leaderboard uses full iPhone width');
+    assert(toggled.roundsReturned,'Return to Rounds without page reload');
+    assert(toggled.confirmed&&toggled.score[0]===3&&toggled.score[1]===2,'Tabs cannot reset confirmed scores');
+  }else{
+    assert(mobile.board.bottom<=mobile.leaderboard.top+2,'Court Scoring precedes Leaderboard: '+JSON.stringify(mobile));
+    assert(mobile.leaderboard.bottom<=mobile.panel.top+2,'Session Control must be below Leaderboard on legacy iPhone');
+    assert(mobile.panel.width>300&&mobile.leaderboard.width>300,'Legacy iPhone cards remain full width');
+  }
   await send('Emulation.setDeviceMetricsOverride',{width:1194,height:834,deviceScaleFactor:2,mobile:false});
   await delay(180);
   const ipad=await run(()=>{
@@ -176,7 +208,7 @@ async function main(){
     return {display:getComputedStyle(root).display,leftPanel:r(panel)?.left,leftBoard:r(leaderboard)?.left};
   });
   assert(ipad.leftPanel<ipad.leftBoard,'iPad keeps Session Control in left column');
-  console.log('PASS iPhone 390px: Court Scoring → Leaderboard → Session Control; iPad 1194px retains split columns.');
+  console.log('PASS iPhone 390px: PR36 exclusive Rounds/Leaderboard tabs (legacy ordering fallback); iPad 1194px split preserved.');
   console.log('PASS Chrome: Round 2 court header/footer open score modal; 3-2 + 4-1 saved; Round 1 pending; navigation intact; upper arrows removed.');
  }finally{
   try{ws?.close();}catch{}

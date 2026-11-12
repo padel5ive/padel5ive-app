@@ -54,4 +54,10 @@ assert(html.includes('scorepair:nth-child(2) .pairname{grid-column:2!important;g
 assert(html.includes('scorepair:nth-child(2) .p5sm-scorebox{grid-column:2!important;grid-row:2!important}'),'Right score not aligned in shared score row');
 assert(html.includes('-webkit-tap-highlight-color:transparent!important'),'iOS scorecard touch highlight guard missing');
 console.log('PASS PR36 mobile scorecard: shared grid rows, centered player names and suppressed tap overlays');
+assert(html.includes('PR36 SESSION CONTROL: quiet two-action layout'),'Compact Session Control style missing');
+assert(html.includes('p5-pr36-session-actions'),'Compact Session Control buttons missing');
+assert(html.includes('View Full History'),'View Full History control missing');
+assert(html.includes('p5-pr36-history-score'),'Confirmed score history display missing');
+assert(!html.includes('Moderator may finish Stage 1 at any time. Only CONFIRMED scores determine standings and KO seeds; pending matches become Not Played.'),'Long Session Control instructions should not remain');
+console.log('PASS PR36 Session Control: minimal actions, intact history and finished score display');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

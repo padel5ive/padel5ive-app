@@ -1,0 +1,37 @@
+name: PADEL 5IVE Cloud Viewer Round Retention QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - public/phase58/cloud-dashboard.js
+      - public/phase5814/view-only-v5814.js
+      - scripts/phase5814-integrate.cjs
+      - scripts/qa-cloud-viewer-round-retention.cjs
+      - scripts/qa-v5810-viewer.cjs
+      - scripts/qa-v5814-view-only.cjs
+      - scripts/qa-v5820-viewer-round-stability.cjs
+      - .github/workflows/qa-cloud-viewer-round-retention.yml
+permissions:
+  contents: read
+jobs:
+  viewer-round:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Round 18 remains selected after moderator sync
+        run: node scripts/qa-cloud-viewer-round-retention.cjs
+      - name: Existing Viewer navigation, Cloud and permission regression
+        run: |
+          node scripts/qa-v5810-viewer.cjs
+          node scripts/qa-v5820-viewer-round-stability.cjs
+      - name: UI test dependency
+        run: npm install --no-save jsdom@26
+      - name: Existing View Only master UI regression
+        run: node scripts/qa-v5814-view-only.cjs
+      - run: git diff --check

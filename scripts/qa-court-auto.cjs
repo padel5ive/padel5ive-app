@@ -6,7 +6,7 @@ function fn(name,next){
  assert(a>=0&&b>a,'Missing function '+name+'→'+next);
  return html.slice(a,b);
 }
-const code=fn('p5ProtectedCourtReschedule','nextRound')+fn('p5AutoApplyQueuedCourtChange','resetStage1');
+const code=fn('p5CapacityRebuildUnscoredFuture','p5ProtectedCourtReschedule')+fn('p5ProtectedCourtReschedule','nextRound')+fn('p5AutoApplyQueuedCourtChange','resetStage1');
 const notices=[],logs=[];
 const ctx={s:null,console,structuredClone,
  clone:state=>structuredClone(state),random:()=>0.42,toast:v=>notices.push(v),

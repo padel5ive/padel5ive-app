@@ -5,8 +5,8 @@
 const fs=require('node:fs');
 const assetVersion='5829.1'; // fresh viewer navigation code for Safari/PWA; all Cloud asset URLs are versioned
 const css=`<link rel="stylesheet" href="/phase5814/view-only-v5814.css?v=${assetVersion}">`;
-const cloudJsVersion='5833.1'; // persistent Moderator ownership + iOS reconnect cache-bust
-const viewerJsVersion='5830.1'; // bust iPhone Safari/PWA cache for read-only leaderboard name fix
+const cloudJsVersion='5834.1'; // persistent Moderator ownership + iOS reconnect cache-bust
+const viewerJsVersion='5834.1'; // bust iPhone Safari/PWA cache for read-only leaderboard name fix
 const js=`<script defer src="/phase5814/view-only-v5814.js?v=${viewerJsVersion}"></script>`;
 function insert(path,anchor,tag){
  let s=fs.readFileSync(path,'utf8');

@@ -64,4 +64,14 @@ assert(html.includes('PR36 PANEL RHYTHM: 12px mobile Stage 1 spacing'),'Mobile p
 assert(html.includes('row-gap:12px!important;gap:12px!important'),'Mobile sibling panel gap must be 12px');
 assert(html.includes('margin-top:0!important;margin-bottom:0!important'),'Old stacked card margins must be cleared');
 console.log('PASS PR36 mobile panel rhythm: 12px gaps without altering iPad');
+assert(html.includes('PR36 SAFE FORMAT EDIT · preserve confirmed match format'),'Live format edit integration missing');
+assert(html.includes('data-act="edit-match-format"'),'Tap Match Format missing from Session Info');
+assert(html.includes('function saveMatchFormat(){'),'Score-format edit handler missing');
+assert(html.includes('(m.matchFormat||s.matchFormat)'),'Per-fixture score validation guard missing');
+assert(html.includes('m.matchFormat=f;m.score=[a,b]'),'Confirmed scores must retain match-specific format');
+assert(html.includes('m.matchFormat||state.matchFormat'),'Published results must retain match format');
+assert(html.includes('Historical score invalid for its saved match format'),'Backup safety check missing');
+assert(html.includes('p5-pr36-format-warning'),'Mixed-format fairness warning missing');
+assert(html.includes('#americano.p5-pr36-mobile-active+.brand-footer'),'Footer vertical rhythm fix missing');
+console.log('PASS PR36 historical-safe Match Format editing and bottom footer rhythm');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

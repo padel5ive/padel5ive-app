@@ -316,33 +316,64 @@ function run(){
   if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
   return;
  }
- promoteCloud();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();
+ promoteCloud();restoreViewerRound();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();
 }
 function schedule(){
  if(queued)return;
  queued=true;requestAnimationFrame(()=>{queued=false;run();});
 }
-// Previous-round navigation pauses Follow Live; the Live action restores it.
+// Cloud score updates reload the native engine. Preserve *explicit* viewer
+// navigation independently of the moderator's currentRound: that progress
+// pointer can legitimately be Round 5 while a viewer inspects Round 18.
+let restoredViewerRound=false;
+function restoreViewerRound(){
+ if(restoredViewerRound)return;
+ const cloud=window.P5CloudSession,selected=cloud?.viewedRound?.();
+ if(!Number.isInteger(selected))return;
+ if(kind==='unified'){
+  // Cloud-update reloads already stamp the correct viewRound in localStorage.
+  // Manual Safari reloads may not: restore without editing tournament scores.
+  try{
+   const stored=JSON.parse(localStorage.getItem('padel5ive-shared-foundation-v2.4-parity-lab')||'null');
+   if(stored?.viewRound===selected){restoredViewerRound=true;return;}
+  }catch{}
+  const target=$('#americano button[data-act="round"][data-round="'+selected+'"]');
+  if(!target)return;
+  restoredViewerRound=true;
+  target.click(); // Native read-only renderer selects the requested round.
+ }else{
+  if(selected<1)return;
+  const target=$('#app button[data-action="view-round"][data-value="'+selected+'"]');
+  if(!target)return; // Native schedule may still be loading; retry.
+  restoredViewerRound=true;
+  target.click(); // Sets ephemeral inspectedRound after Cloud reload.
+ }
+}
 document.addEventListener('click',event=>{
  if(!document.body.classList.contains('p58-view-only'))return;
  const button=event.target?.closest?.('button[data-act],button[data-action]');
- if(!button)return;
+ if(!button||button.disabled)return;
  const action=kind==='club'?button.dataset.action:button.dataset.act;
  const cloud=window.P5CloudSession;
  if(action==='round'){
-  // Evaluate after the native round handler saves the chosen viewRound.
-  // Returning to the most recent round automatically resumes Follow Live.
-  requestAnimationFrame(()=>{
-   try{
-    const state=JSON.parse(localStorage.getItem('padel5ive-shared-foundation-v2.4-parity-lab')||'null');
-    const latest=Number(state?.currentRound),selected=Number(state?.viewRound);
-    if(Number.isInteger(latest)&&Number.isInteger(selected))
-     cloud?.setFollowLive?.(latest===selected);
-   }catch{}
-   schedule();
-  });
- }else if(action==='view-round'){cloud?.setFollowLive?.(false);schedule();}
- else if(action==='latest-round'){cloud?.setFollowLive?.(true);schedule();}
+  // Read the tapped button, not stale persisted tournament viewRound.
+  const selected=Number(button.dataset.round);
+  if(Number.isInteger(selected)&&selected>=0){
+   cloud?.setFollowLive?.(false);
+   cloud?.rememberRound?.(selected);
+  }
+  schedule();
+ }else if(action==='view-round'){
+  const selected=Number(button.dataset.value);
+  if(Number.isInteger(selected)&&selected>=1){
+   cloud?.setFollowLive?.(false);
+   cloud?.rememberRound?.(selected);
+  }
+  schedule();
+ }else if(action==='latest-round'){
+  cloud?.setFollowLive?.(true);
+  schedule();
+ }
 },true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});

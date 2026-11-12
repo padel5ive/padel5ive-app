@@ -91,7 +91,11 @@ assert(html.includes('PR36 PROTECTED ROUND DISTRIBUTION: reserve a future fixtur
 assert(html.includes('Math.max(1,todo.length-futureOpen)'),'PR29 fallback must reserve one fixture for each future open round before protected matches');
 console.log('PASS PR36 protected scheduling: fixture reservation before locked rounds');
 assert(html.includes('PR36 SHARED TYPOGRAPHY: resting and deck + iPhone court and leaderboard'),'Shared operational typography patch missing');
-assert(html.includes('font-size:12px!important;font-weight:750!important'),'Rest/On Court headings are not using their shared type scale');
+assert(html.includes('font-size:11px!important;font-weight:700!important'),'Resting and Next on Court need the refined shared type scale');
+assert(html.includes('justify-content:space-between!important'),'Both operational headings must align round metadata on the right');
+assert(html.includes('margin:0 0 0 auto!important'),'Round and count metadata must be right aligned');
+assert(html.includes('color:#cfb18a!important'),'Operational headings must use subtle brass');
+assert(html.includes('margin-top:12px!important;padding-top:12px!important'),'Between-section spacing must be refined');
 assert(html.includes('font-size:15px!important;font-weight:720!important'),'iPhone Court Scoring and Leaderboard typography diverged');
 assert(html.includes('div:first-child>.card.p5-v26-round-card>.row.between.p5-v26-round-title:first-child>h2'),'Mobile round title selector must override legacy 13px important rule');
 console.log('PASS PR36 heading typography guards: Rest/Next and mobile Scoring/Leaderboard');

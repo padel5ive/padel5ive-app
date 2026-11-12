@@ -30,9 +30,11 @@
  function history(rows,ids){
   const G=Object.fromEntries(ids.map(id=>[id,0])),states=Object.fromEntries(ids.map(id=>[id,[]]));
   const team=new Map(),opp=new Map(),exact=new Map();
-  for(const rd of rows||[]){
+  for(const [ri,rd] of (rows||[]).entries()){
    const on=played(rd),eligible=rd.eligibleIds||ids;
-   for(const id of ids)if(eligible.includes(id)){states[id].push(on.has(id));if(on.has(id))G[id]++;}
+   // Availability gaps must break play/rest streaks. A late arrival or Sit Out
+   // is not an involuntary rest, even if the last earlier eligible round was.
+   for(const id of ids)if(eligible.includes(id)){states[id].push({round:ri,played:on.has(id)});if(on.has(id))G[id]++;}
    for(const m of (rd.matches||[]).filter(Boolean)){
     if(m.teams?.length!==2)continue;
     const [a,b]=m.teams;if(a.length!==2||b.length!==2)continue;
@@ -41,10 +43,11 @@
     for(const x of a)for(const y of b)opp.set(key(x,y),(opp.get(key(x,y))||0)+1);
    }
   }
-  return {G,states,team,opp,exact};
+  return {G,states,team,opp,exact,rounds:(rows||[]).length};
  }
- const last=(h,id)=>h.states[id]?.at(-1);
- const twice=(h,id)=>h.states[id]?.slice(-2).every(v=>v===true)&&h.states[id].length>=2;
+ const last=(h,id)=>{const z=h.states[id]?.at(-1);return z?.round===h.rounds-1?z.played:undefined;};
+ const twice=(h,id)=>{const seq=h.states[id]||[],a=seq.at(-2),b=seq.at(-1);
+  return a?.round===h.rounds-2&&b?.round===h.rounds-1&&a.played&&b.played;};
  function combinationChoices(group,need,h,r,limit=6){
   const records=[],arr=[];
   function evaluate(){
@@ -127,7 +130,7 @@
   while(copy.matches.length<m.cap){
    const on=played(copy),A=m.A.filter(id=>!on.has(id)),B=m.B.filter(id=>!on.has(id));
    if(A.length<2||B.length<2)break;
-   const h=history(prefix.concat([copy]),m.all),all=m.all;
+   const h=history(prefix.concat([copy]),m.all),previousRest=history(prefix,m.all),all=m.all;
    const current=all.map(id=>h.G[id]||0),mean=(current.reduce((a,b)=>a+b,0)+4)/all.length;
    let best=null;
    for(let ai=0;ai<A.length;ai++)for(let aj=ai+1;aj<A.length;aj++)
@@ -138,7 +141,7 @@
       const gap=Math.max(...updated)-Math.min(...updated);
       const variance=updated.reduce((sum,v)=>sum+(v-mean)**2,0);
       let repeat=(h.team.get(key(...x))||0)+(h.team.get(key(...y))||0);
-      const doubleRest=all.filter(id=>!chosen.has(id)&&last(h,id)===false).length;
+      const doubleRest=all.filter(id=>!on.has(id)&&!chosen.has(id)&&last(previousRest,id)===false).length;
       const cost=gap**2*150000+variance*8500+doubleRest*2000+
        repeat*900+encounterCost(x,y,h)+r()*.02;
       if(!best||cost<best.cost)best={cost,teams:[x,y]};

@@ -78,4 +78,7 @@ assert(html.includes('PR36 FOOTER RHYTHM: move safe-area clearance from branding
 assert(html.includes('body main.wrap:has(> #americano.p5-pr36-mobile-active)>.brand-footer'),'Footer-only override selector absent');
 assert(html.includes('padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))!important'),'iPhone bottom safe-area clearance must be in main');
 console.log('PASS PR36 mobile footer: no giant decorative padding; safe-area clearance on scroll container');
+assert(html.includes('PR36 LEADERBOARD FOOTER ALIGNMENT: same 12px rhythm as Rounds'),'Leaderboard-only footer CSS missing');
+assert(html.includes('data-p5-pr36-view="leaderboard"]>.layout>aside>.p5-b41-leaderboard{margin-bottom:0!important}'),'Leaderboard card default margin still active');
+console.log('PASS PR36 leaderboard footer spacing matches Rounds without engine changes');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

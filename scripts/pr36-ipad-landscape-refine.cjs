@@ -61,7 +61,7 @@ const css=`\n${marker}
  #americano>.layout>aside>.p5-b41-leaderboard{padding:14px!important}
  #americano>.layout .p5-v26-round-title,
  #americano>.layout>aside>.p5-b41-leaderboard>.row.between{
-  display:flex!important;align-items:center!important;min-height:23px!important;
+  display:flex!important;align-items:flex-start!important;min-height:23px!important;
   margin:0 0 8px!important;gap:9px!important;
  }
  #americano>.layout .p5-v26-round-title h2,
@@ -70,7 +70,6 @@ const css=`\n${marker}
   letter-spacing:.015em!important;text-transform:uppercase!important;margin:0!important;
  }
  #americano>.layout .p5-v26-round-title>.badge{margin-left:auto!important;align-self:center!important}
- #americano>.layout>aside>.p5-b41-leaderboard>.row.between>h2{transform:translateY(-3px)!important}
  /* Symmetric two-team scorecard grid: shared name row above shared score row. */
  #americano .p5-stage1-score-grid>.court.p5sm-card .p5sm-open-score .scorepairs{
   display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;

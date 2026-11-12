@@ -42,7 +42,7 @@ for(let seed=1;seed<=12;seed++){
  if(m.peak<initial.peak)peakReduced++;
  minimum=Math.min(minimum,m.repeats);
  const result=summary(out);
- for(const key of Object.keys(expected))assert.equal(JSON.stringify(result[key]),JSON.stringify(expected[key]),'Scheduling invariant violated: '+key);
+ for(const key of Object.keys(expected)){const normalize=x=>Object.fromEntries(Object.entries(x).sort(([a],[b])=>a.localeCompare(b)));assert.equal(JSON.stringify(normalize(result[key])),JSON.stringify(normalize(expected[key])),'Scheduling invariant violated: '+key);}
  for(let i=0;i<out.length;i++){
   assert.equal(out[i].matches.length,fixture[i].matches.length);
   assert.equal(out[i].eligibleIds.join(','),fixture[i].eligibleIds.join(','));

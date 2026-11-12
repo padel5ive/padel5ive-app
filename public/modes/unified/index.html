@@ -6919,6 +6919,12 @@ window.P5App=(function(){'use strict';
   s.sitout=[...new Set(s.manualSitout.concat(s.roster.filter(p=>s.arrival[p.id]===false).map(p=>p.id)))];
  }
  function p5PendingAvailability(){return Object.keys(s.sitoutPending||{}).length>0;}
+ function p5NeedsFutureRepair(){
+  if(s.stage!=='stage1'||ENG[s.mode].dynamic||!Array.isArray(s.rounds))return false;
+  p5SyncAvailability();
+  return s.rounds.slice(s.currentRound+1).some(rd=>(rd.matches||[]).some(m=>
+   m&&m.teams.flat().some(id=>s.sitout.includes(id))));
+ }
  function p5RebuildAfterArrival(rounds,random){
   if(ENG[s.mode].dynamic)return rounds;
   const first=rounds[0],available=s.roster.map(p=>p.id).filter(id=>!s.sitout.includes(id));
@@ -7020,7 +7026,7 @@ window.P5App=(function(){'use strict';
   }catch(e){s=before;undo.pop();save();render();return alertModal('Unable to Fill Court',e.message);}
  }
  function nextRound(forceAdvance=false){if(s.stage!=='stage1')return;
-  if(flexibleRoundScoring(s)&&!forceAdvance&&p5PendingAvailability()){
+  if(flexibleRoundScoring(s)&&!forceAdvance&&(p5PendingAvailability()||p5NeedsFutureRepair())){
    if(!currentDone())return alertModal('Availability Pending','Complete current round scores before applying Sit Out / Return.');
    s.viewRound=s.currentRound;return nextRound(true);
   }
@@ -7051,7 +7057,7 @@ window.P5App=(function(){'use strict';
    // Court changes can require a complete future-round rebuild even when the roster is unchanged.
    // This flag MUST be mutable (Safari otherwise throws a readonly-property error).
    const changedSitout=applySitoutQueue(),added=applyPendingParticipants();
-   let changedRoster=changedSitout||added;
+   let changedRoster=changedSitout||added||p5NeedsFutureRepair();
    if(s.pendingCourts){const next=s.pendingCourts;s.pendingCourts=null;
     // Phase 5.0.4: court-only changes also invoke history-aware recovery.
     // Repacking old future fixtures can preserve avoidable opponent repeats and
@@ -7262,7 +7268,7 @@ window.P5App=(function(){'use strict';
    case 'ko-history':{const node=document.querySelector('[data-ko-history]');if(node){node.open=true;node.scrollIntoView({block:'start',behavior:'smooth'});}else toast('No KO result history available.');}break;
    case 'round':{
     const target=Math.max(0,Math.min(s.rounds.length-1,+el.dataset.round));
-    if(s.stage==='stage1'&&target>s.currentRound&&p5PendingAvailability()){
+    if(s.stage==='stage1'&&target>s.currentRound&&(p5PendingAvailability()||p5NeedsFutureRepair())){
      if(!currentDone())return alertModal('Availability Pending','Complete current round scores to apply Sit Out / Return.');
      s.viewRound=s.currentRound;nextRound(true);
      if(!p5PendingAvailability()){s.viewRound=Math.min(target,s.rounds.length-1);render();}

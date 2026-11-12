@@ -6952,13 +6952,17 @@ window.P5App=(function(){'use strict';
  }
  function reshuffleArrival(){if(!canReshuffle())return alertModal('Pre-Match Only','Arrival & Reshuffle is available only before the first confirmed score.');
   p5SyncAvailability();
-  const off=s.sitout.slice();
+  // A queued Leaderboard Sit Out / Return is effective for this pre-match reshuffle.
+  const off=s.roster.map(p=>p.id).filter(id=>
+   Object.prototype.hasOwnProperty.call(s.sitoutPending||{},id)?!!s.sitoutPending[id]:s.sitout.includes(id));
   const eligible=s.roster.map(p=>p.id).filter(id=>!off.includes(id));
   if(P5Structured.is(s)){const ready={...s,sitout:off};try{P5Structured.validate(ready);}catch(e){return alertModal('Balance Groups Before Reshuffle',e.message);}}
   if(eligible.length<(ENG[s.mode].kind==='individual'?4:2))return toast('At least '+(ENG[s.mode].kind==='individual'?4:2)+' ready participants required');
   const previous=s.rounds[0]?.matches?.map(m=>m?.teams.flat().slice().sort((a,b)=>a-b).join(':')).sort().join('|');
   const before=clone(s);snapshot();
-  try{let rounds;const engine=ENG[s.mode];let found=false;
+  try{if(p5PendingAvailability())applySitoutQueue();
+   p5SyncAvailability();
+   let rounds;const engine=ENG[s.mode];let found=false;
    for(let attempts=0;attempts<24;attempts++){
     if(engine.dynamic){const copy={...s,rounds:[],sitout:off};rounds=[engine.next(copy,P5UI.statistics(s),random)];}
     else if(P5AdvancedRules.constrained(s))rounds=P5AdvancedRules.build(s,random,{rounds:s.rounds.length,firstEligibleIds:eligible});

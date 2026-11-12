@@ -23,4 +23,10 @@ for(const [name,needle] of Object.entries(checks)){
 assert(html.includes('p5-coach-opponent-diversity-lab.js'),'PR35 coach module missing');
 assert(html.includes('p5-structured-opponent-diversity-v1.js'),'PR35 opponent diversity missing');
 assert(fs.existsSync('public/index.html'),'Home missing');
+assert(!html.includes("const input=$('p5-score-a');if(input)input.focus();"),'Score select must never autofocus on modal open');
+assert(html.includes('P5 PR36 REVIEW: explicit score picker interaction and aligned flow rule'),'Safari interaction fix missing');
+assert(html.includes('p5-v26-flow-combo>.p5-rest-card::before{content:none!important;display:none!important}'),'Nested Resting rule must not be displaced');
+assert(html.includes('p5-stage1-score-grid>.p5-v26-flow-combo::before'),'Flow accent must align with outer court cards');
+console.log('PASS PR36 Safari selector and Resting/On Deck alignment regression guards');
+
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

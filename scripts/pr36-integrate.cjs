@@ -18,8 +18,8 @@ if(present.length===markers.length){
 }
 if(present.length)throw Error('PR36: partially applied refinement detected; stop instead of corrupting source');
 function run(args){const r=spawnSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:4*1024*1024});if(r.error||r.status!==0)throw Error('PR36: upstream source drift; patch '+args[1]+' failed: '+(r.stderr||r.error||r.stdout||'unknown').slice(0,2200));}
-run(['apply','--check','--whitespace=nowarn',patch]);
-run(['apply','--whitespace=nowarn',patch]);
+run(['apply','--check','--whitespace=fix',patch]);
+run(['apply','--whitespace=fix',patch]);
 const after=fs.readFileSync(target,'utf8');
 for(const k of markers)if(!after.includes(k))throw Error('PR36 missing required module: '+k);
 console.log('PASS PR36: Availability Integrity + Court Utilization + Shared UI + Dual Score Dropdown');

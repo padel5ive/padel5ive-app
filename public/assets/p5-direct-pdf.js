@@ -185,8 +185,11 @@ function sdCover(d){let p=pic('Venue',0,0,W,H);p+=rect(0,0,W,7,'gold');p+=pic('L
  p+=text(52,H-204,'THE OFFICIAL RECORD',12,'F2','gold');
  let lines=wrap(d.session||'Team Showdown',25).slice(0,2),size=lines.some(x=>x.length>21)?38:45;
  lines.forEach((txt,i)=>p+=text(52,H-273-i*48,txt,size,'F2','light'));
- p+=text(53,H-343,'Official Session Report',25,'F3','gold')+line(53,H-365,165,H-365,'gold',2.4);
- p+=text(53,H-391,'TEAM SHOWDOWN  /  '+ell(d.teamA+' VS '+d.teamB,55).toUpperCase(),11,'F2','light');
+ // Two-line session titles need clear space before the italic subtitle.
+ // Keep the original one-line cover layout and all downstream report pages untouched.
+ const reportY=H-343-(lines.length>1?20:0);
+ p+=text(53,reportY,'Official Session Report',25,'F3','gold')+line(53,reportY-22,165,reportY-22,'gold',2.4);
+ p+=text(53,reportY-48,'TEAM SHOWDOWN  /  '+ell(d.teamA+' VS '+d.teamB,55).toUpperCase(),11,'F2','light');
  p+=line(53,141,W-53,141,'gold',.8);
  p+=text(53,116,'DAY · DATE',9,'F2','gold')+text(53,92,ell(dayDate(d.date),37),12,'F2','light');
  p+=text(300,116,'PAIRS / TEAM',9,'F2','gold')+text(300,92,d.pairs,14,'F2','light');

@@ -145,27 +145,138 @@ async function main(){
   assert.equal(history.view,1);
   assert.deepEqual(history.score,[3,2]);
   assert.equal(history.confirmed,true);
-  // Mobile visual hierarchy: Court Scoring > Leaderboard > Session Control.
+  // PR36: changing live format must protect scored and currently viewed rounds.
+  const formatBefore=await run(()=>{
+    document.querySelector('#americano [data-act="edit-match-format"]').click();
+    return {type:window.P5App.getState().ui.modal?.type,options:document.querySelectorAll('#p5-change-match-format option').length};
+  });
+  assert.equal(formatBefore.type,'match-format','Session Info opens the live format editor');
+  assert.equal(formatBefore.options,6);
+  const formatChanged=await run(()=>{
+    document.querySelector('#p5-change-match-format').value='total4';
+    document.querySelector('[data-act="modal-save"]').click();
+    const confirm=window.P5App.getState().ui.modal?.type;
+    document.querySelector('[data-act="modal-save"]').click();
+    const s=window.P5App.getState();
+    return {confirm,format:s.matchFormat,currentRound:s.currentRound,viewRound:s.viewRound,
+      oldFormat:s.rounds[1].matches[0].matchFormat,
+      oldScore:s.rounds[1].matches[0].score,
+      nextFormat:s.rounds[2].matches[0].matchFormat};
+  });
+  assert.equal(formatChanged.confirm,'confirm','Mixed format requires moderator confirmation');
+  assert.equal(formatChanged.format,'total4');
+  assert.deepEqual(formatChanged.oldScore,[3,2],'Confirmed score remains unchanged');
+  assert.equal(formatChanged.oldFormat,'total5','Confirmed match retains original score format');
+  assert.equal(formatChanged.nextFormat,'total4','Only future untouched round gets new format');
+  const reedit=await run(()=>{
+    document.querySelector('.p5sm-card [data-act="score"]').click();
+    return {fmt:document.querySelector('.p5-score-dual')?.dataset.p5ScoreFormat,
+      scoreA:document.getElementById('p5-score-a')?.value};
+  });
+  assert.deepEqual(reedit,{fmt:'total5',scoreA:'3'},'Editing old score still uses original format');
+  await run(()=>document.querySelector('[data-act="modal-cancel"]').click());
+  console.log('PASS PR36 format edit: confirmed/viewed rounds protected, future format changed, old modal preserved.');
+  // PR36 mobile layout: native stage-one cards are exclusive tabs, not stacked.
+  // The legacy iPhone order assertions remain for builds without the PR36 tab feature.
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:3,mobile:true});
-  await delay(180);
+  await delay(250);
   const mobile=await run(()=>{
-    const root=document.querySelector('#americano .layout');
+    const app=document.querySelector('#americano'),root=app?.querySelector(':scope > .layout');
     const board=root?.querySelector(':scope > div:first-child > .p5-v26-round-card');
     const panel=root?.querySelector(':scope > div:first-child > .p5-v26-session-control');
     const leaderboard=root?.querySelector(':scope > aside');
+    const tabbar=app?.querySelector(':scope > .p5-pr36-mobile-tabs');
+    const rail=board?.querySelector('.round-picker .roundbuttons');
     const rect=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height}};
     return {viewport:innerWidth,layout:getComputedStyle(root).display,
       wrapper:getComputedStyle(root.firstElementChild).display,
       board:rect(board),leaderboard:rect(leaderboard),panel:rect(panel),
-      panelText:panel?.textContent};
+      verticalGap:board&&panel?(Math.round((panel.getBoundingClientRect().top-board.getBoundingClientRect().bottom)*10)/10):null,
+      panelText:panel?.textContent,tabs:!!tabbar&&getComputedStyle(tabbar).display!=='none',
+      view:app?.getAttribute('data-p5-pr36-view'),
+      rail:rail?{width:rail.clientWidth,scrollWidth:rail.scrollWidth,wrap:getComputedStyle(rail).flexWrap}:null};
   });
   assert(mobile.board&&mobile.leaderboard&&mobile.panel,'Stage 1 cards exist on iPhone');
-  assert.equal(mobile.layout,'flex','Phone Stage 1 layout is vertical');
-  assert.equal(mobile.wrapper,'contents','Phone first-column wrapper flattens for reordering');
-  assert(mobile.board.bottom<=mobile.leaderboard.top+2,'Court Scoring precedes Leaderboard: '+JSON.stringify(mobile));
-  assert(mobile.leaderboard.bottom<=mobile.panel.top+2,'Session Control must be BELOW complete Leaderboard on iPhone: '+JSON.stringify(mobile));
-  assert(mobile.panel.width>300&&mobile.leaderboard.width>300,'iPhone cards remain full-width');
+  assert.equal(mobile.layout,'flex','Phone Stage 1 layout retains vertical root');
+  assert.equal(mobile.wrapper,'contents','Phone first-column wrapper keeps native order');
   assert(mobile.panelText.includes('Finish Americano'),'Moderator Session Control content remains usable');
+  // PR36: verify actual computed typography, not just stylesheet text.
+  const titleStyles=await run(()=>{
+    const css=(sel)=>{const el=document.querySelector(sel);if(!el)return null;const x=getComputedStyle(el);return {size:x.fontSize,color:x.color,weight:x.fontWeight,spacing:x.letterSpacing,line:x.lineHeight,margin:x.marginBottom}};
+    return {
+      round:css('#americano .p5-v26-round-card .p5-v26-round-title h2'),
+      leaderboard:css('#americano .p5-b41-leaderboard>.row.between>h2'),
+      rest:css('#americano .p5-v26-flow-combo>.p5-rest-card>h3'),
+      deck:css('#americano .p5-v26-flow-combo>.p5-v26-on-deck>.p5-v26-ondeck-title')
+    };
+  });
+  assert(titleStyles.rest&&titleStyles.deck,'Resting and Next on Court titles must exist');
+  for(const prop of ['size','color','weight','spacing','line','margin']){
+    assert.equal(titleStyles.rest[prop],titleStyles.deck[prop],'Rest/Next title '+prop+' must match');
+  }
+  assert(titleStyles.round&&titleStyles.leaderboard,'Both Stage 1 headings must exist');
+  assert.equal(titleStyles.round.size,titleStyles.leaderboard.size,'iPhone Scoring and Leaderboard title font sizes must match');
+  assert.equal(titleStyles.round.weight,titleStyles.leaderboard.weight,'iPhone Scoring and Leaderboard title weights must match');
+  console.log('PASS PR36 mobile headings: matched operational labels and Court Scoring / Leaderboard type scale.');
+  if(mobile.tabs){
+    assert.equal(mobile.view,'rounds','Rounds is default iPhone tab');
+    assert(Math.abs(mobile.verticalGap-12)<=1,'Mobile Court Scoring to Session Control gap must be 12px: '+JSON.stringify(mobile));
+    assert(mobile.board.width>300&&mobile.panel.width>300,'Rounds tab keeps scoring and session control full width');
+    assert.equal(mobile.leaderboard.width,0,'Leaderboard must not stack below Rounds tab');
+    assert.equal(mobile.rail.wrap,'nowrap','Mobile round navigation is one horizontal row');
+    assert(mobile.rail.scrollWidth>=mobile.rail.width,'Mobile round navigation remains scrollable');
+    const toggled=await run(()=>{
+      const app=document.querySelector('#americano');
+      const button=app.querySelector('[data-p5-pr36-tab="leaderboard"]');button?.click();
+      const root=app.querySelector(':scope > .layout');
+      const board=root?.querySelector(':scope > div:first-child > .p5-v26-round-card');
+      const leaderboard=root?.querySelector(':scope > aside');
+      const view=app.getAttribute('data-p5-pr36-view');
+      const state=window.P5App.getState();
+      const result={view,boardWidth:board?.getBoundingClientRect().width,leaderboardWidth:leaderboard?.getBoundingClientRect().width,
+        score:state.rounds[1].matches[0].score,confirmed:state.rounds[1].matches[0].confirmed};
+      app.querySelector('[data-p5-pr36-tab="rounds"]')?.click();
+      result.roundsReturned=app.getAttribute('data-p5-pr36-view')==='rounds';
+      return result;
+    });
+    assert.equal(toggled.view,'leaderboard','Leaderboard tab selectable');
+    assert.equal(toggled.boardWidth,0,'Rounds panel hidden when viewing Leaderboard');
+    assert(toggled.leaderboardWidth>300,'Leaderboard uses full iPhone width');
+    assert(toggled.roundsReturned,'Return to Rounds without page reload');
+    assert(toggled.confirmed&&toggled.score[0]===3&&toggled.score[1]===2,'Tabs cannot reset confirmed scores');
+  }else{
+    assert(mobile.board.bottom<=mobile.leaderboard.top+2,'Court Scoring precedes Leaderboard: '+JSON.stringify(mobile));
+    assert(mobile.leaderboard.bottom<=mobile.panel.top+2,'Session Control must be below Leaderboard on legacy iPhone');
+    assert(mobile.panel.width>300&&mobile.leaderboard.width>300,'Legacy iPhone cards remain full width');
+  }
+  if(mobile.tabs){
+    // PR36 verified visual footer gap in both exclusive mobile views.
+    // The decorative footer must not reserve 98px of empty space.
+    for(const view of ['rounds','leaderboard']){
+      if(view==='leaderboard')await run(()=>document.querySelector('#americano [data-p5-pr36-tab="leaderboard"]')?.click());
+      await run(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+      await delay(110);
+      const gap=await run(()=>{
+        const root=document.getElementById('americano');
+        const last=root.getAttribute('data-p5-pr36-view')==='leaderboard'?
+          root.querySelector(':scope > .layout > aside > .p5-b41-leaderboard'):
+          root.querySelector('.p5-v26-session-control');
+        const footer=document.querySelector('main.wrap > .brand-footer');
+        const bar=root.querySelector('.p5-pr36-mobile-tabs');
+        const wrap=document.querySelector('main.wrap');
+        const f=footer.getBoundingClientRect(),l=last.getBoundingClientRect(),t=bar.getBoundingClientRect();
+        return {view:root.getAttribute('data-p5-pr36-view'),panelToFooter:f.top-l.bottom,
+          footerToTab:t.top-f.bottom,footerPadding:parseFloat(getComputedStyle(footer).paddingBottom),
+          mainPadding:parseFloat(getComputedStyle(wrap).paddingBottom),tabHeight:t.height};
+      });
+      assert.equal(gap.view,view);
+      assert(Math.abs(gap.panelToFooter-12)<=3,'Panel/footer gap is not 12px: '+JSON.stringify(gap));
+      assert(Math.abs(gap.footerToTab-12)<=3,'Footer/tab gap is not 12px: '+JSON.stringify(gap));
+      assert(gap.footerPadding<1,'Decorative footer still has giant bottom padding: '+JSON.stringify(gap));
+      assert(Math.abs(gap.mainPadding-gap.tabHeight-12)<=3,'Scroll container must own safe-area clearance: '+JSON.stringify(gap));
+    }
+    await run(()=>document.querySelector('#americano [data-p5-pr36-tab="rounds"]')?.click());
+  }
   await send('Emulation.setDeviceMetricsOverride',{width:1194,height:834,deviceScaleFactor:2,mobile:false});
   await delay(180);
   const ipad=await run(()=>{
@@ -173,10 +284,37 @@ async function main(){
     const panel=root?.querySelector(':scope > div:first-child > .p5-v26-session-control');
     const leaderboard=root?.querySelector(':scope > aside');
     const r=e=>e?.getBoundingClientRect();
-    return {display:getComputedStyle(root).display,leftPanel:r(panel)?.left,leftBoard:r(leaderboard)?.left};
+    const roundTitle=root.querySelector('.p5-v26-round-title h2');
+    const boardTitle=leaderboard?.querySelector('h2');
+    const rail=root.querySelector('.round-picker .roundbuttons');
+    const scorecard=root.querySelector('.p5-stage1-score-grid>.court.p5sm-card');
+    const names=scorecard?.querySelectorAll('.pairname');
+    const scores=scorecard?.querySelectorAll('.p5sm-scorebox');
+    const session=document.querySelector('#americano>.p5-stage-head.p5-si-card');
+    const mid=e=>{const b=r(e);return b.left+b.width/2};
+    return {
+      display:getComputedStyle(root).display,leftPanel:r(panel)?.left,leftBoard:r(leaderboard)?.left,
+      sessionHeight:r(session)?.height,
+      headingGap:Math.abs(r(roundTitle).top-r(boardTitle).top),
+      headingSizeGap:Math.abs(parseFloat(getComputedStyle(roundTitle).fontSize)-parseFloat(getComputedStyle(boardTitle).fontSize)),
+      railWrap:getComputedStyle(rail).flexWrap,
+      railClient:rail.clientWidth,railScroll:rail.scrollWidth,
+      namesCentered:names?.length===2&&scores?.length===2&&Math.abs(mid(names[0])-mid(scores[0]))<2&&Math.abs(mid(names[1])-mid(scores[1]))<2,
+      scoreRowGap:scores?.length===2?Math.abs(r(scores[0]).top-r(scores[1]).top):Infinity
+    };
   });
+  const ipadOp=await run(()=>{
+    const v=(sel)=>{const el=document.querySelector(sel);if(!el)return null;const c=getComputedStyle(el);return {size:c.fontSize,color:c.color,weight:c.fontWeight,spacing:c.letterSpacing,line:c.lineHeight,margin:c.marginBottom}};
+    return {rest:v('#americano .p5-v26-flow-combo>.p5-rest-card>h3'),deck:v('#americano .p5-v26-flow-combo>.p5-v26-on-deck>.p5-v26-ondeck-title')};
+  });
+  assert(ipadOp.rest&&ipadOp.deck,'iPad operational headings exist');
+  for(const k of ['size','color','weight','spacing','line','margin'])assert.equal(ipadOp.rest[k],ipadOp.deck[k],'iPad Resting/On Court title '+k+' must match');
   assert(ipad.leftPanel<ipad.leftBoard,'iPad keeps Session Control in left column');
-  console.log('PASS iPhone 390px: Court Scoring → Leaderboard → Session Control; iPad 1194px retains split columns.');
+  assert(ipad.sessionHeight>0&&ipad.sessionHeight<130,'iPad session info must remain compact: '+JSON.stringify(ipad));
+  assert(ipad.headingGap<=1&&ipad.headingSizeGap<.1,'iPad scoring and leaderboard titles must align: '+JSON.stringify(ipad));
+  assert(ipad.railWrap==='nowrap'&&ipad.railScroll>ipad.railClient,'iPad round pills must use one horizontal scrollable row: '+JSON.stringify(ipad));
+  assert(ipad.namesCentered&&ipad.scoreRowGap<2,'iPad names and scoreboxes must align symmetrically: '+JSON.stringify(ipad));
+  console.log('PASS iPhone 390px: PR36 exclusive Rounds/Leaderboard tabs (legacy ordering fallback); iPad 1194px split preserved.');
   console.log('PASS Chrome: Round 2 court header/footer open score modal; 3-2 + 4-1 saved; Round 1 pending; navigation intact; upper arrows removed.');
  }finally{
   try{ws?.close();}catch{}

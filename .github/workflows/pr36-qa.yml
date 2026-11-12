@@ -1,0 +1,23 @@
+name: PADEL 5IVE PR36 Review Gate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [review/pr36-availability-court-utilization-ui]
+permissions:
+  contents: read
+jobs:
+  pr36-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-pr36.cjs
+      - run: npm run qa:structured
+      - run: node scripts/qa-all-pairing-modes-audit.cjs
+      - run: git diff --check

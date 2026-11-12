@@ -6,7 +6,7 @@ function fn(name,next){
  assert(a>=0&&b>a,'Missing function '+name+'→'+next);
  return html.slice(a,b);
 }
-const code=fn('p5ProtectedCourtReschedule','nextRound')+fn('p5AutoApplyQueuedCourtChange','resetStage1');
+const code=fn('p5CapacityRebuildUnscoredFuture','p5ProtectedCourtReschedule')+fn('p5ProtectedCourtReschedule','nextRound')+fn('p5AutoApplyQueuedCourtChange','resetStage1');
 const notices=[],logs=[];
 const ctx={s:null,console,structuredClone,
  clone:state=>structuredClone(state),random:()=>0.42,toast:v=>notices.push(v),
@@ -31,6 +31,16 @@ const ctx={s:null,console,structuredClone,
  P5UI:{format(){return 'Total of 5'}},
 };
 vm.createContext(ctx);
+// The browser exposes P5Availability globally. This isolated VM must load
+// the actual module from the built page before invoking saveScore(), rather
+// than omit eligibility protection or replace it with a permissive mock.
+const availStart=html.indexOf('window.P5Availability=(function()');
+const availEnd=html.indexOf('/* PADEL 5IVE Phase 5.1',availStart);
+assert(availStart>=0&&availEnd>availStart,'Built P5Availability module missing');
+ctx.window=ctx;
+vm.runInContext(html.slice(availStart,availEnd),ctx);
+ctx.P5Availability=ctx.window.P5Availability;
+assert.equal(typeof ctx.P5Availability.eligibleMatch,'function','Real Availability eligibility is required in isolated scoring test');
 vm.runInContext(code,ctx);
 assert(!html.includes("||s.pendingCourts)?\`<button type=\"button\" class=\"p5-flex-schedule-advance\""),'Extra button must not appear for court-only change');
 assert(html.includes('P5-PR29-AUTO-COURT-APPLY'));

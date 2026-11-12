@@ -50,6 +50,13 @@ const ctx={
  mode(){return 'Americano';}
 };
 vm.createContext(ctx);
+const availStart=html.indexOf('window.P5Availability=(function()');
+const availEnd=html.indexOf('/* PADEL 5IVE Phase 5.1',availStart);
+assert(availStart>=0&&availEnd>availStart,'Real availability module missing from compiled build');
+ctx.window=ctx;
+vm.runInContext(html.slice(availStart,availEnd),ctx);
+ctx.P5Availability=ctx.window.P5Availability;
+assert.equal(typeof ctx.P5Availability.eligibleMatch,'function','Availability must be real engine module');
 vm.runInContext(source,ctx);
 ctx.s={
  mode:'fp-americano',stage:'stage1',currentRound:0,viewRound:23,

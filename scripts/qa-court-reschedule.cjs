@@ -46,6 +46,8 @@ ctx.bigState=bigState;
 const big=vm.runInContext('p5ProtectedCourtReschedule(bigState,()=>0.5)',ctx);
 assert(big.some(rd=>rd.matches.length===3),'An added third court must actually receive matches');
 assert(!big.slice(1,23).some(rd=>rd.protectedGap),'Avoid empty gaps before Round 24 when enough fixtures remain');
+assert(big.slice(1,19).every(rd=>rd.matches.length>=1),'Every open round before protected R20 must receive a fixture');
+assert(big.slice(20,23).every(rd=>rd.matches.length>=1),'Every open round between protected R20 and R24 must receive a fixture');
 assert.equal(JSON.stringify(big[19]),JSON.stringify(largeRows[19]));
 assert.equal(JSON.stringify(big[23]),JSON.stringify(largeRows[23]));
 assert.equal(big.reduce((n,r)=>n+r.matches.length,0),54);
@@ -56,5 +58,5 @@ for(const rd of big){const participants=new Set();for(const m of rd.matches){
 }}
 const down={...state,courts:1};ctx.down=down;
 assert.throws(()=>vm.runInContext('p5ProtectedCourtReschedule(down,()=>0.5)',ctx),/Protected Round/,'Downsizing blocked if scored future round exceeds capacity');
-assert(html.includes('if(courtOnly){s.rounds=p5ProtectedCourtReschedule(s,random);}') ,'nextRound uses new rescheduler');
+assert(html.includes('if(courtOnly){s.rounds=p5CapacityRebuildUnscoredFuture(s,random,s.currentRound+1)||p5ProtectedCourtReschedule(s,random);}') ,'nextRound uses capacity-aware rebuild with protected-round fallback');
 console.log('PASS PR29: protected current R1, partial R20/R24, retained fixture count, unique courts, safe downsize rejection, iPad left Session Control.');

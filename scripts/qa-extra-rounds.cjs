@@ -14,7 +14,7 @@ assert(html.includes('r===s.rounds.length-1?'+q+'<button type="button" class="p5
 assert(!html.includes('Before adding an extended round, confirm the'),'No all-scores-required error should remain');
 let extensions=0,coachExtensions=0,structuredExtensions=0,notices=[],errors=[];
 const ctx={
- s:null,random:()=>0.5,toast:t=>notices.push(t),render(){},p5PendingAvailability:()=>false,
+ s:null,random:()=>0.5,toast:t=>notices.push(t),render(){},p5PendingAvailability:()=>false,p5NeedsFutureRepair:()=>false,
  clone:v=>structuredClone(v),save(){return true},
  snapshot(){ctx.undo.push('snapshot')},undo:[],
  alertModal:(title,msg)=>errors.push({title,msg}),

@@ -231,6 +231,34 @@ async function main(){
     assert(mobile.leaderboard.bottom<=mobile.panel.top+2,'Session Control must be below Leaderboard on legacy iPhone');
     assert(mobile.panel.width>300&&mobile.leaderboard.width>300,'Legacy iPhone cards remain full width');
   }
+  if(mobile.tabs){
+    // PR36 verified visual footer gap in both exclusive mobile views.
+    // The decorative footer must not reserve 98px of empty space.
+    for(const view of ['rounds','leaderboard']){
+      if(view==='leaderboard')await run(()=>document.querySelector('#americano [data-p5-pr36-tab="leaderboard"]')?.click());
+      await run(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+      await delay(110);
+      const gap=await run(()=>{
+        const root=document.getElementById('americano');
+        const last=root.getAttribute('data-p5-pr36-view')==='leaderboard'?
+          root.querySelector(':scope > .layout > aside'):
+          root.querySelector('.p5-v26-session-control');
+        const footer=document.querySelector('main.wrap > .brand-footer');
+        const bar=root.querySelector('.p5-pr36-mobile-tabs');
+        const wrap=document.querySelector('main.wrap');
+        const f=footer.getBoundingClientRect(),l=last.getBoundingClientRect(),t=bar.getBoundingClientRect();
+        return {view:root.getAttribute('data-p5-pr36-view'),panelToFooter:f.top-l.bottom,
+          footerToTab:t.top-f.bottom,footerPadding:parseFloat(getComputedStyle(footer).paddingBottom),
+          mainPadding:parseFloat(getComputedStyle(wrap).paddingBottom),tabHeight:t.height};
+      });
+      assert.equal(gap.view,view);
+      assert(Math.abs(gap.panelToFooter-12)<=3,'Panel/footer gap is not 12px: '+JSON.stringify(gap));
+      assert(Math.abs(gap.footerToTab-12)<=3,'Footer/tab gap is not 12px: '+JSON.stringify(gap));
+      assert(gap.footerPadding<1,'Decorative footer still has giant bottom padding: '+JSON.stringify(gap));
+      assert(Math.abs(gap.mainPadding-gap.tabHeight-12)<=3,'Scroll container must own safe-area clearance: '+JSON.stringify(gap));
+    }
+    await run(()=>document.querySelector('#americano [data-p5-pr36-tab="rounds"]')?.click());
+  }
   await send('Emulation.setDeviceMetricsOverride',{width:1194,height:834,deviceScaleFactor:2,mobile:false});
   await delay(180);
   const ipad=await run(()=>{

@@ -35,7 +35,7 @@ for(const asset of ['p5-structured-fairness-lab.js','p5-structured-irregular-lab
  run(fs.readFileSync('public/assets/'+asset,'utf8'),asset);
 run(fs.readFileSync('public/assets/p5-coach-opponent-diversity-lab.js','utf8'),'coach-diversity');
 const start=html.indexOf(' function p5SyncAvailability(){');
-const end=html.indexOf(' function canReshuffle(){',start);
+const end=html.indexOf(' function sitoutToggle(',start);
 assert(start>=0&&end>start,'Availability helper source is missing');
 run(html.slice(start,end),'production availability controller');
 function rng(seed=54){return ()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};}
@@ -112,6 +112,46 @@ for(const [mode,n,off] of [
  const next=env.P5EngineRegistry.engine(mode).next(st,ranking,rng());
  inspect(next,st,mode);cases++;
 }
+
+/* Browser-controller regression: mark Not Arrived in R1, press Reshuffle,
+ * then confirm R1 and activate a late arrival for R2 via leaderboard.
+ * No live sessions or data are modified.
+ */
+env.clone=v=>JSON.parse(JSON.stringify(v));
+env.undo=[];env.snapshot=()=>env.undo.push('checkpoint');
+env.save=()=>true;env.render=()=>{};env.logAction=()=>{};
+env.toast=()=>{};env.alertModal=(title,msg)=>{throw Error(title+': '+msg)};
+env.random=rng(111);
+env.P5UI={statistics:st=>st.roster.map(p=>({id:p.id,points:0}))};
+const live=make('individual-americano',16,2,[],{coachEnabled:true,coachIds:[1]});
+live.ui={fullSchedule:false};env.s=live;
+live.rounds=env.P5AdvancedRules.build(live,rng(449),{rounds:30});
+for(const id of [14,15,16])live.arrival[id]=false;
+run('p5SyncAvailability()','R1 absence controller');
+assert(live.sitout.length===3,'R1 absence must persist in canonical sitout');
+run('reshuffleArrival()','actual R1 arrival reshuffle');
+assert(!live.sitoutPending||!Object.keys(live.sitoutPending).length);
+assert(live.rounds.length>1);
+for(let i=0;i<live.rounds.length;i++)inspect(live.rounds[i],live,'browser reshuffle R'+(i+1));
+assert([14,15,16].every(id=>live.arrival[id]===false),'Reshuffle silently marked absent players arrived');
+cases++;
+for(const m of live.rounds[0].matches.filter(Boolean)){m.confirmed=true;m.score=[3,2];}
+live.sitoutPending[14]=false;
+env.currentDone=()=>env.s.rounds[env.s.currentRound].matches.filter(Boolean).every(m=>m.confirmed);
+env.flexibleRoundScoring=()=>true;
+env.closeMenu=()=>{};
+const nextStart=html.indexOf(' function nextRound(forceAdvance=false){');
+const nextEnd=html.indexOf(' function showBalance(){',nextStart);
+assert(nextStart>=0&&nextEnd>nextStart,'Next Round controller bounds');
+run(html.slice(nextStart,nextEnd),'production nextRound');
+run('nextRound(true)','R2 apply late-arrival return');
+assert(live.sitout.includes(15)&&live.sitout.includes(16),'Other missing players were activated by Return');
+assert(!live.sitout.includes(14)&&live.arrival[14]===true,'Returning player not activated');
+assert(live.currentRound===1,'Round 2 was not advanced');
+assert(live.rounds.slice(1).some(rd=>rd.matches.filter(Boolean).some(m=>m.teams.flat().includes(14))),'Returned player absent from all future rounds');
+for(let i=1;i<live.rounds.length;i++)inspect(live.rounds[i],live,'late-arrival R'+(i+1));
+cases++;
+
 assert(html.includes('if(flexibleRoundScoring(s)&&!forceAdvance&&p5PendingAvailability())'),'Round browser skips availability');
 assert(html.includes('Not Arrived stays inactive in every round'),'Prematch instruction stale');
 assert(!html.includes('full roster returns Round 2'),'Auto-arrival legacy behavior remains');

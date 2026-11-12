@@ -241,7 +241,7 @@ async function main(){
       const gap=await run(()=>{
         const root=document.getElementById('americano');
         const last=root.getAttribute('data-p5-pr36-view')==='leaderboard'?
-          root.querySelector(':scope > .layout > aside'):
+          root.querySelector(':scope > .layout > aside > .p5-b41-leaderboard'):
           root.querySelector('.p5-v26-session-control');
         const footer=document.querySelector('main.wrap > .brand-footer');
         const bar=root.querySelector('.p5-pr36-mobile-tabs');

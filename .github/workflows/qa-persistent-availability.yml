@@ -1,0 +1,27 @@
+name: PADEL 5IVE Persistent Availability QA
+on:
+  push:
+    branches: [fix/persistent-player-availability-20261112]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  availability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Persistent Availability Production Engine Regression
+        run: |
+          node scripts/qa-persistent-availability.cjs
+          node scripts/qa-all-pairing-modes-audit.cjs
+          node scripts/qa-structured-pairing-lab.cjs
+          node scripts/qa-extra-rounds.cjs
+          node scripts/qa-phase58-resume.cjs
+          git diff --check

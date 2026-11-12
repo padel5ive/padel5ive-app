@@ -6,6 +6,8 @@ on:
       - public/phase58/cloud-dashboard.js
       - public/phase5814/view-only-v5814.js
       - scripts/phase5814-integrate.cjs
+      - scripts/cloud-viewer-round-retention-integrate.cjs
+      - package.json
       - scripts/qa-cloud-viewer-round-retention.cjs
       - scripts/qa-v5810-viewer.cjs
       - scripts/qa-v5814-view-only.cjs

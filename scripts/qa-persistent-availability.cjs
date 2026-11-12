@@ -139,6 +139,7 @@ for(const m of live.rounds[0].matches.filter(Boolean)){m.confirmed=true;m.score=
 live.sitoutPending[14]=false;
 env.currentDone=()=>env.s.rounds[env.s.currentRound].matches.filter(Boolean).every(m=>m.confirmed);
 env.applyPendingParticipants=()=>false;
+env.p5NeedsFutureRepair=()=>false;
 env.flexibleRoundScoring=()=>true;
 env.closeMenu=()=>{};
 const nextStart=html.indexOf(' function nextRound(forceAdvance=false){');
@@ -153,7 +154,7 @@ assert(live.rounds.slice(1).some(rd=>rd.matches.filter(Boolean).some(m=>m.teams.
 for(let i=1;i<live.rounds.length;i++)inspect(live.rounds[i],live,'late-arrival R'+(i+1));
 cases++;
 
-assert(html.includes('if(flexibleRoundScoring(s)&&!forceAdvance&&p5PendingAvailability())'),'Round browser skips availability');
+assert(html.includes('if(flexibleRoundScoring(s)&&!forceAdvance&&(p5PendingAvailability()||p5NeedsFutureRepair()))'),'Round browser skips availability');
 assert(html.includes('Not Arrived stays inactive in every round'),'Prematch instruction stale');
 assert(!html.includes('full roster returns Round 2'),'Auto-arrival legacy behavior remains');
 cases+=3;

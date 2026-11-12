@@ -170,6 +170,8 @@
   if(s?.mode!=='structured-americano')return previous.rebuild(s,random);
   validate(s);const r=rng(random),m=active(s);
   const prefix=(s.rounds||[]).slice(0,(s.currentRound||0)+1);
+  if((s.rounds||[]).slice(prefix.length).some(rd=>(rd.matches||[]).some(m=>m&&(m.confirmed||m.score!=null||m.skipped))))
+   throw Error('Structured rebuild cannot alter a scored or protected future fixture. Reopen it first.');
   const frozen=JSON.stringify(prefix),pending=Math.max(1,(s.rounds||[]).length-prefix.length);
   let future;
   if(m.A.length!==m.B.length){

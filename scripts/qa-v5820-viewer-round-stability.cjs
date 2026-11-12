@@ -32,12 +32,12 @@ assert.equal(writes,0,'Viewer navigation must not rewrite local tournament data'
 isViewer=false;
 assert.equal(ctx.follow(false),false,'Controller has no viewer-only Follow Live state');
 assert.equal(saves.length,3,'Controller cannot accidentally pause viewer mode');
-assert(viewer.includes("cloud?.setFollowLive?.(latest===selected)"),
- 'Unified round navigation still sets follow preference based on selected round');
-assert(viewer.includes("cloud?.setFollowLive?.(false);schedule();"),
- 'Club history navigation still pauses follow preference');
-assert(viewer.includes("cloud?.setFollowLive?.(true);schedule();"),
- 'Club latest-round navigation still resumes follow preference');
+assert(viewer.includes("cloud?.rememberRound?.(selected)"),
+ 'Round choices must persist in Viewer-only presentation state');
+assert(viewer.includes("cloud?.setFollowLive?.(false)"),
+ 'Explicit round navigation must pause Live Follow');
+assert(viewer.includes("cloud?.setFollowLive?.(true)"),
+ 'Latest-round navigation must resume Live Follow');
 // Polls unchanged revision every 5.5 seconds without refreshing the UI.
 // A changed Cloud revision still calls applyRemote to refresh confirmed scores.
 const start=source.indexOf('async function refresh(){');
@@ -73,9 +73,9 @@ vm.runInNewContext(refreshCode+'\nthis.poll=refresh;',pollCtx);
  assert.equal(pollCtx.meta.revision,7,'Revision is only advanced by applyRemote');
  const pageContent=pages.map(p=>fs.readFileSync(p,'utf8'));
  for(const [index,html] of pageContent.entries()){
-  assert(html.includes('cloud-dashboard.js?v=5833.1'),
+  assert(html.includes('cloud-dashboard.js?v=5834.1'),
    pages[index]+': browser must load fresh Cloud adapter');
-  assert(html.includes('view-only-v5814.js?v=5830.1'),
+  assert(html.includes('view-only-v5814.js?v=5834.1'),
    pages[index]+': browser must load fresh viewer adapter');
   assert.equal(html.split('cloud-dashboard.js?v=').length-1,1,'No duplicate Cloud JS');
  }

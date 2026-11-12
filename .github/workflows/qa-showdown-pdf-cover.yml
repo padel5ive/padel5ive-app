@@ -1,0 +1,36 @@
+name: PADEL 5IVE Team Showdown PDF Cover + Ten-Row QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - public/assets/p5-direct-pdf.js
+      - scripts/qa-showdown-cover-spacing.cjs
+      - scripts/qa-showdown-ledger-ten.cjs
+      - .github/workflows/qa-showdown-pdf-cover.yml
+permissions:
+  contents: read
+jobs:
+  cover-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Assert generated PDF subtitle spacing and unaffected pages
+        run: node scripts/qa-showdown-cover-spacing.cjs
+      - name: Assert 10-match pagination in all Showdown stages
+        run: node scripts/qa-showdown-ledger-ten.cjs
+      - name: Generate PDF smoke fixtures for all supported export types
+        run: node scripts/phase55-pdf-smoke.mjs
+      - name: Save Club Match two-line cover review PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: club-match-pdf-combined-review
+          path: |
+            QA_PREVIEW_CLUB_MATCH_COVER_SPACING.pdf
+            QA_PREVIEW_CLUB_MATCH_10_MATCHES.pdf
+      - run: git diff --check

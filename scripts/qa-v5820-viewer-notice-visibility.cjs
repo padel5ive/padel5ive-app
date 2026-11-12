@@ -38,12 +38,12 @@ sandbox.showAllControls();
 assert.equal(original.style.display,'flex','Moderator original display restored');
 assert(!original.classList.contains('p5814-hide-action'),'Moderator notice visible again');
 assert.notEqual(doc.querySelector('#fairness').style.display,'none','Moderator fairness warning visible again');
-assert(src.includes('promoteCloud();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();'),
+assert(src.includes('promoteCloud();restoreViewerRound();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();'),
  'Viewer run pass must reapply hiding after master round changes');
 assert(src.includes('showAllControls();'), 'Role restoration flow retained');
 for(const path of ['public/modes/unified/index.html','public/modes/club-match/index.html']){
  const html=fs.readFileSync(path,'utf8');
- assert(html.includes('view-only-v5814.js?v=5830.1'),'iOS fresh Viewer asset after fix');
- assert(html.includes('cloud-dashboard.js?v=5833.1'),'iOS fresh Cloud asset after fix');
+ assert(html.includes('view-only-v5814.js?v=5834.1'),'iOS fresh Viewer asset after fix');
+ assert(html.includes('cloud-dashboard.js?v=5834.1'),'iOS fresh Cloud asset after fix');
 }
 console.log('PASS v5.8.20.2: Advanced Player Rules / Scheduling Fairness Review are View Only hidden, restored for moderator, unrelated warnings intact.');

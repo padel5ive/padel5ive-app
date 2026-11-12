@@ -316,7 +316,7 @@ function run(){
   if($('.p5814-view-menu')||$('.p5814-read-score')||$('.p5814-score-static')||hiddenInline.size||changed.size)restore();
   return;
  }
- promoteCloud();restoreClubViewedRound();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();
+ promoteCloud();restoreViewerRound();menuView();scoreViewer();viewerLeaderboardNames();viewerSessionSummary();hideViewerDiagnostics();actions();
 }
 function schedule(){
  if(queued)return;
@@ -325,15 +325,29 @@ function schedule(){
 // Cloud score updates reload the native engine. Preserve *explicit* viewer
 // navigation independently of the moderator's currentRound: that progress
 // pointer can legitimately be Round 5 while a viewer inspects Round 18.
-let restoredClubRound=false;
-function restoreClubViewedRound(){
- if(kind!=='club'||restoredClubRound)return;
+let restoredViewerRound=false;
+function restoreViewerRound(){
+ if(restoredViewerRound)return;
  const cloud=window.P5CloudSession,selected=cloud?.viewedRound?.();
- if(!Number.isInteger(selected)||selected<1)return;
- const target=$('#app button[data-action="view-round"][data-value="'+selected+'"]');
- if(!target)return; // Native schedule may still be loading; try at next render.
- restoredClubRound=true;
- target.click(); // Existing authorized read-only action sets inspectedRound.
+ if(!Number.isInteger(selected))return;
+ if(kind==='unified'){
+  // Cloud-update reloads already stamp the correct viewRound in localStorage.
+  // Manual Safari reloads may not: restore without editing tournament scores.
+  try{
+   const stored=JSON.parse(localStorage.getItem('padel5ive-shared-foundation-v2.4-parity-lab')||'null');
+   if(stored?.viewRound===selected){restoredViewerRound=true;return;}
+  }catch{}
+  const target=$('#americano button[data-act="round"][data-round="'+selected+'"]');
+  if(!target)return;
+  restoredViewerRound=true;
+  target.click(); // Native read-only renderer selects the requested round.
+ }else{
+  if(selected<1)return;
+  const target=$('#app button[data-action="view-round"][data-value="'+selected+'"]');
+  if(!target)return; // Native schedule may still be loading; retry.
+  restoredViewerRound=true;
+  target.click(); // Sets ephemeral inspectedRound after Cloud reload.
+ }
 }
 document.addEventListener('click',event=>{
  if(!document.body.classList.contains('p58-view-only'))return;

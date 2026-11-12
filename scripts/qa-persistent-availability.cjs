@@ -138,6 +138,7 @@ cases++;
 for(const m of live.rounds[0].matches.filter(Boolean)){m.confirmed=true;m.score=[3,2];}
 live.sitoutPending[14]=false;
 env.currentDone=()=>env.s.rounds[env.s.currentRound].matches.filter(Boolean).every(m=>m.confirmed);
+env.applyPendingParticipants=()=>false;
 env.flexibleRoundScoring=()=>true;
 env.closeMenu=()=>{};
 const nextStart=html.indexOf(' function nextRound(forceAdvance=false){');

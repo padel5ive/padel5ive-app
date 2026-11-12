@@ -49,4 +49,9 @@ assert(html.includes("m.type==='session-name'?'Save Changes'"),'Rename button mi
 assert(html.includes('ROUND ${r+1} · COURT SCORING'),'Simplified round title missing');
 assert(!html.includes('ROUND ${r+1} · ${format(s)} · COURT SCORING'),'Scoring format still redundant in round heading');
 console.log('PASS PR36 session rename and lean round title');
+assert(html.includes('PR36 SCORECARD REFINEMENT: invisible hit target, symmetrical mobile names'),'Mobile scorecard refinement missing');
+assert(html.includes('scorepair:nth-child(2) .pairname{grid-column:2!important;grid-row:1!important}'),'Right player names are not aligned into shared name row');
+assert(html.includes('scorepair:nth-child(2) .p5sm-scorebox{grid-column:2!important;grid-row:2!important}'),'Right score not aligned in shared score row');
+assert(html.includes('-webkit-tap-highlight-color:transparent!important'),'iOS scorecard touch highlight guard missing');
+console.log('PASS PR36 mobile scorecard: shared grid rows, centered player names and suppressed tap overlays');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

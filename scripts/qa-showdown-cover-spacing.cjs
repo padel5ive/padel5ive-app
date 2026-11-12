@@ -45,5 +45,6 @@ function yForText(pdf,value){
  assert(yForText(two,'TEAM SHOWDOWN  /  JUDEL VS CANIPADEL')>141+30,
  'Format caption too near cover metadata divider');
  assert(two.includes('(How the Showdown Works) Tj ET'),'Overview missing');
+ fs.writeFileSync('QA_PREVIEW_CLUB_MATCH_COVER_SPACING.pdf',Buffer.from(two,'latin1'));
  console.log('PASS Team Showdown cover: one-line unchanged; two-line title spacing +20pt; caption follows; overview preserved.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

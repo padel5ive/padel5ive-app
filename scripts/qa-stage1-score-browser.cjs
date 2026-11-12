@@ -200,6 +200,24 @@ async function main(){
   assert.equal(mobile.layout,'flex','Phone Stage 1 layout retains vertical root');
   assert.equal(mobile.wrapper,'contents','Phone first-column wrapper keeps native order');
   assert(mobile.panelText.includes('Finish Americano'),'Moderator Session Control content remains usable');
+  // PR36: verify actual computed typography, not just stylesheet text.
+  const titleStyles=await run(()=>{
+    const css=(sel)=>{const el=document.querySelector(sel);if(!el)return null;const x=getComputedStyle(el);return {size:x.fontSize,color:x.color,weight:x.fontWeight,spacing:x.letterSpacing,line:x.lineHeight,margin:x.marginBottom}};
+    return {
+      round:css('#americano .p5-v26-round-card .p5-v26-round-title h2'),
+      leaderboard:css('#americano .p5-b41-leaderboard>.row.between>h2'),
+      rest:css('#americano .p5-v26-flow-combo>.p5-rest-card>h3'),
+      deck:css('#americano .p5-v26-flow-combo>.p5-v26-on-deck>.p5-v26-ondeck-title')
+    };
+  });
+  assert(titleStyles.rest&&titleStyles.deck,'Resting and Next on Court titles must exist');
+  for(const prop of ['size','color','weight','spacing','line','margin']){
+    assert.equal(titleStyles.rest[prop],titleStyles.deck[prop],'Rest/Next title '+prop+' must match');
+  }
+  assert(titleStyles.round&&titleStyles.leaderboard,'Both Stage 1 headings must exist');
+  assert.equal(titleStyles.round.size,titleStyles.leaderboard.size,'iPhone Scoring and Leaderboard title font sizes must match');
+  assert.equal(titleStyles.round.weight,titleStyles.leaderboard.weight,'iPhone Scoring and Leaderboard title weights must match');
+  console.log('PASS PR36 mobile headings: matched operational labels and Court Scoring / Leaderboard type scale.');
   if(mobile.tabs){
     assert.equal(mobile.view,'rounds','Rounds is default iPhone tab');
     assert(Math.abs(mobile.verticalGap-12)<=1,'Mobile Court Scoring to Session Control gap must be 12px: '+JSON.stringify(mobile));
@@ -285,6 +303,12 @@ async function main(){
       scoreRowGap:scores?.length===2?Math.abs(r(scores[0]).top-r(scores[1]).top):Infinity
     };
   });
+  const ipadOp=await run(()=>{
+    const v=(sel)=>{const el=document.querySelector(sel);if(!el)return null;const c=getComputedStyle(el);return {size:c.fontSize,color:c.color,weight:c.fontWeight,spacing:c.letterSpacing,line:c.lineHeight,margin:c.marginBottom}};
+    return {rest:v('#americano .p5-v26-flow-combo>.p5-rest-card>h3'),deck:v('#americano .p5-v26-flow-combo>.p5-v26-on-deck>.p5-v26-ondeck-title')};
+  });
+  assert(ipadOp.rest&&ipadOp.deck,'iPad operational headings exist');
+  for(const k of ['size','color','weight','spacing','line','margin'])assert.equal(ipadOp.rest[k],ipadOp.deck[k],'iPad Resting/On Court title '+k+' must match');
   assert(ipad.leftPanel<ipad.leftBoard,'iPad keeps Session Control in left column');
   assert(ipad.sessionHeight>0&&ipad.sessionHeight<130,'iPad session info must remain compact: '+JSON.stringify(ipad));
   assert(ipad.headingGap<=1&&ipad.headingSizeGap<.1,'iPad scoring and leaderboard titles must align: '+JSON.stringify(ipad));

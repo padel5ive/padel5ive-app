@@ -266,9 +266,30 @@ async function main(){
     const panel=root?.querySelector(':scope > div:first-child > .p5-v26-session-control');
     const leaderboard=root?.querySelector(':scope > aside');
     const r=e=>e?.getBoundingClientRect();
-    return {display:getComputedStyle(root).display,leftPanel:r(panel)?.left,leftBoard:r(leaderboard)?.left};
+    const roundTitle=root.querySelector('.p5-v26-round-title h2');
+    const boardTitle=leaderboard?.querySelector('h2');
+    const rail=root.querySelector('.round-picker .roundbuttons');
+    const scorecard=root.querySelector('.p5-stage1-score-grid>.court.p5sm-card');
+    const names=scorecard?.querySelectorAll('.pairname');
+    const scores=scorecard?.querySelectorAll('.p5sm-scorebox');
+    const session=document.querySelector('#americano>.p5-stage-head.p5-si-card');
+    const mid=e=>{const b=r(e);return b.left+b.width/2};
+    return {
+      display:getComputedStyle(root).display,leftPanel:r(panel)?.left,leftBoard:r(leaderboard)?.left,
+      sessionHeight:r(session)?.height,
+      headingGap:Math.abs(r(roundTitle).top-r(boardTitle).top),
+      headingSizeGap:Math.abs(parseFloat(getComputedStyle(roundTitle).fontSize)-parseFloat(getComputedStyle(boardTitle).fontSize)),
+      railWrap:getComputedStyle(rail).flexWrap,
+      railClient:rail.clientWidth,railScroll:rail.scrollWidth,
+      namesCentered:names?.length===2&&scores?.length===2&&Math.abs(mid(names[0])-mid(scores[0]))<2&&Math.abs(mid(names[1])-mid(scores[1]))<2,
+      scoreRowGap:scores?.length===2?Math.abs(r(scores[0]).top-r(scores[1]).top):Infinity
+    };
   });
   assert(ipad.leftPanel<ipad.leftBoard,'iPad keeps Session Control in left column');
+  assert(ipad.sessionHeight>0&&ipad.sessionHeight<130,'iPad session info must remain compact: '+JSON.stringify(ipad));
+  assert(ipad.headingGap<=1&&ipad.headingSizeGap<.1,'iPad scoring and leaderboard titles must align: '+JSON.stringify(ipad));
+  assert(ipad.railWrap==='nowrap'&&ipad.railScroll>ipad.railClient,'iPad round pills must use one horizontal scrollable row: '+JSON.stringify(ipad));
+  assert(ipad.namesCentered&&ipad.scoreRowGap<2,'iPad names and scoreboxes must align symmetrically: '+JSON.stringify(ipad));
   console.log('PASS iPhone 390px: PR36 exclusive Rounds/Leaderboard tabs (legacy ordering fallback); iPad 1194px split preserved.');
   console.log('PASS Chrome: Round 2 court header/footer open score modal; 3-2 + 4-1 saved; Round 1 pending; navigation intact; upper arrows removed.');
  }finally{

@@ -52,9 +52,9 @@ const css=`\n${marker}
  }
  #americano .p5-v26-round-card .round-picker .roundbuttons::-webkit-scrollbar{display:none!important}
  #americano .p5-v26-round-card .round-picker .roundbuttons>button{
-  flex:0 0 30px!important;width:30px!important;min-width:30px!important;max-width:30px!important;
-  min-height:30px!important;height:30px!important;padding:3px!important;
-  font-size:10px!important;border-radius:7px!important;scroll-snap-align:start;
+  flex:0 0 38px!important;width:38px!important;min-width:38px!important;max-width:38px!important;
+  min-height:38px!important;height:38px!important;padding:4px!important;
+  font-size:13px!important;border-radius:9px!important;scroll-snap-align:start;
  }
  /* Equal section titles and identical top inset on both desktop columns. */
  #americano>.layout .p5-v26-round-card,

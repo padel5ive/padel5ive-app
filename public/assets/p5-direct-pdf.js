@@ -221,13 +221,14 @@ function sdStandings(d,items,part,total,page){let p=masthead(sdMultiStage(d)?'Te
  const top=H-230;p+=rect(48,top-12,W-96,29,'slate')+text(57,top,'#',9,'F2','light')+text(88,top,'PAIR',9,'F2','light')+text(467,top,'TEAM',9,'F2','light')+text(584,top,'W-L-T',9,'F2','light')+text(649,top,'DIFF',9,'F2','light')+text(712,top,'P',9,'F2','light')+text(759,top,'G',9,'F2','light');
  items.forEach((r,i)=>{const y=top-35-i*22;if(i%2===0)p+=rect(48,y-9,W-96,22,'cream');p+=text(57,y,String(r.rank||part*12+i+1).padStart(2,'0'),10,'F2','gold')+text(88,y,ell(r.name,50),9.8,'F2','ink')+text(467,y,ell(r.team,15),9.2,'F1','ink')+text(584,y,`${r.w}-${r.l}-${r.d}`,10,'F1','ink')+text(649,y,String(r.diff>0?'+':'')+r.diff,10,'F1','ink')+text(712,y,r.p,10,'F1','ink')+text(759,y,r.g,10,'F1','ink');});return p;
 }
+const SD_MATCHES_PER_PAGE=10;
 function sdLedger(d,items,part,total,page,stage){let p=masthead('Team Showdown / '+(stage==='Stage 1'&&!sdMultiStage(d)?'Round Robin':stage)+' Results',page);
  p+=text(52,H-115,(stage==='Stage 1'?'04':stage==='Stage 2'?'05':'06')+' / '+(stage==='Stage 1'&&!sdMultiStage(d)?'ROUND ROBIN':stage.toUpperCase())+' · MATCH HISTORY',11,'F2','gold');
  p+=text(52,H-154,stage==='Stage 1'?'Cross-Club Round Robin':stage==='Stage 2'?'Custom Team Duel':'The Decider',28,'F2','ink');
  p+=text(52,H-183,ell(`${d.teamA} vs ${d.teamB} · ${items.length} MATCHES ON THIS PAGE`,85),11,'F1','gray');
  const top=H-231;p+=rect(48,top-11,W-96,28,'slate')+text(57,top,'#',9,'F2','light')+text(94,top,'COURT',9,'F2','light')+text(169,top,ell(d.teamA,28),9,'F2','light')+text(497,top,ell(d.teamB,28),9,'F2','light')+text(752,top,'SCORE',9,'F2','light');
- items.forEach((r,i)=>{let y=top-35-i*29;if(i%2===0)p+=rect(48,y-11,W-96,27,'cream');
- p+=text(57,y,String(r.no??Math.max(1,total-(part*9+i))).padStart(2,'0'),9.5,'F2','gold')+text(98,y,String(r.court||'—'),9.5,'F1','ink');
+ items.forEach((r,i)=>{let y=top-35-i*27;if(i%2===0)p+=rect(48,y-11,W-96,25,'cream');
+ p+=text(57,y,String(r.no??Math.max(1,total-(part*SD_MATCHES_PER_PAGE+i))).padStart(2,'0'),9.5,'F2','gold')+text(98,y,String(r.court||'—'),9.5,'F1','ink');
  p+=text(169,y,ell(r.a,53),9.1,'F1','ink')+text(497,y,ell(r.b,39),9.1,'F1','ink')+text(748,y,r.score||'PENDING',9.8,'F2','ink');});return p;
 }
 function sdFinal(d,page){let p=pic('Champion',0,0,W,H)+pic('Logo',49,H-114,52,68);
@@ -245,10 +246,10 @@ function renderShowdown(d){if(!d||d.p5showdown!==1||!Array.isArray(d.roster)||!A
  if(d.winner)doc.add(sdFinal(d,pg++));
  doc.add(sdOverview(d,pg++));
  const descending=(items)=>items.map((m,i)=>({...m,no:m.no??i+1})).reverse();
- if(d.matches3?.length)for(const [i,items] of chunk(descending(d.matches3),9).entries())doc.add(sdLedger(d,items,i,d.matches3.length,pg++,'Stage 3'));
- if(d.matches2?.length)for(const [i,items] of chunk(descending(d.matches2),9).entries())doc.add(sdLedger(d,items,i,d.matches2.length,pg++,'Stage 2'));
+ if(d.matches3?.length)for(const [i,items] of chunk(descending(d.matches3),SD_MATCHES_PER_PAGE).entries())doc.add(sdLedger(d,items,i,d.matches3.length,pg++,'Stage 3'));
+ if(d.matches2?.length)for(const [i,items] of chunk(descending(d.matches2),SD_MATCHES_PER_PAGE).entries())doc.add(sdLedger(d,items,i,d.matches2.length,pg++,'Stage 2'));
  for(const [i,items] of chunk(d.standings,12).entries())doc.add(sdStandings(d,items,i,d.standings.length,pg++));
- for(const [i,items] of chunk(descending(d.matches1),9).entries())doc.add(sdLedger(d,items,i,d.matches1.length,pg++,'Stage 1'));
+ for(const [i,items] of chunk(descending(d.matches1),SD_MATCHES_PER_PAGE).entries())doc.add(sdLedger(d,items,i,d.matches1.length,pg++,'Stage 1'));
  for(const [i,items] of chunk(d.roster,10).entries())doc.add(sdRoster(d,items,i,d.roster.length,pg++));
  return doc.bytes();
 }

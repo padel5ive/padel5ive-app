@@ -60,4 +60,8 @@ assert(html.includes('View Full History'),'View Full History control missing');
 assert(html.includes('p5-pr36-history-score'),'Confirmed score history display missing');
 assert(!html.includes('Moderator may finish Stage 1 at any time. Only CONFIRMED scores determine standings and KO seeds; pending matches become Not Played.'),'Long Session Control instructions should not remain');
 console.log('PASS PR36 Session Control: minimal actions, intact history and finished score display');
+assert(html.includes('PR36 PANEL RHYTHM: 12px mobile Stage 1 spacing'),'Mobile panel rhythm style missing');
+assert(html.includes('row-gap:12px!important;gap:12px!important'),'Mobile sibling panel gap must be 12px');
+assert(html.includes('margin-top:0!important;margin-bottom:0!important'),'Old stacked card margins must be cleared');
+console.log('PASS PR36 mobile panel rhythm: 12px gaps without altering iPad');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

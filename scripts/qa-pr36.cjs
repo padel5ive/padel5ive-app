@@ -42,4 +42,11 @@ assert(html.includes('flex-wrap:nowrap!important'),'Round rail must remain on on
 assert(html.includes('#americano.p5-pr36-mobile-active>.stats,#americano.p5-pr36-mobile-active>.bars{display:none!important}'),'Mobile monitor should be hidden');
 assert(html.includes('background:#1b262f!important'),'Native navy/brass bottom tab style missing');
 console.log('PASS PR36 mobile density: one-row rail, compact session, invisible KPIs, quiet-luxury tabs');
+assert(html.includes('PR36 SESSION POLISH: tap name to rename without an edit icon'),'Session name edit script missing');
+assert(html.includes('data-act="edit-session-name"'),'Tap Session Name action missing');
+assert(html.includes('function renameSession(){'),'Session name save handler missing');
+assert(html.includes("m.type==='session-name'?'Save Changes'"),'Rename button missing');
+assert(html.includes('ROUND ${r+1} · COURT SCORING'),'Simplified round title missing');
+assert(!html.includes('ROUND ${r+1} · ${format(s)} · COURT SCORING'),'Scoring format still redundant in round heading');
+console.log('PASS PR36 session rename and lean round title');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

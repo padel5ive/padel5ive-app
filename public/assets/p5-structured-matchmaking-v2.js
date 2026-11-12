@@ -19,7 +19,11 @@
  }
  function validate(s,requireBalance=true){
   if(s?.mode!=='structured-americano')return previous.validate(s,requireBalance);
-  previous.validate(s,false);const m=active(s);
+  previous.validate(s,false);
+  // Non-strict validation is used by backup/restore and roster editing, even
+  // when all players are temporarily unavailable. Do not reject valid archives.
+  if(requireBalance===false)return true;
+  const m=active(s);
   if(m.cap<1)throw Error('Structured Americano needs two available players in each group.');
   return true;
  }

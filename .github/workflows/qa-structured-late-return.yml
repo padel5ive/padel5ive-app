@@ -1,0 +1,31 @@
+name: PADEL 5IVE Structured Americano Late Arrival + Court Density QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - public/assets/p5-structured-late-return-density.js
+      - scripts/structured-late-return-integrate.cjs
+      - scripts/qa-structured-late-return-density.cjs
+      - .github/workflows/qa-structured-late-return.yml
+      - package.json
+permissions:
+  contents: read
+jobs:
+  late-arrival-court-density:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build approved engines and isolated adapter
+        run: npm run build
+      - name: Reproduce four players arriving after Round 4
+        run: node scripts/qa-structured-late-return-density.cjs
+      - name: Existing Structured Pairing fairness / irregular QA
+        run: |
+          node scripts/qa-structured-pairing-lab.cjs
+          node scripts/qa-structured-irregular-lab.cjs
+      - run: git diff --check

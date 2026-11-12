@@ -160,6 +160,7 @@ async function main(){
     return {viewport:innerWidth,layout:getComputedStyle(root).display,
       wrapper:getComputedStyle(root.firstElementChild).display,
       board:rect(board),leaderboard:rect(leaderboard),panel:rect(panel),
+      verticalGap:board&&panel?(Math.round((panel.getBoundingClientRect().top-board.getBoundingClientRect().bottom)*10)/10):null,
       panelText:panel?.textContent,tabs:!!tabbar&&getComputedStyle(tabbar).display!=='none',
       view:app?.getAttribute('data-p5-pr36-view'),
       rail:rail?{width:rail.clientWidth,scrollWidth:rail.scrollWidth,wrap:getComputedStyle(rail).flexWrap}:null};
@@ -170,6 +171,7 @@ async function main(){
   assert(mobile.panelText.includes('Finish Americano'),'Moderator Session Control content remains usable');
   if(mobile.tabs){
     assert.equal(mobile.view,'rounds','Rounds is default iPhone tab');
+    assert(Math.abs(mobile.verticalGap-12)<=1,'Mobile Court Scoring to Session Control gap must be 12px: '+JSON.stringify(mobile));
     assert(mobile.board.width>300&&mobile.panel.width>300,'Rounds tab keeps scoring and session control full width');
     assert.equal(mobile.leaderboard.width,0,'Leaderboard must not stack below Rounds tab');
     assert.equal(mobile.rail.wrap,'nowrap','Mobile round navigation is one horizontal row');

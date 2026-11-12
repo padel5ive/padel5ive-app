@@ -52,7 +52,7 @@ const helper=[
 ' }',
 ''].join("\n");
 replace(' function nextRound(forceAdvance=false){',helper+' function nextRound(forceAdvance=false){');
-replace('let changedRoster=changedSitout||added;','let changedRoster=changedSitout||added,courtOnly=false;');
+replace('let changedRoster=changedSitout||added||p5NeedsFutureRepair();','let changedRoster=changedSitout||added||p5NeedsFutureRepair(),courtOnly=false;');
 replace('if(!ENG[s.mode].dynamic)changedRoster=true;\n    s.courts=next;','if(!ENG[s.mode].dynamic){changedRoster=true;courtOnly=!changedSitout&&!added;}\n    s.courts=next;');
 const start=src.indexOf('   if(changedRoster&&!ENG[s.mode].dynamic){'),end=src.indexOf('   if(s.currentRound+1>=s.rounds.length){',start);
 assert(start>=0&&end>start,'future rebuild boundary');assert(src.slice(start,end).includes('P5Recovery.rebuild(s,random)'));

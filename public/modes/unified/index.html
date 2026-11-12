@@ -6919,6 +6919,32 @@ window.P5App=(function(){'use strict';
   s.sitout=[...new Set(s.manualSitout.concat(s.roster.filter(p=>s.arrival[p.id]===false).map(p=>p.id)))];
  }
  function p5PendingAvailability(){return Object.keys(s.sitoutPending||{}).length>0;}
+ function p5RebuildAfterArrival(rounds,random){
+  if(ENG[s.mode].dynamic)return rounds;
+  const first=rounds[0],available=s.roster.map(p=>p.id).filter(id=>!s.sitout.includes(id));
+  if(!first||!Array.isArray(first.matches)||!first.matches.filter(Boolean).length)throw Error('No available opening fixture');
+  if(first.matches.filter(Boolean).some(m=>m.teams.flat().some(id=>s.sitout.includes(id))))
+   throw Error('Opening fixture still includes a Not Arrived / Sit Out player');
+  const base={...s,rounds,currentRound:0};
+  let future;
+  if(P5Structured.is(s))future=P5Structured.rebuild(base,random);
+  else if(P5AdvancedRules.constrained(s))future=P5AdvancedRules.rebuild(base,random);
+  else {
+   // Recovery analyzes confirmed history. Use a scratch Round 1 as a pairing
+   // placeholder; never mark the real Round 1 scored or change its results.
+   const shadow={...first,matches:first.matches.map(m=>m?{...m,confirmed:true,score:[0,0]}:m)};
+   future=P5Recovery.rebuild({...base,rounds:[shadow]},random);
+  }
+  const optimized=P5Fair532.optimize(future,[first],s.roster.map(p=>p.id),random,
+   {coaches:P5AdvancedRules.coachIds(s),structured:s.mode==='structured-americano',availableIds:available});
+  const result=[first,...optimized];
+  for(let i=1;i<result.length;i++)for(const m of result[i].matches||[]){
+   if(m&&m.teams.flat().some(id=>s.sitout.includes(id)))
+    throw Error('Unavailable player leaked into Round '+(i+1));
+  }
+  return result;
+ }
+
  function canReshuffle(){return s.stage==='stage1'&&s.currentRound===0&&!s.rounds.some(r=>r.matches.some(m=>m&&m.confirmed));}
  function arrivalToggle(id){if(!canReshuffle())return toast('Arrival & Reshuffle closes as soon as any score is confirmed.');
   if(!s.roster.some(p=>p.id===id))return;
@@ -6944,6 +6970,10 @@ window.P5App=(function(){'use strict';
    }
    if(!rounds?.[0]?.matches?.length)throw Error('No playable opening match');
    if(P5CourtRotation.applies(s))P5CourtRotation.allocate(s,rounds);
+   // Keep the reshuffled opening, rebuild every future fixture from AVAILABLE players only.
+   rounds=p5RebuildAfterArrival(rounds,random);
+   if(P5CourtRotation.applies(s)&&!engine.dynamic)P5CourtRotation.allocate(s,rounds);
+   P5EngineRegistry.validateSchedule(rounds,s);
    logAction('Opening round reshuffled · '+eligible.length+' ready');s.rounds=rounds;p5SyncAvailability();s.currentRound=s.viewRound=0;s.ui.fullSchedule=false;save();render();
    toast(`${eligible.length} ready · ${off.length} not arrived · unavailable players remain excluded until Arrived / Return${found?'':' (limited alternatives)'}`);
   }catch(e){s=before;undo.pop();save();render();toast('Reshuffle rejected: '+e.message);}

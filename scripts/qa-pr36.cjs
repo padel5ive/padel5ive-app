@@ -87,4 +87,7 @@ assert(html.includes('scroll-snap-type:x proximity'),'iPad horizontal round rail
 assert(html.includes('display:flex!important;align-items:flex-start!important;min-height:23px!important'),'iPad headers must share top alignment');
 assert(html.includes('scorepair:nth-child(2) .p5sm-scorebox{grid-column:2!important;grid-row:2!important}'),'iPad score rows not aligned');
 console.log('PASS PR36 iPad landscape: compact session, one-row rounds, matched headings, symmetric scoring');
+assert(html.includes('PR36 PROTECTED ROUND DISTRIBUTION: reserve a future fixture before compaction'),'PR29 protected-round capacity fix missing');
+assert(html.includes('Math.max(1,todo.length-futureOpen)'),'PR29 fallback must reserve one fixture for each future open round before protected matches');
+console.log('PASS PR36 protected scheduling: fixture reservation before locked rounds');
 console.log('PASS PR36 post-build structural gate. Device/cloud E2E remains a manual review requirement.');

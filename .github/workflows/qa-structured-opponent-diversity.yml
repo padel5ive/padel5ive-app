@@ -1,0 +1,26 @@
+name: PADEL 5IVE Structured Americano Opponent Diversity QA
+on:
+  push:
+    branches: [fix/structured-americano-opponent-diversity-20261112]
+  pull_request:
+    branches: [main]
+concurrency:
+  group: opponent-diversity-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  opponent-diversity-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-structured-opponent-diversity.cjs
+      - run: npm run qa:structured
+      - run: node scripts/qa-all-pairing-modes-audit.cjs
+      - run: git diff --check

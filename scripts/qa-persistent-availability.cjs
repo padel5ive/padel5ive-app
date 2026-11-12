@@ -30,6 +30,7 @@ until('window.P5CourtRotation=(function','window.P5EngineRegistry=');
 const registryStart=html.indexOf('window.P5EngineRegistry=(function'),
 registryEnd=html.indexOf('})();',registryStart);
 run(html.slice(registryStart,registryEnd+5),'engine registry');
+env.ENG=Object.fromEntries(env.P5EngineRegistry.modes().map(d=>[d.id,env.P5EngineRegistry.engine(d.id)]));
 for(const asset of ['p5-structured-fairness-lab.js','p5-structured-irregular-lab.js','p5-structured-mexicano-diversity-lab.js'])
  run(fs.readFileSync('public/assets/'+asset,'utf8'),asset);
 run(fs.readFileSync('public/assets/p5-coach-opponent-diversity-lab.js','utf8'),'coach-diversity');

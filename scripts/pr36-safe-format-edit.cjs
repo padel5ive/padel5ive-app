@@ -24,11 +24,11 @@ const applyFormat=`function saveMatchFormat(){
  if(!['total4','total5','total6','first4','first5','first6'].includes(next))return toast('Select a Match Format');
  if(next===old){s.ui.modal=null;render();return;}
  const scored=s.rounds.some(rd=>(rd.matches||[]).some(m=>m?.confirmed));
- const from=scored?Math.min(s.rounds.length,s.currentRound+1):0;
- const applicable=s.rounds.slice(from).some(rd=>(rd.matches||[]).some(m=>m&&!m.confirmed)&&!(rd.matches||[]).some(m=>m?.confirmed));
+ const from=scored?Math.min(s.rounds.length,Math.max(s.currentRound,s.viewRound||0)+1):0;
+ const applicable=s.rounds.slice(from).some(rd=>(rd.matches||[]).some(m=>m&&!m.confirmed&&!m.skipped&&m.score==null)&&!(rd.matches||[]).some(m=>m?.confirmed||m?.skipped||m?.score!=null));
  if(!applicable)return alertModal('No Future Rounds','Current or confirmed matches are protected. Add another unplayed round to change the Match Format.');
  const apply=()=>{const prior=clone(s);snapshot();try{
-  for(let i=0;i<s.rounds.length;i++){const ms=(s.rounds[i].matches||[]).filter(Boolean),locked=i<from||ms.some(m=>m.confirmed);
+  for(let i=0;i<s.rounds.length;i++){const ms=(s.rounds[i].matches||[]).filter(Boolean),locked=i<from||ms.some(m=>m.confirmed||m.skipped||m.score!=null);
    for(const m of ms)m.matchFormat=locked||m.confirmed?(m.matchFormat||old):next;
   }
   s.matchFormat=next;s.ui.modal=null;logAction('Match Format updated '+old+' → '+next+' (future only)');

@@ -50,5 +50,6 @@ el=render(null,null,[{id:'old',state:{setup:{sessionName:'Active Archive'},stage
 assert.equal(el.hidden,true);cases++;
 const unified=fs.readFileSync('public/modes/unified/index.html','utf8');
 assert(unified.includes("function canReshuffle(){return s.stage==='stage1'&&s.currentRound===0&&!s.rounds.some(r=>r.matches.some(m=>m&&m.confirmed));}"),'Arrival must be locked after first score and only in Round 1');cases++;
-assert(unified.includes('Not Arrived applies to Round 1 only. All registered participants return to normal scheduling from Round 2.'),'Arrival must not silently sit out players after R1');cases++;
+assert(unified.includes('Not Arrived stays inactive in every round'),'Persistent Arrival instruction required');cases++;
+assert(unified.includes('function p5SyncAvailability()'),'Persistent availability controller required');cases++;
 console.log('PASS v5.8 finished-session Resume and Round 1 Arrival/Reshuffle:',cases,'checks.');

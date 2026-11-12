@@ -49,7 +49,15 @@ const ctx={
   }
  }},
 };
-vm.createContext(ctx);vm.runInContext(js,ctx);
+vm.createContext(ctx);
+const availStart=html.indexOf('window.P5Availability=(function()');
+const availEnd=html.indexOf('/* PADEL 5IVE Phase 5.1',availStart);
+assert(availStart>=0&&availEnd>availStart,'Real availability module missing from compiled build');
+ctx.window=ctx;
+vm.runInContext(html.slice(availStart,availEnd),ctx);
+ctx.P5Availability=ctx.window.P5Availability;
+assert.equal(typeof ctx.P5Availability.eligibleMatch,'function','Availability must be real engine module');
+vm.runInContext(js,ctx);
 const rounds=Array.from({length:24},(_,r)=>({index:r,matches:[
  {id:'R'+r+'C0',court:1,teams:[[1],[2]],score:null,confirmed:false},
  {id:'R'+r+'C1',court:2,teams:[[3],[4]],score:null,confirmed:false}

@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const read=f=>fs.readFileSync(f,'utf8');
 const club=read('public/modes/club-match/index.html');
-const home=read('public/index.html'),cloud=read('public/phase58/cloud-dashboard.js');
+const cloud=read('public/phase58/cloud-dashboard.js');
 const cloudHome=read('public/phase58/cloud-home.js'),history=read('public/phase57/home-session-history.js');
 const routes=read('netlify.toml'),sw=read('public/sw.js');
 const must=(s,x)=>assert(s.includes(x),'Missing staging marker: '+x);
@@ -18,6 +18,6 @@ assert(!club.includes('P5_QA_DATA'),'QA fixture leaked into native engine');
 for(const [i,m] of [...club.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)].entries()){
  if(!/\bsrc\s*=/.test(m[1])&&m[2].trim())new vm.Script(m[2],{filename:'club-inline-'+i});
 }
-assert(home.includes('/modes/club-match/'),'Home Team Showdown route missing');
+assert(cloudHome.includes('/modes/club-match/?intent=resume'),'Load Session route to Team Showdown missing');
 assert(!cloud.includes("club:'padel5ive-team-showdown-state-v3'"),'Cloud uses old key');
 console.log('PASS Team Showdown v0.9.7 staging: engine JS, Cloud Session, Home, /i/ and PDF hooks');

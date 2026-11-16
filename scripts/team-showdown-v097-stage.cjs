@@ -44,6 +44,13 @@ for(const file of ['public/phase58/cloud-home.js','public/phase57/home-session-h
  if(!s.includes(oldArch))throw Error('Archive-key drift: '+file);
  fs.writeFileSync(file,s.split(oldArch).join(newArch));
 }
+// On /i/ or /r/ published result pages, never mount editable Cloud controls.
+const cloudFile='public/phase58/cloud-dashboard.js';
+let cloudJs=fs.readFileSync(cloudFile,'utf8');
+const boot="(()=>{'use strict';";
+if(!cloudJs.includes(boot))throw Error('Cloud adapter boot marker changed');
+cloudJs=cloudJs.replace(boot,boot+"\nif(/^\\/(?:r|i)\\//.test(location.pathname))return;");
+fs.writeFileSync(cloudFile,cloudJs);
 const swFile='public/sw.js';let sw=fs.readFileSync(swFile,'utf8');
 const deny="'/r/', '/u/'";
 if(sw.includes(deny))sw=sw.replace(deny,"'/r/', '/i/', '/u/'");

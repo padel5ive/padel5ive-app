@@ -20,4 +20,5 @@ for(const [i,m] of [...club.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/g
 }
 assert(cloudHome.includes('/modes/club-match/?intent=resume'),'Load Session route to Team Showdown missing');
 assert(!cloud.includes("club:'padel5ive-team-showdown-state-v3'"),'Cloud uses old key');
+assert(cloud.includes('if(/^\\/(?:r|i)\\//.test(location.pathname))return;'),'Public result route must not mount Cloud controls');
 console.log('PASS Team Showdown v0.9.7 staging: engine JS, Cloud Session, Home, /i/ and PDF hooks');

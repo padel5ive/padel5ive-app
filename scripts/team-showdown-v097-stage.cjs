@@ -20,41 +20,54 @@ check('printReport()','native A4 landscape PDF print');
 for(const [i,m] of [...source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)].entries()){
  if(!/\bsrc\s*=/.test(m[1])&&m[2].trim())new vm.Script(m[2],{filename:'v097-native-inline-'+i});
 }
+/* Keep the existing First Edition master byte-for-byte intact.
+ * Compile v0.9.7 as a separate native Team Showdown page.
+ * This avoids breaking all the validated UI/PWA/Cloud adapters on Classic + Fixed.
+ */
 let html=source;
 const menu='<details class="mc32-advanced"><summary>Advanced Settings';
 const session='<details class="mc32-advanced"><summary>Session Management</summary><div class="mc32-advanced-body"><button type="button" data-p58-cloud class="p58-menu-action">CLOUD SESSION</button></div></details>\n';
+if(html.split(menu).length!==2)throw Error('v097 native menu drift');
 html=html.replace(menu,session+menu);
 const headEnd=html.indexOf('</head>'),body=html.indexOf('<body');
 if(headEnd<0||body<0||headEnd>body)throw Error('v097 real head missing');
-html=html.slice(0,headEnd)+'<link rel="stylesheet" href="/phase58/cloud-session.css">\n'+html.slice(headEnd);
+const styles=[
+ '/phase58/cloud-session.css',
+ '/phase5822/cloud-modal-compact-v5822.css',
+ '/phase585/menu-unified-v585.css',
+ '/phase5814/view-only-v5814.css'
+].map(url=>'<link rel="stylesheet" href="'+url+'">').join('\n');
+html=html.slice(0,headEnd)+styles+'\n'+html.slice(headEnd);
+const target='public/modes/club-match/v097/index.html';
+fs.mkdirSync('public/modes/club-match/v097',{recursive:true});
 const end=html.lastIndexOf('</body>');if(end<0)throw Error('v097 body terminator missing');
-html=html.slice(0,end)+'<script defer src="/phase58/cloud-dashboard.js"></script>\n'+html.slice(end);
+const scripts=[
+ '/v097/cloud-dashboard.js',
+ '/phase5814/view-only-v5814.js?v=5834.1',
+ '/phase585/menu-unified-v585.js'
+].map(url=>'<script defer src="'+url+'"></script>').join('\n');
+html=html.slice(0,end)+scripts+'\n'+html.slice(end);
 html=html.replace('PADEL 5IVE | Team Showdown Individual Americano Continuous Balanced v0.9.6 Offline',
  'PADEL 5IVE | Team Showdown v0.9.7 · Staging');
-fs.writeFileSync('public/modes/club-match/index.html',html);
-const legacy='padel5ive-team-showdown-state-v3',current='padel5ive-team-showdown-v090-individual-lab';
-for(const file of ['public/phase58/cloud-dashboard.js','public/phase58/cloud-home.js','public/phase57/home-session-history.js','public/index.html']){
- let s=fs.readFileSync(file,'utf8'),count=s.split(legacy).length-1;
- if(file!=='public/index.html'&&count!==1)throw Error('Cloud/Home storage-key drift: '+file+' (count='+count+')');
- if(count)fs.writeFileSync(file,s.split(legacy).join(current));
-}
-const oldArch='padel5ive-clubmatch-p54-sessions',newArch='padel5ive-team-showdown-native-v07-archive';
-for(const file of ['public/phase58/cloud-home.js','public/phase57/home-session-history.js']){
- let s=fs.readFileSync(file,'utf8');
- if(!s.includes(oldArch))throw Error('Archive-key drift: '+file);
- fs.writeFileSync(file,s.split(oldArch).join(newArch));
-}
-// On /i/ or /r/ published result pages, never mount editable Cloud controls.
-const cloudFile='public/phase58/cloud-dashboard.js';
-let cloudJs=fs.readFileSync(cloudFile,'utf8');
+fs.writeFileSync(target,html);
+const originalCloud=fs.readFileSync('public/phase58/cloud-dashboard.js','utf8');
+const oldKey='padel5ive-team-showdown-state-v3',newKey='padel5ive-team-showdown-v090-individual-lab';
+if(originalCloud.split(oldKey).length!==2)throw Error('Cloud master session key changed upstream');
+const oldMeta="const META='p58-cloud-link-'+kind";
+if(!originalCloud.includes(oldMeta))throw Error('Cloud link metadata identity changed upstream');
+let cloud=originalCloud.replace(oldKey,newKey)
+ .replace(oldMeta,"const META='p58-cloud-link-v097-'+kind");
 const boot="(()=>{'use strict';";
-if(!cloudJs.includes(boot))throw Error('Cloud adapter boot marker changed');
-cloudJs=cloudJs.replace(boot,boot+"\nif(/^\\/(?:r|i)\\//.test(location.pathname))return;");
-fs.writeFileSync(cloudFile,cloudJs);
+if(!cloud.includes(boot))throw Error('Cloud boot changed');
+cloud=cloud.replace(boot,boot+"\nif(/^\\/(?:r|i)\\//.test(location.pathname))return;");
+fs.mkdirSync('public/v097',{recursive:true});
+fs.writeFileSync('public/v097/cloud-dashboard.js',cloud);
+// Public /i/ results must never be handled by the PWA's cached HTML fallback.
+// Keep the exact current production SW fingerprint: many shared-mode QA
+// checks explicitly require the already approved cache version.
 const swFile='public/sw.js';let sw=fs.readFileSync(swFile,'utf8');
 const deny="'/r/', '/u/'";
 if(sw.includes(deny))sw=sw.replace(deny,"'/r/', '/i/', '/u/'");
-else if(!sw.includes("'/i/'"))throw Error('PWA result-cache bypass missing');
-sw=sw.replace(/const VERSION = '[^']+';/,"const VERSION = 'p5-stage-team-showdown-v097-1';");
+else if(!sw.includes("'/i/'"))throw Error('PWA result cache bypass missing');
 fs.writeFileSync(swFile,sw);
-console.log('PASS Team Showdown v0.9.7 staging adapter: SHA verified, native engine preserved; Cloud Session, Home & /i/ wired');
+console.log('PASS v0.9.7 staging sidecar: frozen source, native Cloud, /i/; First Edition main HTML/Cloud untouched');

@@ -1,0 +1,26 @@
+name: Team Showdown v0.9.7 Staging Integration QA
+on:
+  push:
+    branches: [release/team-showdown-v097]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'source/team-showdown-v097/**'
+      - 'scripts/team-showdown-v097-stage.cjs'
+      - 'scripts/qa-team-showdown-v097.cjs'
+      - 'netlify.toml'
+      - 'package.json'
+  workflow_dispatch:
+jobs:
+  staging-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-team-showdown-v097.cjs
+      - run: npm run qa:pr36

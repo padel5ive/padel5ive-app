@@ -1,0 +1,69 @@
+-women{border-color:rgba(198,145,169,.40);color:#e7ccd9;background:rgba(73,47,63,.35)}
+.p5-court-division-mixed{border-color:rgba(213,179,115,.41);color:#eed1a4;background:rgba(77,62,40,.35)}
+.prepare-division-slot{flex:0 0 auto;align-self:center}
+.prepare-division-slot:empty{display:none}
+.prepare-division-slot .p5-court-division{font-size:8px!important;letter-spacing:.035em;padding:4px 5px}
+@media(max-width:700px){
+ .p5-si-compact{padding:12px 13px!important;margin-bottom:10px!important}
+ .p5-si-compact-title{gap:8px}
+ .p5-si-compact-title strong{font-size:15px}
+ .p5-si-compact-over{font-size:8px}
+ .p5-si-compact .p5-si-status{padding:5px 9px!important}
+ .p5-si-compact-bottom{margin-top:8px;padding-top:8px;display:block}
+ .p5-si-compact-format{display:block;font-size:9px;letter-spacing:.028em}
+ .p5-si-compact-meta{margin-top:6px;gap:5px 12px;font-size:10px}
+ .match-center .p5sm-card .p5-court-heading{gap:6px}
+ .p5-court-division{font-size:8px!important;padding:4px 5px;letter-spacing:.035em}
+ .prepare-row{flex-wrap:wrap}
+ .prepare-division-slot{order:1;margin-left:27px}
+ .prepare-pairs{order:2;flex:1 1 calc(100% - 27px);margin-left:27px}
+ .prepare-row .prepare-status{order:1;margin-left:auto}
+}
+@media print{.p5-si-compact{break-inside:avoid}}
+
+</style><script defer="" src="/assets/p5-keyboard-nav-v5516.js"></script><script defer="" src="/pwa-register.js"></script><script>(function(){
+ const nav=document.createElement('nav');nav.className='p5-native-bottom-nav';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Mobile dashboard navigation');
+ const listIcon='<svg class="p5-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.7" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="3.7" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="3.7" cy="18" r=".8" fill="currentColor" stroke="none"/></svg>';
+ const boardIcon='<svg class="p5-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18M7 17v-5h3v5M12 17V6h3v11M17 17V9h3v8"/></svg>';
+ nav.innerHTML='<button type="button" data-native-tab="rounds" aria-selected="true">'+listIcon+'<span>Rounds</span></button><button type="button" data-native-tab="leaderboard" aria-selected="false">'+boardIcon+'<span>Leaderboard</span></button>';document.body.appendChild(nav);
+ let selected='rounds',queued=false;
+ function sync(){
+  queued=false;
+  const root=document.getElementById('app'),status=document.getElementById('headerStatus')?.textContent?.trim();
+  const stage1=!!root?.querySelector('.stage1-layout'),later=!!root?.querySelector('.showdown-stage-layout');
+  const playing=['STAGE 1','STAGE 2','STAGE 3'].includes(status)&&(stage1||later);
+  document.body.classList.toggle('p5-native-tabbed',playing);
+  document.body.classList.toggle('p5-native-duel-tabbed',playing&&later);
+  document.body.setAttribute('data-p5-native-view',selected);
+  nav.hidden=!playing;
+  nav.setAttribute('aria-hidden',String(!playing));
+  for(const b of nav.querySelectorAll('button'))b.setAttribute('aria-selected',String(b.dataset.nativeTab===selected));
+ }
+ nav.addEventListener('click',e=>{const b=e.target.closest('button[data-native-tab]');if(!b)return;selected=b.dataset.nativeTab;sync();document.getElementById('app')?.scrollIntoView({block:'start',behavior:'instant'});});
+ new MutationObserver(()=>{if(!queued){queued=true;requestAnimationFrame(sync);}}).observe(document.getElementById('app'),{childList:true,subtree:false});sync();
+})();</script>
+<style id="p5-showdown-v081-bottom-spacing">
+/* Team Showdown v0.8.1 — footer/nav spacing parity with the master cadence.
+   Mobile nav outer height: 68px; desired clear space above it: 24px.
+   Only active match dashboards use the fixed nav; setup/registration unaffected. */
+@media screen and (max-width:700px){
+  body.p5-native-tabbed .wrap{
+    padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;
+  }
+}
+</style>
+<!-- v0.8.2: stability fix for division leaderboard tabs on mobile -->
+
+<style id="p5-showdown-v087-refinement">
+/* v0.8.7 · Native Master refinement. No change to stage-one scheduling. */
+.p5-setup-competition .roster-team-tabs{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;padding:5px!important;margin:12px 0 19px!important;
+  border:1px solid rgba(194,166,126,.27);border-radius:14px;
+  background:rgba(11,22,32,.50)!important;overflow:hidden;box-sizing:border-box;
+}
+.p5-setup-competition .roster-team-tabs .roster-team-tab{
+  width:100%!important;min-width:0!important;min-height:51px!important;
+  margin:0!important;padding:11px 8px!important;border-radius:10px!important;
+  flex:initial!important;box-shadow:none!important;transform:none!important;
+  font-size:clamp(12px,3.3vw,16px)!important;font-weight:680!important;

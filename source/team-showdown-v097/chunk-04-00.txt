@@ -1,0 +1,1000 @@
+function individualBalancedFill(s){
+ const wave=individualBalancedCurrentWave(s);
+ if(!wave)return [];
+ const pending=wave.fixtures.filter(m=>m.status==='pending');
+ if(pending.some(m=>!individualEligible(s,m))){
+  // Never freeze the event due to an absent participant or Sit Out.
+  s.balancedWaveFallback=true;return individualFill(s);
+ }
+ const active=liveCourts(s);
+ if(active.some(m=>m.division!==wave.division||m.plannedRound!==wave.plannedRound)){
+  // Compatible restore with an older partial-continuous schedule.
+  s.balancedWaveFallback=true;return individualFill(s);
+ }
+ const busy=individualBusy(s);
+ if(pending.some(m=>!individualDisjoint(m,busy))){
+  s.balancedWaveFallback=true;return individualFill(s);
+ }
+ const free=Array.from({length:s.setup.courts},(_,i)=>i+1).filter(c=>!active.some(m=>m.court===c));
+ if(!free.length||!pending.length)return [];
+ if(pending.length>free.length){s.balancedWaveFallback=true;return individualFill(s);}
+ const assigned=[];
+ for(const {m,court} of individualCourtPlacement(s,pending,free,null)){
+  m.court=court;m.wave=wave.waveNumber;m.status='active';m.sequence=++s.dispatchSequence;
+  assigned.push(m);
+ }
+ s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ return assigned;
+}
+function individualFill(s){
+ if(s.stage!=='stage1'||s.stage1Closed)return [];
+ // Initial five courts start with a full Men's round. Every court afterwards
+ // refills independently using the existing audited maximum-cardinality engine.
+ // This is *only* an opening allocation; no checkpoint can block later dispatch.
+ if(individualBalancedWaveMode(s)&&!s.dispatchSequence&&s.equalization?.status!=='running')return individualBalancedFill(s);
+ if(s.equalization?.status==='running')return individualFillEqualization(s);
+ const active=liveCourts(s),free=Array.from({length:s.setup.courts},(_,i)=>i+1).filter(c=>!active.some(m=>m.court===c));
+ if(!free.length){individualPreview(s);return [];}
+ // Only opportunity repair; never an eligibility gate or a mutation of LIVE fixtures.
+ individualAdaptiveRewire(s);
+ const busy=individualBusy(s),locked=individualLocked(s),best=individualCardinality(s,free.length,busy,null);
+ let chosen=best,pinned=null;
+ if(locked){const withLocked={A:new Set(busy.A),B:new Set(busy.B)};
+  for(const c of ['A','B'])for(const i of individualPlayersOf(locked,c))withLocked[c].add(i);
+  const rest=individualCardinality(s,free.length-1,withLocked,locked.id);
+  if(1+rest.length===best.length){chosen=[locked,...rest];pinned=locked.id;}
+  else s.lockedNextMatchId=null;
+ }
+ const assigned=[];
+ for(const {m,court} of individualCourtPlacement(s,chosen,free,pinned)){
+  m.court=court;m.wave=null;m.status='active';m.sequence=++s.dispatchSequence;assigned.push(m);
+ }
+ if(pinned)s.lockedNextMatchId=null;
+ assigned.push(...individualRescueIdle(s));
+ individualPreview(s);return assigned;
+}
+function individualStats(s){
+ const n=s.setup.pairs,pairStats={A:Array.from({length:n},(_,i)=>({index:i,w:0,l:0,d:0,p:0,against:0,diff:0,played:0})),B:Array.from({length:n},(_,i)=>({index:i,w:0,l:0,d:0,p:0,against:0,diff:0,played:0}))};
+ const team={A:{w:0,l:0,d:0,p:0,against:0,played:0},B:{w:0,l:0,d:0,p:0,against:0,played:0}};
+ for(const m of matchPool(s))if(m.scoreA!==null&&m.scoreB!==null){
+  for(const c of ['A','B'])for(const i of individualPlayersOf(m,c)){
+   const p=pairStats[c][i],other=c==='A'?'B':'A';p.played++;p.p+=m['score'+c];p.against+=m['score'+other];
+   if(m.winner===c)p.w++;else if(m.winner===other)p.l++;else p.d++;
+  }
+  for(const c of ['A','B']){const t=team[c],other=c==='A'?'B':'A';t.played++;t.p+=m['score'+c];t.against+=m['score'+other];if(m.winner===c)t.w++;else if(m.winner===other)t.l++;else t.d++;}
+ }
+ for(const c of ['A','B'])for(const p of pairStats[c])p.diff=p.p-p.against;
+ const rank=rows=>rows.slice().sort((a,b)=>b.w-a.w||b.diff-a.diff||b.p-a.p||a.index-b.index);
+ const total=matchPool(s).length||individualTotalMatches(s),complete=team.A.played===total||s.stage1Closed===true;
+ const winner=complete?(team.A.w>team.B.w?'A':team.B.w>team.A.w?'B':team.A.p>team.B.p?'A':team.B.p>team.A.p?'B':null):null;
+ const overallRanking=[...pairStats.A.map(p=>({...p,team:'A'})),...pairStats.B.map(p=>({...p,team:'B'}))].sort((a,b)=>b.w-a.w||b.diff-a.diff||b.p-a.p||a.team.localeCompare(b.team)||a.index-b.index).map((p,i)=>({...p,rank:i+1}));
+ return {pairStats:{A:rank(pairStats.A),B:rank(pairStats.B)},overallRanking,team,complete,winner,total};
+}
+function individualFairness(s){
+ const st=individualStats(s),booked=individualCounts(s),division=individualSegments(s).map(d=>{
+  const teams={};for(const c of ['A','B']){
+   const completed=st.pairStats[c].filter(p=>p.index>=d.start&&p.index<d.start+d.count).map(p=>p.played);
+   const assigned=booked.counts[c].slice(d.start,d.start+d.count);
+   teams[c]={min:Math.min(...completed),max:Math.max(...completed),gap:Math.max(...completed)-Math.min(...completed),
+    bookedMin:Math.min(...assigned),bookedMax:Math.max(...assigned),bookedGap:Math.max(...assigned)-Math.min(...assigned)};
+  }return {division:d.id,label:d.label,A:teams.A,B:teams.B,gap:Math.max(teams.A.gap,teams.B.gap),bookedGap:Math.max(teams.A.bookedGap,teams.B.bookedGap)};
+ });
+ return {division,maxGap:Math.max(0,...division.map(x=>x.gap)),maxBookedGap:Math.max(0,...division.map(x=>x.bookedGap)),imbalanced:division.some(x=>x.gap>1)};
+}
+function individualStandings(s){const st=individualStats(s);return individualSegments(s).map(d=>({id:d.id,label:d.label,rows:st.overallRanking.filter(p=>p.index>=d.start&&p.index<d.start+d.count).map((p,i)=>({...p,division:d.id,divisionRank:i+1}))}));}
+function individualSavedState(s){
+ if(!s||s.version!==1||!s.setup||!s.roster||!Array.isArray(s.schedule))return false;
+ const t=s.setup,n=individualPlayersPerTeam(s);
+ if(!Number.isInteger(t.courts)||t.courts<1||t.courts>5||n<1||n>40)return false;
+ if(!['setup','stage1','stage2choice','stage2','stage3choice','stage3','finished'].includes(s.stage))return false;
+ if(s.stage==='setup')return s.schedule.length===0;
+ if(s.equalization!=null){
+  const eq=s.equalization,valid=new Set(s.schedule.flat().map(m=>m.id));
+  if(!['running','completed'].includes(eq.status)||!Number.isInteger(eq.target)||eq.target<0||eq.target>5||(eq.target===0&&!['smart','live-only'].includes(eq.mode))||!Array.isArray(eq.ids)||eq.ids.length!==eq.target||new Set(eq.ids).size!==eq.target||eq.ids.some(id=>!valid.has(id)))return false;
+  if(eq.status==='completed'&&!s.stage1Closed)return false;
+ }
+ if(!['A','B'].every(c=>Array.isArray(s.roster[c])&&s.roster[c].length===t.pairs&&s.roster[c].every(p=>Array.isArray(p.players)&&p.players.length===1&&typeof p.players[0].id==='string'&&typeof p.players[0].name==='string')))return false;
+ if(!individualIsValidSetup(s)||t.pairs!==n||!formats.includes(t.format))return false;
+ if(s.schedule.flat().length!==individualTotalMatches(s))return false;
+ const seen={A:new Set(),B:new Set()},busy={A:new Set(),B:new Set()},courts=new Set(),segments=individualSegments(s);
+ for(const m of s.schedule.flat()){
+  if(!m||!['pending','active','completed'].includes(m.status)||!Number.isInteger(m.a)||!Number.isInteger(m.a2)||!Number.isInteger(m.b)||!Number.isInteger(m.b2))return false;
+  for(const c of ['A','B']){
+   const [a,b]=individualPlayersOf(m,c);if(a>=n||b>=n||a<0||b<0||a===b)return false;
+   const seg=segments.find(d=>a>=d.start&&a<d.start+d.count&&b>=d.start&&b<d.start+d.count);
+   if(!seg||seg.id!==m.division)return false;
+   const key=[Math.min(a,b),Math.max(a,b)].join(':')+':'+seg.id;if(seen[c].has(key))return false;seen[c].add(key);
+   if(m.status==='active')for(const idx of [a,b]){if(busy[c].has(idx))return false;busy[c].add(idx);}
+  }
+  if(m.status==='active'){if(!Number.isInteger(m.court)||m.court<1||m.court>t.courts||courts.has(m.court))return false;courts.add(m.court);}
+  if(m.status==='pending'&&(m.scoreA!==null||m.scoreB!==null))return false;
+  if(m.status==='completed'&&(m.scoreA===null||m.scoreB===null))return false;
+  if(m.scoreA!==null||m.scoreB!==null){try{const v=validateScore(t.format,m.scoreA,m.scoreB);if(v.winner!==m.winner)return false;}catch(e){return false;}}
+ }
+ for(const c of ['A','B'])if(seen[c].size!==individualTotalMatches(s))return false;
+ const checkDuel=(matches,format)=>!matches||matches.every(m=>['A','B'].every(c=>Array.isArray(m['players'+c])&&m['players'+c].length===2&&m['players'+c].every(id=>!id||s.roster[c].some(p=>p.players[0].id===id)))&&(m.scoreA===null&&m.scoreB===null||(()=>{try{return validateScore(format,m.scoreA,m.scoreB,true,m.winner).winner===m.winner;}catch(e){return false;}})()));
+ return checkDuel(s.stage2?.matches,s.stage2?.format)&&checkDuel(s.stage3?.matches,s.stage3?.format);
+}
+
+function individualSetSitOut(s,club,index,sitOut){
+ if(s.stage!=='stage1'||s.stage2||!['A','B'].includes(club)||index<0||index>=s.setup.pairs)throw Error('Sit Out requires an active Stage 1 player');
+ ensureSitOut(s)[club][index]=sitOut;
+ if(sitOut)s.lockedNextMatchId=null;
+ s.nextMatchQueue=[];
+ const activeMatch=liveCourts(s).some(m=>individualPlayersOf(m,club).includes(index));
+ individualFill(s);return {sitOut,activeMatch};
+}
+function individualToggleArrival(s,club,index){
+ if(s.stage!=='stage1'||!['A','B'].includes(club)||index<0||index>=s.setup.pairs)throw Error('Invalid player arrival');
+ const next=ensureArrival(s)[club][index]===false;
+ if(!next&&liveCourts(s).some(m=>individualPlayersOf(m,club).includes(index)))throw Error('Finish active match before marking player Not Arrived');
+ s.arrival[club][index]=next;s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ individualFill(s);return next;
+}
+function individualReshuffle(s,increment=true){
+ if(s.stage!=='stage1'||s.stage2||hasOpeningScore(s))throw Error('Reshuffle only before the first confirmed result');
+ for(const m of liveCourts(s)){m.status='pending';m.court=null;m.sequence=null;m.completedSequence=null;}
+ s.dispatchSequence=0;s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ if(increment)s.openingShuffle++;
+ return individualFill(s);
+}
+
+return {individualMode,individualSegments,individualPlayersPerTeam,individualTotalMatches,individualCreateMatches,individualParticipationMetrics,individualProjectedQuality,individualBalancedWaveMode,individualBalancedCurrentWave,individualCardinality,individualCounts,individualSavedState,individualEqualizationOptions,individualSmartFinishPlan,individualStartSmartFinish,individualFinishAfterLive,individualCheckpointSnapshot,individualStartEqualization,individualCancelEqualization,individualEquitySnapshot,MAX_PAIRS,MAX_COURTS,formats,fmt,stage1Clinch,stage1Fairness,stage1DivisionStandings,ensureArrival,ensureSitOut,pairIsSitOut,setPairSitOut,toggleArrival,reshuffleOpening,hasOpeningScore,checkSetup,validateSavedState,generateSchedule,stage1Stats,stage2Stats,stage3Stats,stage3Matches,stage3AssignedPlayers,stage3DuplicateAssignments,stage3Match,verdict,allowedDuels,roster,newState,createMatches,matchPool,liveCourts,pendingMatches,courtStatus,fillAvailableCourts,previewNextMatches,updateNextQueue,ensureNextLock,lockedNextMatch,dispatchMatching,assignCourtResult,amendCourtResult,migrateLegacySchedule,validateScore,scoreMatch,isValidLineup,setStage1Result,makeStage2,stage2AssignedPlayers,assertStage2DuelAvailable,stage2DuplicateAssignments,clearDuelLineup,setDuelLineup,setDuelScore,startFinal,addFinalTieBreaker,setFinalLineup,setFinalScore,clearFinalLineup};
+});
+
+</script><script>
+/* PADEL 5IVE TEAM SHOWDOWN • UI controller, intentionally independent of Match Control 4.8.92.18 */
+(function(){'use strict';
+const TEAM_PALETTE=[{name:'Sky Blue',value:'#77b7ec'},{name:'Champagne',value:'#d9ac72'},{name:'Emerald',value:'#78c6a9'},{name:'Lavender',value:'#b6a0e9'},{name:'Coral',value:'#e99c91'},{name:'Silver',value:'#c1cbd2'}];
+let leaderboardFilter='ALL',divisionLeaderboardFilter='men';
+let setupStep='session',registrationSide='A';
+let pendingResult=null,roundDrawerOpen=false,arrivalDrawerOpen=true;
+const E=window.ClubEngine,KEY='padel5ive-team-showdown-v090-individual-lab',LEGACY_KEY='padel5ive-club-match-state-v1',PIN_KEY='padel5ive-showdown-share-pin-v1';
+let state=load(),viewOnly=false,editRoster=false,rosterBeforeEdit=null,shareId=null,toastTimeout;
+const app=document.getElementById('app');
+ // Phase 5.4 same-origin Team Showdown session archive. Independent from unified Americano storage.
+ const P54_CLUB_ARCHIVE_KEY='padel5ive-team-showdown-native-v07-archive';
+ function p54ClubArchiveList(){try{const x=JSON.parse(localStorage.getItem(P54_CLUB_ARCHIVE_KEY)||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
+ function p54ClubArchiveCurrent(){
+   if(state.stage==='setup'&&!state.setup?.sessionName&&!state.setup?.clubs?.A&&!state.setup?.clubs?.B)return true;
+   try{
+    const x=p54ClubArchiveList(),id='club-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);
+    x.unshift({id,savedAt:Date.now(),state:JSON.parse(JSON.stringify(state))});
+    if(x.length>40)throw Error('Session archive capacity reached');
+    localStorage.setItem(P54_CLUB_ARCHIVE_KEY,JSON.stringify(x));return true;
+   }catch(e){alert('Unable to archive existing Team Showdown. Please download Backup JSON before switching sessions. '+e.message);return false;}
+ }
+ function p54ClubBootstrap(){
+  const q=new URLSearchParams(window.__P54_PREVIEW_QUERY || location.search),intent=q.get('intent');
+  if(intent==='new'){
+   if(p54ClubArchiveCurrent()){state=freshState();save();}
+   (void 0);
+  }else if(intent==='archive'){
+   const id=q.get('id'),entry=p54ClubArchiveList().find(e=>e.id===id);
+   if(entry&&E.validateSavedState(entry.state)&&p54ClubArchiveCurrent()){
+    state=E.migrateLegacySchedule(JSON.parse(JSON.stringify(entry.state)));E.ensureArrival(state);E.ensureSitOut(state);if(state.stage==='stage1')E.fillAvailableCourts(state);save();
+    const rest=p54ClubArchiveList().filter(e=>e.id!==id);localStorage.setItem(P54_CLUB_ARCHIVE_KEY,JSON.stringify(rest));
+   }else if(!entry)alert('Saved Club Match session was not found.');
+   (void 0);
+  }else if(intent==='resume'){(void 0);}
+ }
+ p54ClubBootstrap();
+
+function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function club(c){return state.setup.clubs[c]||`TEAM ${c}`;}
+function teamColor(c){const color=state.setup.teamColors?.[c];return TEAM_PALETTE.some(t=>t.value===color)?color:(c==='A'?'#77b7ec':'#d9ac72');}
+function colorOptions(c){return TEAM_PALETTE.map(t=>`<option value="${t.value}" ${teamColor(c)===t.value?'selected':''}>${t.name}</option>`).join('');}
+function teamLegend(){return `<div class="team-legend"><span><i class="team-dot" style="--team-accent:${teamColor('A')}"></i>${esc(club('A'))}</span><span><i class="team-dot" style="--team-accent:${teamColor('B')}"></i>${esc(club('B'))}</span></div>`;}
+function save(){if(viewOnly)return;try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('Autosave unavailable',e);}}
+function freshState(){const s=E.newState();s.setup.individualDivision='single';s.setup.individualCounts={single:null,men:null,women:null};s.setup.format='';s.setup.formatManuallySelected=false;s.setup.pairsManuallySelected=false;s.setup.courtsManuallySelected=false;s.setup.divisionCounts={men:null,women:null,mixed:null};s.setup.classicPairCount=null;s.setup.classicPairCountChosen=false;return s;}
+function isUnstartedBlankSetup(s){return s.stage==='setup'&&Array.isArray(s.schedule)&&s.schedule.length===0;}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(E.validateSavedState(v)){
+ const restored=E.migrateLegacySchedule(v);restored.setup.schedulingStrategy=restored.setup.schedulingStrategy||'smart';E.ensureArrival(restored);E.ensureSitOut(restored);if(restored.stage==='stage1'){E.fillAvailableCourts(restored);E.updateNextQueue(restored);try{localStorage.setItem(KEY,JSON.stringify(restored));}catch(e){console.warn('Recovered session autosave unavailable',e);}}
+ // v0.8.7/earlier stored the old engine default. Clear it on a truly blank setup.
+ if(isUnstartedBlankSetup(restored)){
+  if(restored.setup.formatManuallySelected!==true)restored.setup.format='';
+  // Legacy registration default was 8 pairs; a blank roster should never imply a choice.
+  // Keep an explicitly chosen count and any existing roster entries on older sessions.
+  if(restored.setup.pairsManuallySelected!==true){
+   const hasPlayers=['A','B'].some(c=>restored.roster[c].some(pair=>pair.players.some(p=>p.name.trim())));
+   restored.setup.pairsManuallySelected=hasPlayers||restored.setup.pairs!==8;
+  }
+  // Preserve deliberate court choices in old setup data. Brand-new setups stay unselected.
+  if(restored.setup.courtsManuallySelected!==true){
+    const userEntered=!!(restored.setup.sessionName||restored.setup.date||restored.setup.clubs.A||restored.setup.clubs.B||restored.setup.formatManuallySelected||restored.setup.pairsManuallySelected);
+    restored.setup.courtsManuallySelected=userEntered||restored.setup.courts!==5;
+  }
+ }
+ return restored;
+ }}catch(e){console.warn('Saved Team Showdown unavailable',e);}return freshState();}
+function notify(msg,error=false){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.borderColor=error?'#d97870':'#ac8757';clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>el.style.display='none',3500);}
+// v0.8.35: all destructive actions and Restore use in-page confirmations (iOS-safe).
+let pendingConfirmation=null,pendingConfirmationStay=false;
+function hideConfirmation(){
+ const layer=document.getElementById('confirmLayer');
+ if(layer)layer.hidden=true;
+ document.body.classList.remove('showdown-confirm-open');
+ pendingConfirmation=null;
+}
+function confirmAction(msg,fn,stay=false){
+ const layer=document.getElementById('confirmLayer');
+ if(!layer){notify('Confirmation dialog unavailable',true);return;}
+ pendingConfirmation=fn;pendingConfirmationStay=stay;
+ document.getElementById('confirmMessage').textContent=msg;
+ // v0.8.35: accurate action-specific confirmations for every stage and Restore.
+ let title='Confirm Action',approve='Confirm';
+ if(msg.startsWith('Start a brand-new')){title='New Tournament';approve='Create New Tournament';}
+ else if(msg.startsWith('Restore')){title='Restore Backup';approve='Restore Backup';}
+ else if(msg.startsWith('Reset')){const stage=msg.match(/Stage [123]/i)?.[0];title=stage?`Reset ${stage}`:'Reset Scores';approve='Reset Scores';}
+ else if(msg.startsWith('Cancel')){const stage=msg.match(/Stage [123]/i)?.[0];title=stage?`Cancel ${stage}`:'Cancel Stage';approve=title;}
+ else if(msg.startsWith('Finish tournament after Stage 1')){title='Finish Tournament';approve='Finish Tournament';}
+ else if(msg.startsWith('Clear')){title='Clear Lineup';approve='Clear Lineup';}
+ else if(msg.startsWith('Set Sit Out')){title='Pair Availability';approve='SET SIT OUT';}
+ else if(msg.startsWith('Return to Play')){title='Pair Availability';approve='RETURN TO PLAY';}
+ document.getElementById('confirmTitle').textContent=title;
+ document.getElementById('confirmApprove').textContent=approve;
+ layer.hidden=false;
+ document.body.classList.add('showdown-confirm-open');
+ document.getElementById('confirmCancel').focus({preventScroll:true});
+}
+function resolveConfirmation(approved){
+ const fn=pendingConfirmation,stay=pendingConfirmationStay;
+ hideConfirmation();pendingConfirmationStay=false;
+ if(!approved||!fn)return;
+ try{fn();save();render();closeMenu();if(!stay)window.scrollTo?.(0,0);notify('Changes applied');}
+ catch(e){notify(e.message||String(e),true);}
+}
+function closeMenu(){const el=document.getElementById('mainMenu');if(!el)return;el.open=false;el.querySelectorAll?.('details[open]').forEach(d=>d.open=false);}
+function goTop(){closeMenu();window.scrollTo?.({top:0,behavior:'instant'});}
+function safeRoster(){for(const c of ['A','B'])for(const pair of state.roster[c])if(!pair.players.every(p=>p.name.trim()))throw Error(`Complete both player names for every ${club(c)} pair`);if(!club('A').trim()||!club('B').trim()||club('A').trim().toLowerCase()===club('B').trim().toLowerCase())throw Error('Enter two different team names');}
+function formatOptions(selected,allowEmpty=false){return (allowEmpty?`<option value="" ${!selected?'selected':''}>Select Match Format</option>`:'')+E.formats.map(x=>`<option value="${x}" ${x===selected?'selected':''}>${x.startsWith('total')?'Total of ':'First to '}${x.slice(-1)}</option>`).join('');}
+function niceGameDate(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return 'Select Game Date';
+ const [y,m,d]=value.split('-').map(Number),months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ return m>=1&&m<=12&&d>=1&&d<=31?`${d} ${months[m-1]} ${y}`:'Select Game Date';
+}
+function individualActive(){return state.setup.competitionFormat==='individual';}
+function individualMulti(){return individualActive()&&state.setup.individualDivision==='multi';}
+function individualCounts(){return state.setup.individualCounts||{single:null,men:null,women:null};}
+function individualPlayerCount(){return individualActive()?((individualMulti()?Number(individualCounts().men||0)+Number(individualCounts().women||0):Number(individualCounts().single||0))):0;}
+function pairName(c,i){const pair=state.roster[c][i];return pair?pair.players.map(p=>p.name||'—').join(' / '):'—';}
+function matchSideName(c,m){return individualActive()?pairName(c,m[c==='A'?'a':'b'])+' / '+pairName(c,m[c==='A'?'a2':'b2']):pairName(c,m[c==='A'?'a':'b']);}
+
+function playerName(id){for(const c of ['A','B'])for(const pair of state.roster[c])for(const p of pair.players)if(p.id===id)return p.name||id;return 'Select player';}
+function setupRow(c,i){
+ if(individualActive()){
+  const p=state.roster[c][i]?.players[0];
+  return `<div class="p5-dual-pair-row p5-individual-player-row" role="group" aria-label="${esc(club(c))} Player ${i+1}"><span class="p5-pair-index">${i+1}.</span><input data-field="player" data-club="${c}" data-index="${i}" data-player="0" value="${esc(p?.name||'')}" placeholder="Player ${i+1}" aria-label="${esc(club(c))} Player ${i+1}" maxlength="70" autocomplete="off"></div>`;
+ }
+ const players=state.roster[c][i].players;
+ return `<div class="p5-dual-pair-row" role="group" aria-label="${esc(club(c))} Pair ${i+1}">
+ <span class="p5-pair-index">${i+1}.</span>
+ <input data-field="player" data-club="${c}" data-index="${i}" data-player="0" value="${esc(players[0].name)}" placeholder="Player 1" aria-label="${esc(club(c))} Pair ${i+1} Player 1" maxlength="70" autocomplete="off">
+ <input data-field="player" data-club="${c}" data-index="${i}" data-player="1" value="${esc(players[1].name)}" placeholder="Player 2" aria-label="${esc(club(c))} Pair ${i+1} Player 2" maxlength="70" autocomplete="off">
+ </div>`;
+}
+function rosterHTML(isEdit=false){return `<div class="grid2"><section class="roster-group"><h3>${esc(club('A'))} · ${state.setup.pairs} ${individualActive()?'Players':'Pairs'}</h3>${state.roster.A.map((_,i)=>setupRow('A',i)).join('')}</section><section class="roster-group"><h3>${esc(club('B'))} · ${state.setup.pairs} ${individualActive()?'Players':'Pairs'}</h3>${state.roster.B.map((_,i)=>setupRow('B',i)).join('')}</section></div>${isEdit?'<div class="form-actions"><button class="primary" data-action="save-roster">Save Roster Changes</button><button data-action="cancel-roster">Return to Match</button></div>':''}`;}
+function renderSetupSession(){return `<section class="card setup-card"><div class="setup-header"><div><div class="over">INITIAL SETUP</div><h2>Match Details</h2></div></div>
+ <div class="setup-simple-fields"><div class="field"><label for="sessionName">Session Name</label><input id="sessionName" data-field="sessionName" value="${esc(state.setup.sessionName||'')}" maxlength="90" placeholder="e.g. PADEL 5IVE TEAM BATTLE" autocomplete="off"></div><div class="field"><label for="gameDate">Game Date</label><div class="p5-date-shell ${state.setup.date?'has-date':''}"><div class="p5-date-display" aria-hidden="true"><span id="datePickerValue">${esc(niceGameDate(state.setup.date))}</span><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg></div><input id="gameDate" type="date" data-field="date" value="${esc(state.setup.date)}" aria-label="Game Date" autocomplete="off"></div></div>
+ <div class="field team-field" style="--team-accent:${teamColor('A')}"><label for="teamAName"><i class="team-dot" aria-hidden="true"></i> Team A Name</label><input id="teamAName" data-field="clubA" value="${esc(state.setup.clubs.A)}" placeholder="Team A" maxlength="64" autocomplete="off"></div><div class="field team-field" style="--team-accent:${teamColor('B')}"><label for="teamBName"><i class="team-dot" aria-hidden="true"></i> Team B Name</label><input id="teamBName" data-field="clubB" value="${esc(state.setup.clubs.B)}" placeholder="Team B" maxlength="64" autocomplete="off"></div></div>
+ <div class="field setup-home-format"><label for="matchFormat">Match Format</label><select id="matchFormat" data-field="format" required aria-required="true">${formatOptions(state.setup.format,true)}</select></div>
+ <div class="courts-field"><label>Available Courts</label><div class="setup-courts">${[1,2,3,4,5].map(c=>`<button class="choice ${state.setup.courtsManuallySelected===true&&state.setup.courts===c?'selected':''}" data-action="set-courts" data-value="${c}" aria-pressed="${state.setup.courtsManuallySelected===true&&state.setup.courts===c}">${c}</button>`).join('')}</div></div>
+ ${multiControls()}
+ <div class="form-actions setup-actions setup-home-actions"><button type="button" class="setup-clear-button" data-action="clear-setup">Clear Setup</button><button type="button" class="primary" data-action="continue-session">Continue to Team Registration <span aria-hidden="true">→</span></button></div><button type="button" class="setup-restore-link" data-action="restore">↑ Restore existing Team Showdown backup</button></section>`;}
+function renderSetupFormat(){
+ const chosen=state.setup.pairsManuallySelected===true;
+ const n=chosen?state.setup.pairs:0;
+ const matches=n*n;
+ const waves=n?E.generateSchedule(n,state.setup.courts).length:0;
+ const value=x=>n?String(x):'—';
+ return `<section class="card setup-card"><div class="setup-header"><div><div class="over">TEAM REGISTRATION</div><h2>Pairs per Team</h2><p>${esc(club('A'))} vs ${esc(club('B'))} · ${state.setup.courts} ${state.setup.courts===1?'court':'courts'}</p></div></div>
+ <div class="grid2 setup-format-grid"><div class="field"><label for="pairsCount">Pairs per Team</label><select id="pairsCount" data-field="pairs" required aria-required="true"><option value="" ${!chosen?'selected':''}>Select Pairs per Team</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${chosen&&i+1===n?'selected':''}>${i+1} ${i?'Pairs':'Pair'} · ${2*(i+1)} Players per Team</option>`).join('')}</select></div><div class="setup-current-format"><span>SELECTED MATCH FORMAT</span><b>${esc(E.fmt(state.setup.format).kind==='total'?'Total of ':'First to ')}${esc(E.fmt(state.setup.format).target)}</b><small>Change it in Session Details</small></div></div>
+ <div class="format-summary" aria-label="Session summary"><span><b>${value(n)}${n?' vs '+n:''}</b><small>PAIRS</small></span><span><b>${value(matches)}</b><small>MATCHES</small></span><span><b>${value(waves)}</b><small>WAVES</small></span><span><b>${state.setup.courts}</b><small>COURTS</small></span></div>
+ ${!chosen?'<p class="pairs-selection-hint">Select the number of pairs to calculate the match schedule.</p>':''}
+ <details class="colors-advanced"><summary>Team colors <span>Optional</span></summary><div class="grid2"><div class="team-identity" style="--team-accent:${teamColor('A')}"><label>${esc(club('A'))}</label><select data-field="colorA">${colorOptions('A')}</select></div><div class="team-identity" style="--team-accent:${teamColor('B')}"><label>${esc(club('B'))}</label><select data-field="colorB">${colorOptions('B')}</select></div></div></details>
+ <div class="form-actions setup-actions"><button class="ghost" data-action="back-session">← BACK</button><button class="primary" data-action="continue-format">CONTINUE TO PLAYERS →</button></div></section>`;
+}
+function multiEnabled(){return state.setup.competitionFormat==='multi'||individualMulti();}
+function multiCounts(){return state.setup.divisionCounts||{men:null,women:null,mixed:null};}
+function multiKind(i){const d=multiCounts(),a=Number(d.men)||0,b=Number(d.women)||0;return i<a?'men':i<a+b?'women':'mixed';}
+function multiLabel(kind){return {men:"MEN'S",women:"WOMEN'S",mixed:"MIXED"}[kind]||kind;}
+function matchCategory(match){
+ if(!multiEnabled())return '';
+ const k=match?.division||(individualActive()?'single':multiKind(match?.a||0));
+ return {men:individualActive()?"MEN'S AMERICANO":"MEN'S DOUBLES",women:individualActive()?"WOMEN'S AMERICANO":"WOMEN'S DOUBLES",mixed:'MIXED DOUBLES'}[k]||'';
+}
+function matchCategoryBadge(match){
+ const category=matchCategory(match);
+ if(!category)return '';
+ const k=match?.division||multiKind(match?.a||0);
+ return `<span class="p5-court-division p5-court-division-${k}" aria-label="${category}">${category}</span>`;
+}
+function multiSelectionsComplete(){const d=multiCounts();return ['men','women','mixed'].every(k=>d[k]!==null&&d[k]!==undefined&&Number.isInteger(Number(d[k]))&&Number(d[k])>=0&&Number(d[k])<=10);}
+function applyMultiCount(){
+ const d=multiCounts(),sum=['men','women','mixed'].reduce((p,k)=>p+(Number(d[k])||0),0);
+ if(!multiSelectionsComplete()||sum<1){state.setup.pairsManuallySelected=false;save();render();return false;}
+ if(sum>30)throw Error('Maximum 30 pairs per team across divisions');
+ resizeRoster(sum);return true;
+}
+
+function individualControls(){
+ const isMulti=individualMulti(),d=individualCounts(),value=k=>d[k]===null||d[k]===undefined?'':String(d[k]);
+ const options=(key,allowZero)=>'<option value="" '+(!value(key)?'selected':'')+'>Select Players</option>'+
+  (allowZero?'<option value="0" '+(value(key)==='0'?'selected':'')+'>0 · Unused</option>':'')+
+  Array.from({length:17},(_,i)=>i+4).map(n=>'<option value="'+n+'" '+(value(key)===String(n)?'selected':'')+'>'+n+' Players / Team</option>').join('');
+ let out='<div class="p5-individual-divider"><span>INDIVIDUAL AMERICANO</span><small>Rotating teammates · Team A vs Team B</small></div>';
+ out+='<div class="p5-individual-tabs" role="group" aria-label="Individual Division Format">'+
+  ['single','multi'].map(k=>'<button type="button" data-action="individual-division" data-value="'+k+'" aria-pressed="'+(state.setup.individualDivision===k)+'" class="'+((isMulti?'multi':'single')===k?'active':'')+'">'+(k==='single'?'Single Division':'Men’s + Women’s')+'</button>').join('')+'</div>';
+ if(isMulti){
+  out+='<div class="p5-native-div-counts p5-individual-counts">';
+  for(const [k,label] of [['men',"MEN’S"],['women',"WOMEN’S"]]){
+   out+='<label><span class="p5-division-count-name">'+label+'</span><small class="p5-division-count-unit">PLAYERS / TEAM</small><select data-field="individual-count" data-division="'+k+'" aria-label="'+label+' players per team">'+options(k,false)+'</select></label>';
+  }
+  out+='</div>';
+ }else out+='<label class="p5-classic-pair-label" for="individualPlayers">PLAYERS PER TEAM<select id="individualPlayers" data-field="individual-count" data-division="single">'+options('single',false)+'</select></label>';
+ const valid=isMulti?Number(d.men)>=4&&Number(d.men)<=20&&Number(d.women)>=4&&Number(d.women)<=20:
+  Number(d.single)>=4&&Number(d.single)<=20&&value('single')!=='';
+ const n=valid?(isMulti?Number(d.men)+Number(d.women):Number(d.single)):0;
+ const total=valid?(isMulti?Number(d.men)*(Number(d.men)-1)/2+Number(d.women)*(Number(d.women)-1)/2:n*(n-1)/2):0;
+ out+='<div class="p5-setup-format-summary"><span><strong>'+(valid?n:'—')+'</strong><small>PLAYERS / TEAM</small></span><span><strong>'+(valid?total:'—')+'</strong><small>FULL-CYCLE MATCHES</small></span></div>';
+ out+='<p class="muted p5-setup-competition-note">Every player partners every teammate exactly once · No opposing duo repeats · Fairness optimized for early finish · Up to 5 courts. '+(isMulti?'Men’s and Women’s never mix.':'Open division.')+'</p>';
+ if(valid)out+='<div class="p5-smart-scheduling-note">UNIVERSAL SMART CONTINUOUS <small>Division-aware · proportional fairness per player · courts refill whenever a legal match is available · no wave barrier.</small></div>';
+ return out;
+}
+function multiControls(){
+ const multi=multiEnabled(),counts=multiCounts(),ind=individualActive();
+ const tab=(id,label)=>'<button type="button" class="roster-team-tab '+((ind?'individual':multi?'multi':'classic')===id?'active':'')+'" data-action="competition-format" data-value="'+id+'" aria-pressed="'+String((ind?'individual':multi?'multi':'classic')===id)+'">'+label+'</button>';
+ let out='<section class="p5-native-divisions p5-setup-competition" aria-label="Competition Format"><div class="tiny-label">COMPETITION FORMAT</div><div class="roster-team-tabs">'+tab('classic','Classic')+tab('multi','Multi-Division')+tab('individual','Individual Americano')+'</div>';
+ if(ind){
+  out+=individualControls();
+ }else if(multi){
+  out+='<div class="p5-native-div-counts">';
+  for(const kind of ['men','women','mixed']){
+   out+='<label><span class="p5-division-count-name">'+multiLabel(kind)+'</span><small class="p5-division-count-unit">PAIRS / TEAM</small><select data-field="division-count" data-division="'+kind+'" aria-label="'+multiLabel(kind)+' pairs per team">';
+   out+='<option value="" '+(counts[kind]===null||counts[kind]===undefined?'selected':'')+'>Select</option>';
+   for(let i=0;i<=10;i++)out+='<option value="'+i+'" '+(counts[kind]!==null&&counts[kind]!==undefined&&Number(counts[kind])===i?'selected':'')+'>'+i+'</option>';
+   out+='</select></label>';
+  }
+  out+='</div><div class="p5-smart-scheduling-note" aria-label="Automatic scheduling">SMART CONTINUOUS MATCHMAKING <small>Automatic · all divisions · maximum eligible court usage</small></div>';
+  const n=Number(counts.men||0)+Number(counts.women||0)+Number(counts.mixed||0);
+  const matches=['men','women','mixed'].reduce((a,k)=>a+Math.pow(Number(counts[k])||0,2),0);
+  out+='<div class="p5-setup-format-summary"><span><strong>'+(multiSelectionsComplete()&&n>0?n:'—')+'</strong><small>PAIRS / TEAM</small></span><span><strong>'+(multiSelectionsComplete()&&n>0?matches:'—')+'</strong><small>UNIQUE MATCHES</small></span></div>';
+  out+='<p class="muted p5-setup-competition-note">Cross Round Robin per division · No repeated opponents · Courts filled whenever legal matches are available.</p>';
+ }else{
+  const chosen=state.setup.pairsManuallySelected===true;
+  out+='<label class="p5-classic-pair-label" for="pairsCount">PAIRS PER TEAM<select id="pairsCount" data-field="pairs" required aria-required="true"><option value="" '+(!chosen?'selected':'')+'>Select Pairs per Team</option>';
+  for(let i=1;i<=10;i++)out+='<option value="'+i+'" '+(chosen&&state.setup.pairs===i?'selected':'')+'>'+i+' '+(i===1?'Pair':'Pairs')+' · '+2*i+' Players / Team</option>';
+  out+='</select></label>';
+  const n=chosen?Number(state.setup.pairs):0;
+  const valid=chosen&&Number.isInteger(n)&&n>=1&&n<=10;
+  out+='<div class="p5-setup-format-summary p5-classic-format-summary" aria-label="Classic match calculation"><span><strong>'+(valid?n:'—')+'</strong><small>PAIRS / TEAM</small></span><span><strong>'+(valid?n*n:'—')+'</strong><small>UNIQUE MATCHES</small></span></div>';
+  out+='<p class="muted p5-setup-competition-note">Fixed Partner · Team A × Team B · Every pair meets every opposing pair once.</p>';
+ }
+ return out+'</section>';
+}
+function multiRegistrationRows(club){
+ return state.roster[club].map((_,i)=>(multiEnabled()&&(i===0||multiKind(i)!==multiKind(i-1))?'<div class="p5-native-div-label">'+multiLabel(multiKind(i))+'</div>':'')+setupRow(club,i)).join('');
+}
+
+function renderSetupRegistration(){
+ if(individualActive()){
+  const c=registrationSide,divs=E.individualSegments(state);
+  return `<section class="card setup-card master-roster-card"><div class="setup-header"><div><div class="over">PLAYER REGISTRATION</div><h2>INDIVIDUAL PLAYERS</h2></div><span class="badge">${state.setup.pairs*2} PLAYERS TOTAL</span></div>
+  <div class="p5-registration-readonly"><div><span class="tiny-label">${individualMulti()?'MEN’S + WOMEN’S':'SINGLE DIVISION'} · ROTATING PARTNERS</span><strong>${divs.map(d=>`${d.label} · ${d.count}/team`).join(' · ')}</strong></div><small>Players pair only within their own team and division.</small></div>
+  <div class="roster-team-tabs"><button data-action="registration-team" data-value="A" class="roster-team-tab ${c==='A'?'active':''}" style="--team-accent:${teamColor('A')}"><i class="team-dot"></i>${esc(club('A'))}</button><button data-action="registration-team" data-value="B" class="roster-team-tab ${c==='B'?'active':''}" style="--team-accent:${teamColor('B')}"><i class="team-dot"></i>${esc(club('B'))}</button></div>
+  <div class="roster-registration-list" style="--team-accent:${teamColor(c)}"><div class="roster-label"><b>${esc(club(c))}</b><small>${state.setup.pairs} INDIVIDUAL PLAYERS</small></div>
+   ${divs.map(d=>'<div class="p5-native-div-label">'+d.label+'</div>'+Array.from({length:d.count},(_,j)=>setupRow(c,d.start+j)).join('')).join('')}</div>
+  <div class="form-actions setup-actions"><button class="ghost" data-action="back-session">← BACK TO SETUP</button>${c==='A'?'<button class="primary" data-action="registration-team" data-value="B">NEXT TEAM →</button>':'<button class="primary" data-action="start">START INDIVIDUAL AMERICANO →</button>'}</div></section>`;
+ }
+ const c=registrationSide;return `<section class="card setup-card master-roster-card"><div class="setup-header"><div><div class="over">PLAYER REGISTRATION</div><h2>FIXED PARTNERS</h2></div><span class="badge">${state.setup.pairs*2} PAIRS TOTAL</span></div>
+ <div class="p5-registration-readonly"><div><span class="tiny-label">${multiEnabled()?'MULTI-DIVISION':'CLASSIC'} · FIXED PARTNERS</span><strong>${multiEnabled()?['men','women','mixed'].filter(d=>Number(multiCounts()[d])>0).map(d=>multiLabel(d)+' '+multiCounts()[d]).join(' · '):state.setup.pairs+' pairs / team'}</strong></div><small>Competition format &amp; pair counts are set in Initial Setup.</small></div><div class="roster-team-tabs"><button data-action="registration-team" data-value="A" class="roster-team-tab ${c==='A'?'active':''}" style="--team-accent:${teamColor('A')}"><i class="team-dot"></i>${esc(club('A'))}</button><button data-action="registration-team" data-value="B" class="roster-team-tab ${c==='B'?'active':''}" style="--team-accent:${teamColor('B')}"><i class="team-dot"></i>${esc(club('B'))}</button></div>
+ <div class="roster-registration-list" style="--team-accent:${teamColor(c)}"><div class="roster-label"><b>${esc(club(c))}</b><small>${state.setup.pairs} FIXED PAIRS</small></div>${multiRegistrationRows(c)}</div>
+ <div class="form-actions setup-actions"><button class="ghost" data-action="back-session">← BACK TO SETUP</button>${c==='A'?'<button class="primary" data-action="registration-team" data-value="B">NEXT TEAM →</button>':'<button class="primary" data-action="start">START TEAM ROUND ROBIN →</button>'}</div></section>`;}
+function renderSetup(){return setupStep==='registration'?renderSetupRegistration():renderSetupSession();}
+function stageWinnerChip(which){
+ const result=which===1?E.stage1Stats(state):E.stage2Stats(state);
+ if(which===2&&!state.stage2)return 'Stage 2 · Not started';
+ if(!result.complete)return `Stage ${which} · In progress`;
+ return `Stage ${which} · ${result.winner?esc(club(result.winner)):'Draw'}`;
+}
+function stageNavHTML(){
+ const s1=E.stage1Stats(state),s2=E.stage2Stats(state),v=E.verdict(state);
+ const current=state.stage==='stage2choice'?'stage2':state.stage==='stage3choice'?'stage3':state.stage==='finished'?(state.stage3?'stage3':state.stage2?'stage2':'stage1'):state.stage;
+ const tabs=[{num:1,id:'stage1',label:'Round Robin',ready:true,done:s1.complete},
+  {num:2,id:'stage2',label:'Team Duel',ready:s1.complete,done:s2.complete},
+  {num:3,id:'stage3',label:'The Decider',ready:!!state.stage3||v.status==='final-needed',done:E.stage3Stats(state).complete}];
+ return `<nav class="showdown-stage-nav" aria-label="Tournament stages">${tabs.map(t=>`<button type="button" data-action="jump-stage" data-value="${t.id}" ${t.ready?'':'disabled'} class="showdown-stage-tab ${current===t.id?'active':''}" aria-current="${current===t.id?'step':'false'}"><span class="stage-num">${t.done?'✓':String(t.num).padStart(2,'0')}</span><span class="stage-tab-text"><b>STAGE ${t.num}</b><small>${t.label}</small></span><span class="stage-tab-indicator">${t.done?'DONE':t.ready?'':'LOCKED'}</span></button>`).join('')}</nav>`;
+}
+function clubBoard(label='STAGE 1 · LIVE TEAM SCORE'){
+ const st=E.stage1Stats(state),t=st.team,v=E.verdict(state),is2=label.includes('STAGE 2'),is3=label.includes('THE DECIDER');
+ const s2=E.stage2Stats(state),s3=E.stage3Stats(state),stg=is3?s3:is2?s2:null;
+ const left=stg?stg.wA:t.A.w,right=stg?stg.wB:t.B.w;
+ const leftSub=stg?`${stg.pA} TOTAL POINTS`:`${t.A.p} TOTAL POINTS`;
+ const rightSub=stg?`${stg.pB} TOTAL POINTS`:`${t.B.p} TOTAL POINTS`;
+ const progress=stg?`${stg.completed} / ${stg.total} duels completed`:`${t.A.played} / ${st.total} matches completed`;
+ const caption=is3?'DUEL WINS → TOTAL POINTS · NO DRAWS':is2?'DUEL WINS → TOTAL POINTS · NO DRAWS':'WINS → POINTS';
+ const recaps=is3||is2?`<div class="stage-winner-recaps"><span class="stage-recap-chip">${stageWinnerChip(1)}</span>${is3?`<span class="stage-recap-chip">${stageWinnerChip(2)}</span>`:''}</div>`:'';
+ const showSeries=(is2||is3)&&st.complete;
+ const series=showSeries?`<div class="series-score-strip"><span>CHAMPIONSHIP SCORE</span><strong>${v.points.A.toFixed(1)} <em>–</em> ${v.points.B.toFixed(1)}</strong>${v.status==='final-needed'?'<small>SERIES TIED · DECIDER REQUIRED</small>':v.status==='champion'?`<small>LEADER · ${esc(club(v.champion))}</small>`:'<small>1 POINT PER STAGE</small>'}</div>`:'';
+ return `<section class="club-board showdown-scoreboard"><div class="board-head">${label}</div><div class="board-inner"><div class="club-side" style="--team-accent:${teamColor('A')}"><div class="club-name"><i class="team-dot"></i>${esc(club('A'))}</div><div class="club-win">${left}</div><div class="club-scoresub">${leftSub}</div></div><div class="versus">VS</div><div class="club-side" style="--team-accent:${teamColor('B')}"><div class="club-name"><i class="team-dot"></i>${esc(club('B'))}</div><div class="club-win">${right}</div><div class="club-scoresub">${rightSub}</div></div></div>${recaps}${series}<div class="board-bottom"><span>${progress}</span><strong>${caption}</strong></div></section>`;
+}
+function assignedRounds(){
+ const all=E.matchPool(state).filter(m=>m.status==='active'||m.status==='completed').slice().sort((a,b)=>(a.sequence??0)-(b.sequence??0));
+  const n=Math.max(1,Math.min(Number(state.setup.pairs)||1,Number(state.roundBatchSize)||Number(state.setup.courts)||1)),rounds=[];
+ all.forEach((m,i)=>{const k=Math.floor(i/n);(rounds[k]??=[]).push(m);});
+ return rounds;
+}
+/* v0.8.17: Court refills are independent, so a later round may receive its
+   first match while earlier courts are still playing. The visible CURRENT round
+   must follow the oldest active batch, not the highest dispatched batch. */
+function currentActiveRound(rounds){
+  if(!rounds.length)return 1;
+  const firstOpen=rounds.findIndex(matches=>matches.some(m=>m.status==='active'));
+  return firstOpen>=0?firstOpen+1:rounds.length;
+}
+let inspectedRound=null;
+function formForPair(team,index){
+ return E.matchPool(state).filter(m=>m.status==='completed'&&(individualActive()?((team==='A'?[m.a,m.a2]:[m.b,m.b2]).includes(index)):(team==='A'?m.a===index:m.b===index))).sort((a,b)=>(a.completedSequence??0)-(b.completedSequence??0)).map(m=>m.winner===null?'T':m.winner===team?'W':'L');
+}
+function formDotsHTML(team,index){const form=formForPair(team,index),recent=form.slice(-10);return `<div class="match-form" aria-label="Last ${recent.length} results: ${recent.join(', ')||'No results yet'}">${recent.map((f,i)=>`<span class="form-dot form-${f.toLowerCase()}" title="${f==='W'?'Win':f==='L'?'Loss':'Tie'}"></span>`).join('')}</div>`;}
+
+/* v0.8.15: switch filters in place; rebuilding the whole dashboard made the table
+   and iOS scroll anchoring jump each time the number of visible pairs changed. */
+function applyLeaderboardFilter(){
+ document.querySelectorAll('[data-unified-leaderboard]').forEach(card=>{
+  card.querySelectorAll('.leaderboard-filter').forEach(button=>{
+   const selected=button.dataset.value===leaderboardFilter;
+   button.classList.toggle('active',selected);
+   button.setAttribute('aria-pressed',String(selected));
+  });
+  card.querySelectorAll('tbody tr[data-ranked-team]').forEach(row=>{
+   row.hidden=leaderboardFilter!=='ALL'&&row.dataset.rankedTeam!==leaderboardFilter;
+  });
+ });
+}
+/* v0.8.2 — Keep division tabs mounted and visible when switching rankings.
+ * Previous implementation called render() for every Men's/Women's/Mixed click,
+ * destroying the whole dashboard and destabilizing mobile scroll position.
+ * Replace only the standings card; the bottom navigation and Stage 1 courts stay
+ * mounted and the live engine's match state is unchanged. */
+function setDivisionLeaderboardFilter(nextDivision){
+ const d=individualActive()?individualCounts():state.setup?.divisionCounts||{};const active=['men','women','mixed'].filter(k=>Number(d[k]||0)>0);
+ if(!active.includes(nextDivision))return;
+ divisionLeaderboardFilter=nextDivision;
+ const oldCard=document.querySelector('.stage1-sidebar [data-unified-leaderboard]');
+ if(!oldCard){render();return;}
+ const oldTabs=oldCard.querySelector('.p5-division-filter');
+ const oldTop=oldTabs?.getBoundingClientRect().top;
+ const oldPageY=window.scrollY;
+ oldCard.outerHTML=leaderboard();
+ applyLeaderboardFilter();
+ const newTabs=document.querySelector('.stage1-sidebar [data-unified-leaderboard] .p5-division-filter');
+ if(!newTabs)return;
+ // Category buttons remain visible even when switching from a long list to a
+ // shorter one. iOS Safari may clamp scrollY as the document becomes shorter.
+ const rect=newTabs.getBoundingClientRect();
+ const dock=document.querySelector('.p5-native-bottom-nav:not([hidden])');
+ const safeBottom=window.innerHeight-(dock?.getBoundingClientRect().height||0)-14;
+ if(rect.top<12||rect.bottom>safeBottom){
+  const targetTop=Math.min(90,Math.max(16,oldTop??20));
+  const scrollTop=Math.max(0,window.scrollY+rect.top-targetTop);
+  window.scrollTo({top:scrollTop,behavior:'instant'});
+ }
+}
+function leaderboard(){
+ const st=E.stage1Stats(state),isMulti=multiEnabled();
+ const counts=individualActive()?individualCounts():(state.setup.divisionCounts||{}),activeDivisions=(individualActive()?['men','women']:['men','women','mixed']).filter(d=>Number(counts[d]||0)>0);
+ if(isMulti&&!activeDivisions.includes(divisionLeaderboardFilter))divisionLeaderboardFilter=activeDivisions[0]||'men';
+ const kindForIndex=(i)=>i<Number(counts.men||0)?'men':i<Number(counts.men||0)+Number(counts.women||0)?'women':'mixed';
+ const rows=(isMulti?st.overallRanking.filter(p=>kindForIndex(p.index)===divisionLeaderboardFilter):st.overallRanking)
+   .map((p,i)=>({...p,divisionRank:i+1}));
+ const divisionNames={men:"MEN'S",women:"WOMEN'S",mixed:'MIXED'};
+ const filters=[{id:'ALL',label:'ALL'},{id:'A',label:club('A')},{id:'B',label:club('B')}];
+ return `<section class="card leaderboard-card" data-unified-leaderboard><div class="stage-label"><div><h2>LIVE STANDINGS</h2><p class="muted">${isMulti?`${divisionNames[divisionLeaderboardFilter]} division ranking · ${rows.length} ${individualActive()?'players':'pairs'}`:`Overall rankings · ${st.overallRanking.length} ${individualActive()?'players':'pairs'}`}</p></div><span class="badge">WINS → DIFF → P</span></div>
+ ${isMulti?`<div class="p5-division-filter" role="group" aria-label="Division leaderboard">${activeDivisions.map(d=>`<button type="button" data-action="filter-division" data-value="${d}" class="p5-division-tab ${divisionLeaderboardFilter===d?'active':''}" aria-pressed="${divisionLeaderboardFilter===d?'true':'false'}">${divisionNames[d]}</button>`).join('')}</div><p class="p5-division-help">Each division has its own ranking. Team wins are combined in the main team scoreboard.</p>`:''}
+ <div class="leaderboard-filters" role="group" aria-label="Filter leaderboard by team">${filters.map(f=>`<button type="button" data-action="filter-leaderboard" data-value="${f.id}" class="leaderboard-filter ${leaderboardFilter===f.id?'active':''}" aria-pressed="${leaderboardFilter===f.id?'true':'false'}">${f.id==='ALL'?'':`<i class="team-dot" style="--team-accent:${teamColor(f.id)}"></i>`}${esc(f.label)}</button>`).join('')}</div>
+ <div class="table-scroll"><table class="unified-table live-standings"><colgroup><col class="col-pair"><col class="col-wlt"><col class="col-diff"><col class="col-points"><col class="col-games"></colgroup><thead><tr><th>NAME / FORM</th><th>W–L–T</th><th>DIFF</th><th>P</th><th>G</th></tr></thead><tbody>${rows.map(p=>`<tr data-ranked-team="${p.team}" data-global-rank="${p.rank}" ${leaderboardFilter!=='ALL'&&p.team!==leaderboardFilter?'hidden':''}><td class="pair-cell"><div class="ranked-pair" style="--team-accent:${teamColor(p.team)}"><i class="team-stripe" aria-hidden="true"></i><div class="ranked-pair-details"><strong><span class="rank">${p.divisionRank}.</span> <button type="button" class="p5-sitout-name" data-action="pair-sitout" data-club="${p.team}" data-value="${p.index}" ${state.stage!=='stage1'||state.stage2||viewOnly||window.P5CloudSession?.getStatus?.().role==='viewer'?'disabled':''} aria-label="Manage Sit Out for ${esc(pairName(p.team,p.index))}">${esc(pairName(p.team,p.index))}</button></strong><small>${esc(club(p.team))}${E.pairIsSitOut(state,p.team,p.index)?' · SIT OUT':''}</small>${formDotsHTML(p.team,p.index)}</div></div></td><td class="wlt-cell">${p.w}–${p.l}–${p.d}</td><td>${p.diff>0?'+':''}${p.diff}</td><td>${p.p}</td><td>${p.played}</td></tr>`).join('')}</tbody></table></div>
+ <p class="standings-legend">G = Games played · <span class="form-dot form-w">W</span> Win · <span class="form-dot form-t">T</span> Tie · <span class="form-dot form-l">L</span> Loss. Rank: Wins → DIFF → P.</p><div class="rank-note">${isMulti?'Rankings are independent within each division; team wins remain combined.':'Rankings stay global when filtered.'}</div></section>`;
+}
+/* First Edition scoring pattern: actual master court-card markup and interaction semantics.
+   Team Showdown scheduling/confirmation engine remains unchanged. */
+function stage1ScoreDialogHTML(match){
+ const f=E.fmt(state.setup.format),pA=matchSideName('A',match),pB=matchSideName('B',match);
+ return `<div class="p5-v2-overlay p5-showdown-score-overlay" id="p5-stage1-score-dialog" role="presentation"><div class="p5-v2-modal p5-showdown-score-modal" role="dialog" aria-modal="true" aria-label="Confirm Match Score">
+ <div class="p5sm-modal-over">COURT ${match.court} · STAGE 1${matchCategory(match)?` · ${matchCategory(match)}`:''}</div><h2>CONFIRM MATCH SCORE</h2>
+ <div class="p5-v2-modal-score"><label><span>${esc(pA)}</span><input id="modal-a" type="number" min="0" max="${f.target}" inputmode="numeric" data-stage1-score data-id="${match.id}" data-side="A" placeholder="–" aria-label="${esc(pA)} games"></label><span class="p5sm-modal-versus">×</span><label><span>${esc(pB)}</span><input id="modal-b" type="number" min="0" max="${f.target}" inputmode="numeric" data-stage1-score data-id="${match.id}" data-side="B" placeholder="–" aria-label="${esc(pB)} games"></label></div>
+ <p class="p5sm-modal-hint">${f.kind==='total'?`Total of ${f.target} · opponent auto-fills`:`First to ${f.target} · enter both scores`}</p>
+ <div class="result-review-slot" data-review-slot="${match.id}"></div>
+ <div class="p5sm-modal-actions"><button type="button" data-action="close-stage1-score">Cancel</button><button type="button" class="primary" data-action="complete-stage1" data-id="${match.id}">Review Score →</button></div>
+ </div></div>`;
+}
+function openStage1Score(id){
+ const match=E.matchPool(state).find(x=>x.id===id);
+ if(!match||match.status!=='active'||state.stage!=='stage1'||viewOnly)throw Error('This court cannot be scored now');
+ app.querySelector('#p5-stage1-score-dialog')?.remove();pendingResult=null;
+ app.insertAdjacentHTML('beforeend',stage1ScoreDialogHTML(match));
+ const first=app.querySelector('#p5-stage1-score-dialog #modal-a');
+ if(first){first.focus({preventScroll:true});}
+}
+function courtHTML(match){
+ const f=E.fmt(state.setup.format),pA=matchSideName('A',match),pB=matchSideName('B',match);
+ return `<article class="court live-court p5sm-card" data-court-match="${match.id}">
+  <div class="court-header"><div class="p5-court-heading"><strong>COURT ${match.court}</strong>${matchCategoryBadge(match)}</div><span class="court-status mini-court">READY</span></div>
+  <button type="button" data-action="open-stage1-score" data-id="${match.id}" class="p5sm-open-score" aria-label="Tap to score Court ${match.court}: ${esc(pA)} versus ${esc(pB)}">
+   <div class="scorepairs">
+    <div class="scorepair" style="--team-accent:${teamColor('A')}"><div class="pairname">${esc(pA)}</div><span class="p5sm-scorebox">–</span></div>
+    <span class="p5sm-score-separator" aria-hidden="true">×</span>
+    <div class="scorepair" style="--team-accent:${teamColor('B')}"><div class="pairname">${esc(pB)}</div><span class="p5sm-scorebox">–</span></div>
+   </div>
+  </button><div class="scorehint p5-v26-format-hint">${f.kind==='total'?`Total of ${f.target}`:`First to ${f.target}`} · Tap to Score</div>
+ </article>`;
+}
+function prepareNextMatchHTML(){
+ const pending=E.pendingMatches(state),planned=E.previewNextMatches(state,5),closed=!!state.stage1Closed;
+ const waveMode=individualActive()&&E.individualBalancedWaveMode(state);
+ const locked=planned.find(m=>m.locked);
+ const row=(m,i)=>`<li class="prepare-row ${m.locked?'prepare-row-locked':'prepare-row-standby'}"><span class="prepare-index">${String(i+1).padStart(2,'0')}</span><div class="prepare-division-slot">${matchCategoryBadge(m)}</div><div class="prepare-pairs"><span class="prepare-team" style="--team-accent:${teamColor('A')}"><i class="team-dot"></i>${esc(matchSideName('A',m))}</span><span class="prepare-versus">vs</span><span class="prepare-team" style="--team-accent:${teamColor('B')}"><i class="team-dot"></i>${esc(matchSideName('B',m))}</span></div><span class="prepare-status ${m.locked?'prepare-ready':m.ready?'prepare-standby':'prepare-wait'}">${m.locked?'LOCKED':m.ready?'STANDBY':'WAIT'}</span></li>`;
+ return `<section class="prepare-next" aria-label="Prepare next match"><div class="prepare-next-heading"><div><h3>PREPARE NEXT MATCH</h3><p>${closed?'Stage 1 closed':waveMode?'Continuous court-by-court refill · both divisions balanced':locked?'1 guaranteed · up to 4 on deck':'No match locked · standby candidates'}</p></div><span class="prepare-count">${pending.length} ${closed?'NOT PLAYED':'REMAINING'}</span></div>
+ ${closed?`<p class="prepare-finished">Stage 1 closed by moderator · ${pending.length} fixtures NOT PLAYED. Confirmed scores and pair rankings are preserved.</p>`:
+ planned.length?`<div class="prepare-next-list">${locked?'<div class="prepare-group-label">NEXT ON COURT · GUARANTEED</div>':waveMode?'<div class="prepare-group-label">NEXT ON COURT · CONTINUOUS FAIR DISPATCH</div>':'<div class="prepare-group-label">NEXT ON COURT · WAITING FOR ELIGIBLE PAIRS</div>'}<ol class="prepare-list">${planned.map((m,i)=>row(m,i)).join('')}</ol>${planned.length>1?'<div class="prepare-group-help">02–05 · ON DECK — BE READY · Order may change</div>':''}</div>`:
+ '<p class="prepare-finished">No eligible next match yet. Remaining opponents are currently playing, Sit Out, or Not Arrived.</p>'}
+ <p class="prepare-help">${closed?'Stage 1 closed · no more assignments.':locked?'01 LOCKED goes to the next court that becomes free. 02–05 are standby only; do not call them to court until confirmed.':waveMode?'CONTINUOUS BALANCED: as soon as a court finishes, its next eligible match starts automatically. Player fairness is a priority, never a hard court barrier.': 'No match is locked until all four individual players are available. Standby pairings are provisional.'}</p></section>`;
+}
+function arrivalPanelHTML(){
+ if(state.stage!=='stage1'||state.stage2||E.stage1Stats(state).complete||individualActive())return '';
+ const arrival=E.ensureArrival(state),scored=E.hasOpeningScore(state),readyA=arrival.A.filter(Boolean).length,readyB=arrival.B.filter(Boolean).length;
+ if(scored&&readyA===state.setup.pairs&&readyB===state.setup.pairs)return '';
+ const teams=['A','B'].map(c=>`<div class="arrival-team"><div class="arrival-team-title"><span><i class="team-dot" style="--team-accent:${teamColor(c)}"></i>${esc(club(c))}</span><small>${arrival[c].filter(Boolean).length}/${state.setup.pairs} READY</small></div><div class="arrival-team-pairs">${state.roster[c].map((p,i)=>{const ok=arrival[c][i]!==false;return `<button type="button" data-action="toggle-arrival" data-club="${c}" data-value="${i}" class="arrival-pair ${ok?'is-ready':'is-late'}" aria-pressed="${ok}" title="${ok?'Ready — tap to mark Not Arrived':'Not Arrived — tap to check in'}"><span class="arrival-pair-number">${i+1}</span><span class="arrival-pair-names">${esc(pairName(c,i))}</span><span class="arrival-state">${ok?'✓ READY':'○ LATE'}</span></button>`;}).join('')}</div></div>`).join('');
+ return `<section class="arrival-panel" aria-label="Arrival and Round 1 reshuffle"><button type="button" class="arrival-panel-toggle" data-action="toggle-arrival-panel" aria-expanded="${arrivalDrawerOpen}"><span><strong>PRE-MATCH SETUP</strong> · Arrival &amp; Reshuffle</span><span>${readyA+readyB}/${state.setup.pairs*2} READY <b>${arrivalDrawerOpen?'⌃':'⌄'}</b></span></button><div class="arrival-panel-body" ${arrivalDrawerOpen?'':'hidden'}><p class="arrival-guide">Mark pairs Ready or Not Arrived. Only Ready pairs are assigned to free courts. Changes to the opening draw are allowed before the first score.</p><div class="arrival-grid">${teams}</div><div class="arrival-panel-footer"><div class="arrival-status">${readyA} ${esc(club('A'))} + ${readyB} ${esc(club('B'))} ready · ${E.liveCourts(state).length}/${state.setup.courts} courts allocated</div><button type="button" class="primary arrival-reshuffle-btn" data-action="reshuffle-opening" ${scored?'disabled title="Locked after the first score"':''}>↻ Reshuffle Round 1</button></div>${scored?'<div class="arrival-locked-note">Reshuffle locked after the first result. Late arrivals may still check in; active matches stay unchanged.</div>':''}</div></section>`;
+}
+function roundView(){
+ const cs=E.courtStatus(state),st=E.stage1Stats(state),total=cs.total,played=st.team.A.played;
+ const waveMode=individualActive()&&E.individualBalancedWaveMode(state);
+ const waveName='CONTINUOUS · BALANCED';
+ const rounds=assignedRounds(),current=currentActiveRound(rounds),selected=inspectedRound===null?current:Math.min(Math.max(inspectedRound,1),rounds.length||1);
+ const courtMap=new Map(cs.live.map(m=>[m.court,m]));
+ const live=Array.from({length:state.setup.courts},(_,i)=>i+1).map(c=>courtMap.get(c)?courtHTML(courtMap.get(c)):`<article class="court waiting-court"><div class="court-header"><strong>COURT ${c}</strong><span class="court-status">AVAILABLE</span></div><div class="waiting-court-message">${state.stage1Closed?'Stage 1 closed':cs.pending.length?(waveMode?'Finding next eligible match':individualActive()?'Waiting for eligible players':'Waiting for eligible pairs'):'All matches allocated'}</div><div class="scorehint">${individualActive()?'No player can occupy two courts':'No two courts may share a pair'}</div></article>`).join('');
+ const viewed=rounds[selected-1]||[],byCourt=viewed.slice().sort((a,b)=>a.sequence-b.sequence);const complete=byCourt.filter(m=>m.status==='completed').length;
+ const roundPills=rounds.map((r,i)=>{const done=r.every(m=>m.status==='completed');return `<button class="round-chip ${selected===i+1?'selected':''} ${done?'complete':''}" data-action="view-round" data-value="${i+1}" aria-pressed="${selected===i+1}">${i+1}${done?'<span class="wave-check">✓</span>':''}</button>`;}).join('');
+ const scoreLocked=!!state.stage2;
+ return `<section class="card match-center" id="liveScoreboard" aria-label="Stage 1 live match control">
+ <div class="match-center-head"><div><h2>LIVE MATCHES</h2><p class="match-center-sub">${fancyFormat(state.setup.format)} · ${individualActive()?'UNIVERSAL CONTINUOUS · DIVISION AWARE · AUTO REFILL':waveMode?'5 COURTS · CONTINUOUS BALANCED · AUTO REFILL':'Courts refill independently'}</p></div><span class="round-progress-pill">${played}/${total} SCORED</span></div>
+ <div class="rounds-compact"><span><strong>${waveMode?waveName:individualActive()?'MATCH PROGRESS':`ROUND ${current||1}`}</strong> <em>· ${played} / ${total} matches completed</em></span><button type="button" class="rounds-toggle" data-action="toggle-rounds">Match History <span>⌄</span></button></div>
+ <div class="rounds-drawer ${roundDrawerOpen?'is-open':''}" ${roundDrawerOpen?'':'hidden'}>
+  <div class="rounds-drawer-head">MATCH HISTORY &amp; SCORE EDITING <span>Choose a round to view or correct past results</span></div>
+  <div class="round-selector">${roundPills}</div>
+  <div class="round-browser"><div><strong>ROUND ${selected} <span class="muted">· ${complete}/${byCourt.length} scored</span></strong></div><button class="ghost" type="button" data-action="latest-round">LATEST ↗</button></div>
+  <div class="round-match-strip">${byCourt.map(m=>`<div class="round-fixture ${m.status==='completed'?'scored':'on-court'}" data-match-id="${m.id}"><span>#${m.sequence} · ${m.status==='completed'?'SCORED':`C${m.court} · LIVE`}</span><b>${esc(matchSideName('A',m))} <em>vs</em> ${esc(matchSideName('B',m))}</b><span class="history-result-area">${m.status==='completed'?`<strong>${m.scoreA}–${m.scoreB}</strong>${scoreLocked?'<span class="history-locked">Locked</span>':`<button type="button" data-action="edit-stage1-result" data-id="${m.id}">Edit Score</button>`}`:'In progress'}</span></div>`).join('')}</div>
+ </div>
+ <div class="round-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${played}"><div style="width:${total?100*played/total:0}%"></div></div>
+ <div class="round-overview"><span>${cs.live.length} LIVE · ${cs.pending.length} REMAINING · ${played} FINISHED</span></div>
+ ${individualActive()&&state.equalization?.status==='running'?`<div class="p5-eq-banner"><strong>SMART FAIR FINISH · ${state.equalization.ids.filter(id=>E.matchPool(state).find(m=>m.id===id)?.status==='completed').length}/${state.equalization.target} EXTRA MATCHES</strong><span>Already-live matches continue normally. Only the smart-selected extras will be dispatched. Stage 1 closes automatically after all LIVE and selected extras finish.</span><button type="button" data-action="cancel-equalization">Cancel Fair Finish · Resume Scheduling</button></div>`:''}
+ <div class="court-grid">${live}</div>
+ ${prepareNextMatchHTML()}
+ ${arrivalPanelHTML()}
+ ${stage1Actions()}
+ </section>`;
+}
+function fancyFormat(f){return f.startsWith('total')?'Total of '+f.slice(-1):'First to '+f.slice(-1);}
+function stage1ModeratorInsights(){
+ const st=E.stage1Stats(state),cl=E.stage1Clinch(state),fair=E.stage1Fairness(state);
+ if(st.team.A.played<1)return '';
+ const completed=st.team.A.played,remaining=cl.remaining;
+ const clinch=cl.winner?`<div class="p5-insight-clinch"><strong>✓ MATHEMATICALLY CLINCHED · ${esc(club(cl.winner))}</strong><span>${completed}/${st.total} scored · ${remaining} fixture${remaining===1?'':'s'} remaining · No automatic Stage 1 finish</span></div>`:'';
+ const fairness=fair.imbalanced?`<div class="p5-insight-fair"><strong>FAIRNESS CHECK · MATCH COUNT GAP ${fair.maxGap}</strong><span>${fair.division.filter(d=>d.gap>1).map(d=>`${esc(d.label)}: ${esc(club('A'))} ${d.A.min}–${d.A.max} G · ${esc(club('B'))} ${d.B.min}–${d.B.max} G`).join(' · ')}. Rankings may be uneven if Stage 1 ends early.</span></div>`:'';
+ const checkpoints=individualActive()?E.individualCheckpointSnapshot(state):[];
+ const equity=individualActive()?E.individualParticipationMetrics(state,E.individualCounts(state).counts):null;
+ const parity=equity&&equity.divisionMeans.length>1?`<div class="p5-checkpoint-status"><strong>DIVISION PARTICIPATION · BOOKED MATCHES/PLAYER</strong><span>${equity.divisionMeans.map(x=>`${esc(x.division.toUpperCase())} ${x.perPlayer.toFixed(2)}`).join(' · ')} · MEAN Δ ${equity.crossMeanDelta.toFixed(2)}</span></div>`:'';
+ const checkpoint=checkpoints.length?`<div class="p5-checkpoint-status"><strong>${individualActive()?'UNIVERSAL CONTINUOUS · SOFT FAIRNESS CHECKPOINTS':'PROGRESSIVE FAIRNESS · SOFT CHECKPOINTS'}</strong><span>${checkpoints.map(cp=>`${esc(cp.label)} · ${cp.completed}/${cp.nextCompleted} scored · booked gap ${esc(club('A'))} ${cp.A.gap} / ${esc(club('B'))} ${cp.B.gap}`).join(' · ')}</span></div>`:'';
+ return clinch+fairness+checkpoint+parity?`<div class="p5-stage-insights">${clinch}${fairness}${checkpoint}${parity}</div>`:'';
+}
+function stage1FinishWarning(){
+ const st=E.stage1Stats(state),cl=E.stage1Clinch(state),fair=E.stage1Fairness(state);
+ const pending=st.total-st.team.A.played;
+ let info=`${st.team.A.played}/${st.total} matches confirmed. ${pending} remaining fixtures will be recorded as NOT PLAYED, never as wins or losses. `;
+ info+=`Current wins: ${esc(club('A'))} ${cl.winsA} – ${cl.winsB} ${esc(club('B'))}. `;
+ info+=cl.winner?`${esc(club(cl.winner))} already mathematically clinched Stage 1. `:'The result is not yet mathematically clinched. ';
+ if(fair.imbalanced)info+=`Fairness warning: within-division confirmed matches vary by up to ${fair.maxGap} per ${individualActive()?'player':'pair'}. Early rankings may be uneven. `;
+ return info+'The moderator decides whether to end Stage 1 now.';
+}
+function stage1Actions(){
+ const st=E.stage1Stats(state);
+ if(st.team.A.played<1)return '';
+ const summary=st.complete?(st.winner?`${esc(club(st.winner))} wins Stage 1.`:'Stage 1 finished in a draw.'):'Moderator may finish Stage 1 early; unplayed fixtures are excluded from the standings.';
+ const label=state.stage1Closed&&st.team.A.played<st.total?'STAGE 1 · CLOSED EARLY':st.complete?'STAGE 1 COMPLETE':'STAGE 1 · MODERATOR CONTROL';
+ const early=individualActive()&&!state.stage1Closed&&!st.complete;
+ const actions=state.stage2
+   ?'<button type="button" class="primary" data-action="reopen-stage2">Return to Team Duel →</button>'
+   :`${state.stage1Closed?'<button type="button" data-action="resume-stage1">↶ Resume Stage 1 Scoring</button>':''}<button type="button" data-action="${early?'review-early-finish':'finish-stage1'}" ${early?'data-value="final"':''}>${early?'Review Early Finish':'Finish Tournament After Stage 1'}</button><button type="button" class="primary" data-action="${early?'review-early-finish':'choose-stage2'}" ${early?'data-value="duel"':''}>Continue to Team Duel →</button>`;
+ return `${stage1ModeratorInsights()}<div class="stage1-finish-actions" aria-label="Stage 1 moderator controls"><div class="stage1-finish-summary"><strong>${label}</strong><span>${summary}</span></div><div class="form-actions">${actions}</div></div>`;
+}
+function openEarlyFinishAdvisor(destination){
+ app.querySelector('#p5-early-finish-dialog')?.remove();
+ if(!individualActive()||state.stage1Closed||state.stage2)throw Error('Early Finish Advisor is available only during Individual Stage 1');
+ const fair=E.stage1Fairness(state),checkpoints=E.individualCheckpointSnapshot(state);
+ const plan=E.individualSmartFinishPlan(state,5),scored=E.stage1Stats(state).team.A.played;
+ const equity=E.individualParticipationMetrics(state,E.individualCounts(state).counts);
+ const teams=fair.division.map(x=>{
+  const cp=checkpoints.find(c=>c.division===x.division);
+  const next=cp?` · Next fairness checkpoint: ${cp.nextCompleted}/${cp.total} scored`:'';
+  return `<div class="p5-eq-division"><strong>${esc(x.label)}</strong><span>Confirmed G · ${esc(club('A'))}: ${x.A.min}–${x.A.max} · ${esc(club('B'))}: ${x.B.min}–${x.B.max}</span><span>Including LIVE · ${x.A.bookedMin}–${x.A.bookedMax} / ${x.B.bookedMin}–${x.B.bookedMax}</span><span>${next}</span></div>`;
+ }).join('');
+ const divisionMeans=equity.divisionMeans.length>1?`<div class="p5-eq-division"><strong>BOOKED PARTICIPATION PER PLAYER</strong><span>${equity.divisionMeans.map(x=>`${esc(x.division.toUpperCase())} ${x.perPlayer.toFixed(2)} G/player`).join(' · ')} · Δ ${equity.crossMeanDelta.toFixed(2)}</span></div>`:'';
+ const running=state.equalization?.status==='running';
+ const recommendation=plan.count?`Recommended: +${plan.count} real match${plan.count===1?'':'es'} · projected max gap ${plan.baselineGap} → ${plan.projectedGap}${plan.projectedGap===plan.baselineGap?' · distribution more even':''}`:
+  'No additional fixtures offer meaningful fairer participation within five extra matches.';
+ const message=running?'A finish plan is already running. Cancel it to resume normal continuous play.':
+  'Fairness is calculated per PLAYER, including currently LIVE fixtures; division sizes are normalized. No hard wave barrier. These are projected outcomes, not guarantees.';
+ app.insertAdjacentHTML('beforeend',`<div id="p5-early-finish-dialog" class="p5-v2-overlay p5-eq-overlay" role="presentation"><div class="p5-v2-modal p5-eq-dialog" role="dialog" aria-modal="true" aria-label="Smart Fair Finish Advisor"><div class="over">STAGE 1 · MODERATOR CONTROL</div><h2>Smart Fair Finish</h2><p class="muted">${scored} scored · ${E.liveCourts(state).length} LIVE · confirmed player gap <strong>${fair.maxGap}</strong> · booked gap <strong>${fair.maxBookedGap}</strong></p><div class="p5-eq-divisions">${teams}${divisionMeans}</div><div class="p5-eq-recommendation"><strong>${esc(recommendation)}</strong><span>Automatic lookahead · up to five extra matches · zero-repeat teammate and opposing duo.</span></div><p class="p5-eq-tip">${message} Scores are never adjusted artificially. The two teams' winning scores are not forced to tie.</p><div class="p5-eq-actions p5-eq-actions-simple"><button type="button" data-action="close-early-finish">Go Back</button><button type="button" data-action="early-finish-live" ${running?'disabled':''}>Finish After Live Matches</button><button type="button" class="primary" data-action="start-smart-fair-finish" ${running?'disabled':''}>Smart Fair Finish · ${plan.count?'+'+plan.count+' Matches':'No Extras'} →</button></div></div></div>`);
+}
+
+function stage1HTML(){
+ const stats=E.stage1Stats(state);
+ return `${clubBoard()}<section class="p5-stage-head p5-si-card p5-si-compact" aria-label="Current session information">
+  <div class="p5-si-compact-top"><div class="p5-si-compact-title"><span class="p5-si-compact-over">SESSION</span><strong>${esc(state.setup.sessionName)}</strong></div><span class="pill p5-si-status">${state.stage1Closed?'CLOSED':'LIVE'}</span></div>
+  <div class="p5-si-compact-bottom"><span class="p5-si-compact-format">TEAM ROUND ROBIN <i>·</i> ${individualActive()?'INDIVIDUAL AMERICANO':multiEnabled()?'MULTI-DIVISION':'CLASSIC'} <i>·</i> ${individualActive()?(individualMulti()?"MEN'S + WOMEN'S":'SINGLE DIVISION'):'FIXED PARTNER'}</span>
+   <div class="p5-si-compact-meta"><span>${fancyFormat(state.setup.format)}</span><span>${esc(state.setup.date)}</span><span>${individualActive()?state.setup.pairs*2+' Players':state.setup.pairs*2+' Pairs'}</span><span>${state.setup.courts} Courts</span></div>
+  </div></section>
+  ${state.stage2?'<div class="locked-stage-note">Stage 1 results are protected while Stage 2 exists. Use <b>Cancel Stage 2</b> in Menu &amp; Settings to reopen score editing.</div>':''}
+  <div class="layout stage1-layout"><div class="stage1-main">${roundView()}</div><div class="stage1-sidebar">${leaderboard()}<details class="card stage1-rules"><summary>Championship Rules</summary><p class="muted">Stage 1 winner: match Wins → total Games (P). Winner earns 1 championship point; exact tie earns 0.5 per team.</p><p class="muted">Stage 2 allows 1–10 custom duels. Duel wins, then total games won, determine the stage. Stage 3 is played only if the championship points remain tied.</p></details></div></div>`;
+}
+function choiceStage2(){
+ const allowed=E.allowedDuels(state.setup.pairs,2);
+ return `${clubBoard('STAGE 2 · CUSTOM TEAM DUEL')}<section class="card showdown-stage-setup"><div class="over">STAGE 2 · SETUP</div><h2>Custom Team Duel</h2><p class="muted">Select 1–10 duels and the scoring format. Even-numbered ties use total games won; players may return in a later duel wave.</p><div class="grid2"><div><label for="duelCount">Number of Duels</label><select id="duelCount" required><option value="" selected>Select Number of Duels</option>${allowed.map(n=>`<option value="${n}">${n} Duel${n===1?'':'s'}</option>`).join('')}</select></div><div><label for="duelFormat">Stage 2 Match Format</label><select id="duelFormat" required>${formatOptions('',true)}</select></div></div><div class="stage-setup-validation" id="duelSetupError" role="alert" hidden></div><div class="form-actions"><button data-action="back-stage1">← Stage 1</button><button class="primary" data-action="create-duels">START CUSTOM TEAM DUEL →</button></div></section><details class="card showdown-collapsible"><summary>Stage 1 Standings</summary>${leaderboard()}</details>`;
+}
+function choiceStage3(){
+ const allowed=E.allowedDuels(state.setup.pairs,3);
+ return `${clubBoard('THE DECIDER · STAGE 3')}<section class="card showdown-stage-setup"><div class="over">STAGE 3 · SETUP</div><h2>The Decider · Custom Team Duel</h2><p class="muted">The championship is tied. Select 1–5 duels. Wins decide the stage; games won break a tied duel count. If both remain equal, schedule one additional tie-break duel (up to 5 total).</p><div class="grid2"><div><label for="finalCount">Number of Duels</label><select id="finalCount" required><option value="" selected>Select Number of Duels</option>${allowed.map(n=>`<option value="${n}">${n} Duel${n===1?'':'s'}</option>`).join('')}</select></div><div><label for="finalFormat">Stage 3 Match Format</label><select id="finalFormat" required>${formatOptions('',true)}</select></div></div><div class="stage-setup-validation" id="finalSetupError" role="alert" hidden></div><div class="form-actions"><button data-action="reopen-stage2">← Stage 2</button><button class="primary" data-action="create-final">START THE DECIDER →</button></div></section>${verdictSummary()}`;
+}
+function individualRosterMeta(i){return !individualActive()?(' · Pair '+(i+1)):individualMulti()?(' · '+(i<Number(individualCounts().men)?"Men":"Women")):(' · Individual');}
+function rosterOptions(c,chosen,duelId){
+ const reserved=duelId.startsWith('final')?E.stage3AssignedPlayers(state,duelId)[c]:E.stage2AssignedPlayers(state,duelId)[c];
+ return `<option value="">Select Player</option>`+state.roster[c].flatMap((pair,i)=>pair.players.map(p=>{
+  const other=reserved.get(p.id),locked=other&&chosen!==p.id;
+  return `<option value="${p.id}" ${chosen===p.id?'selected':''} ${locked?'disabled':''}>${esc(p.name)}${individualRosterMeta(i)}${other?' · IN DUEL '+esc(other.split('-').pop()):''}</option>`;
+ })).join('');
+}
+function lineupSelectors(c,id,arr){return `<div class="lineup-fields"><label>${esc(club(c))}</label><select data-lineup="${id}" data-club="${c}" data-player="0">${rosterOptions(c,arr?.[0],id)}</select><select data-lineup="${id}" data-club="${c}" data-player="1">${rosterOptions(c,arr?.[1],id)}</select></div>`;}
+// v0.8.8 — live lineup reservations. A selection is reserved immediately on
+// the screen (before Save All Lineups) for every duel within the same wave.
+// Wave 2 remains eligible to reuse Wave 1 players, as required by Team Duel rules.
+const lineupPriorValue=new WeakMap();
+function lineupWaveMap(){
+ const matches=state.stage==='stage3'?E.stage3Matches(state):state.stage2?.matches||[];
+ return new Map(matches.map(m=>[m.id,Number(m.wave||1)]));
+}
+function lineupConflict(slot,playerId){
+ if(!playerId)return null;
+ const waves=lineupWaveMap(),currentWave=waves.get(slot.dataset.lineup)||1;
+ return Array.from(app.querySelectorAll('select[data-lineup]')).find(other=>
+  other!==slot && other.dataset.club===slot.dataset.club &&
+  (waves.get(other.dataset.lineup)||1)===currentWave &&
+  other.value===playerId
+ )||null;
+}
+function refreshStage2LineupOptions(){
+ const slots=Array.from(app.querySelectorAll('select[data-lineup]'));
+ if(!slots.length)return;
+ for(const slot of slots){
+  for(const opt of slot.options){
+   if(!opt.value)continue;
+   if(!opt.dataset.baseLabel)opt.dataset.baseLabel=opt.textContent.split(' · IN DUEL ')[0].split(' · USED IN DUEL ')[0];
+   const occupied=lineupConflict(slot,opt.value);
+   // Keep selected values visible while an older backup is being corrected;
+   // new duplicate selections are blocked in the change handler below.
+   opt.disabled=!!occupied&&opt.value!==slot.value;
+   opt.textContent=opt.dataset.baseLabel+(occupied?` · USED IN DUEL ${occupied.dataset.lineup.split('-').pop()}`:'');
+  }
+ }
+}
+function onLineupSelectionChanged(slot){
+ const occupied=lineupConflict(slot,slot.value);
+ if(occupied){
+  const bad=slot.value;
+  const prev=lineupPriorValue.get(slot);
+  const match=(state.stage==='stage3'?E.stage3Matches(state):state.stage2?.matches||[]).find(m=>m.id===slot.dataset.lineup);
+  const saved=match?.[`players${slot.dataset.club}`]?.[Number(slot.dataset.player)]||'';
+  slot.value=prev!==undefined&&prev!==bad?prev:saved!==bad?saved:'';
+  const player=state.roster[slot.dataset.club].flatMap(pair=>pair.players).find(p=>p.id===bad);
+  notify(`${player?.name||'Player'} is already selected in Duel ${occupied.dataset.lineup.split('-').pop()} (same wave).`,true);
+ }
+ lineupPriorValue.set(slot,slot.value);
+ refreshStage2LineupOptions();
+}
+function scoreEditor(m,format,kind){
+ const f=E.fmt(format),score=key=>m[key]===null?'':m[key];
+ return `<div class="duel-score-section p5sm-duel-modal-fields"><div class="duel-score-grid"><label><span>${esc(club('A'))}</span><input type="number" min="0" max="${f.target}" inputmode="numeric" data-custom-score="${kind}" data-id="${m.id}" data-side="A" value="${score('scoreA')}" aria-label="${esc(club('A'))} score"></label><strong>×</strong><label><span>${esc(club('B'))}</span><input type="number" min="0" max="${f.target}" inputmode="numeric" data-custom-score="${kind}" data-id="${m.id}" data-side="B" value="${score('scoreB')}" aria-label="${esc(club('B'))} score"></label></div>${f.kind==='total'&&f.target%2===0?`<label class="duel-tiebreak">Tiebreak Winner (only for ${f.target/2}–${f.target/2})<select data-tie="${kind}" data-id="${m.id}"><option value="">Select Tiebreak Winner</option><option value="A" ${m.winner==='A'&&m.scoreA===m.scoreB?'selected':''}>${esc(club('A'))}</option><option value="B" ${m.winner==='B'&&m.scoreA===m.scoreB?'selected':''}>${esc(club('B'))}</option></select></label>`:''}<p class="p5sm-modal-hint">${f.kind==='total'?`Total of ${f.target} · opponent auto-fills`:`First to ${f.target} · no draws`}</p><div class="duel-review-slot" data-duel-review="${m.id}"></div><div class="p5sm-modal-actions"><button type="button" data-action="close-duel-score">Cancel</button><button type="button" class="primary" data-action="review-${kind}-score" data-id="${m.id}">Review Score →</button></div></div>`;
+}
+function openDuelScore(kind,id){
+ const m=kind==='duel'?state.stage2?.matches.find(z=>z.id===id):E.stage3Matches(state).find(z=>z.id===id);
+ if(!m||!m.playersA.every(Boolean)||!m.playersB.every(Boolean)||viewOnly)throw Error('Save the two team lineups before scoring');
+ if(kind==='duel'&&state.stage!=='stage2'||kind==='final'&&state.stage!=='stage3')throw Error('This stage is not active');
+ const fmt=kind==='duel'?state.stage2.format:state.stage3.format;
+ const lbl=kind==='duel'?'STAGE 2 · TEAM DUEL':'STAGE 3 · DECIDER';
+ app.querySelector('#p5-duel-score-dialog')?.remove();pendingDuelReview=null;
+ app.insertAdjacentHTML('beforeend',`<div class="p5-v2-overlay p5-showdown-score-overlay" id="p5-duel-score-dialog" role="presentation"><div class="p5-v2-modal p5-showdown-score-modal" role="dialog" aria-modal="true" aria-label="Confirm Match Score"><div class="p5sm-modal-over">${lbl} · COURT ${m.court||1}</div><h2>CONFIRM MATCH SCORE</h2><div class="p5sm-modal-pairs"><span>${esc(m.playersA.map(playerName).join(' & '))}</span><span>${esc(m.playersB.map(playerName).join(' & '))}</span></div>${scoreEditor(m,fmt,kind)}</div></div>`);
+ const first=app.querySelector(`#p5-duel-score-dialog [data-custom-score="${kind}"][data-side="A"]`);first?.focus({preventScroll:true});
+}
+function duelCard(m,kind,format){
+ const hasLineup=m.playersA.every(Boolean)&&m.playersB.every(Boolean);
+ const f=E.fmt(format);
+ return `<div class="duel-row showdown-duel-card p5sm-duel-card" data-duel-card="${m.id}"><div class="duel-title"><strong>${kind==='final'?`DECIDER DUEL ${m.id.split('-').pop()||1}`:`DUEL ${m.id.split('-').pop()}`}</strong><span class="badge">COURT ${m.court||1} · WAVE ${m.wave||1}${m.winner?' · ✓ COMPLETE':''}</span></div>
+ <button type="button" class="p5sm-open-score p5sm-duel-score-button" data-action="open-duel-score" data-value="${kind}" data-id="${m.id}" ${hasLineup?'':'disabled'} aria-label="${hasLineup?'Tap to score this duel':'Set lineups before scoring'}"><div class="scorepairs">
+ <div class="scorepair"><div class="pairname">${hasLineup?esc(m.playersA.map(playerName).join(' & ')):esc(club('A'))}</div><span class="p5sm-scorebox">${m.scoreA===null?'–':m.scoreA}</span></div><span class="p5sm-score-separator" aria-hidden="true">×</span><div class="scorepair"><div class="pairname">${hasLineup?esc(m.playersB.map(playerName).join(' & ')):esc(club('B'))}</div><span class="p5sm-scorebox">${m.scoreB===null?'–':m.scoreB}</span></div>
+ </div></button><div class="scorehint p5-v26-format-hint">${f.kind==='total'?`Total of ${f.target}`:`First to ${f.target}`} · ${hasLineup?(m.winner?'Edit Score':'Tap to Score'):'Select Players First'}</div>
+ <details class="duel-lineup-details" ${hasLineup?'':'open'}><summary>${hasLineup?'Edit Lineup':'Select Players'} <span>⌄</span></summary><div class="lineup-grid">${lineupSelectors('A',m.id,m.playersA)}${lineupSelectors('B',m.id,m.playersB)}</div><div class="duel-lineup-help">${kind==='duel'?'One appearance per player in Stage 2.':'One appearance per player in Stage 3. Stage 2 players may be reused.'}</div></details></div>`;
+}
+
+// v0.8.7 · One atomic Save All Lineups for all Stage 2/3 duels.
+function allLineupsToolbar(kind,matches){
+ const ready=matches.filter(m=>m.playersA.every(Boolean)&&m.playersB.every(Boolean)).length;
+ return `<div class="p5-batch-lineup-footer" role="group" aria-label="Save all ${kind==='duel'?'Stage 2':'Stage 3'} lineups"><div class="p5-batch-lineup-meta"><strong>TEAM DUEL LINEUPS</strong><span>${ready} / ${matches.length} saved · Changes apply together</span></div><div id="p5-batch-lineup-error" role="alert" hidden></div><button type="button" class="primary p5-batch-save-button" data-action="save-all-lineups" data-value="${kind}">Save All Lineups →</button></div>`;
+}
+function focusLineupError(id,message){
+ const card=app.querySelector(`[data-duel-card="${id}"]`);
+ const details=card?.querySelector('.duel-lineup-details');if(details)details.open=true;
+ card?.classList.add('p5-batch-lineup-invalid');
+ const error=app.querySelector('#p5-batch-lineup-error');
+ if(error){error.hidden=false;error.textContent=message;}
+ card?.scrollIntoView?.({behavior:'smooth',block:'center'});
+ notify(message,true);
+}
+function saveAllLineups(kind){
+ if((kind==='duel'&&state.stage!=='stage2')||(kind==='final'&&state.stage!=='stage3'))throw Error('Open the correct Team Duel stage first');
+ const current=kind==='duel'?state.stage2?.matches:E.stage3Matches(state);
+ if(!current?.length)throw Error('No Team Duels to save');
+ const scratch=JSON.parse(JSON.stringify(state));
+ const proposed=current.map((match,i)=>({
+  id:match.id,number:i+1,wave:match.wave||1,
+  A:getLineup(kind,match.id,'A'),B:getLineup(kind,match.id,'B')
+ }));
+ const rosterIds={A:new Set(state.roster.A.flatMap(p=>p.players.map(x=>x.id))),B:new Set(state.roster.B.flatMap(p=>p.players.map(x=>x.id)))};
+ const used={A:new Map(),B:new Map()};
+ for(const p of proposed){
+  for(const clubId of ['A','B']){
+   const ids=p[clubId];
+   if(ids.some(id=>!id||!rosterIds[clubId].has(id))||ids[0]===ids[1]){
+    const msg=`Duel ${p.number}: select two different registered players for ${club(clubId)}.`;
+    focusLineupError(p.id,msg);return;
+   }
+   for(const playerId of ids){
+    const key=p.wave+':'+playerId;
+    if(used[clubId].has(key)){
+     const previous=used[clubId].get(key);
+     const name=state.roster[clubId].flatMap(x=>x.players).find(x=>x.id===playerId)?.name||'Player';
+     const msg=`Duel ${p.number}: ${name} (${club(clubId)}) already plays in Duel ${previous} of the same wave.`;
+     focusLineupError(p.id,msg);return;
+    }
+    used[clubId].set(key,p.number);
+   }
+  }
+ }
+ // Clear provisional assignments ONLY in the scratch copy, to allow valid swaps
+ // between duels without creating temporary conflicts. Production state is untouched.
+ const trial=kind==='duel'?scratch.stage2.matches:E.stage3Matches(scratch);
+ trial.forEach(m=>{m.playersA=['',''];m.playersB=['',''];});
+ for(const p of proposed){
+  try{
+   if(kind==='duel')E.setDuelLineup(scratch,p.id,p.A,p.B);
+   else E.setFinalLineup(scratch,p.A,p.B,p.id);
+  }catch(err){focusLineupError(p.id,`Duel ${p.number}: ${err.message}`);return;}
+ }
+ // Restore confirmed scores ONLY when both pairs have stayed exactly the same.
+ let invalidated=0,changed=0;
+ for(let i=0;i<current.length;i++){
+  const old=current[i],next=trial[i],p=proposed[i];
+  const unchanged=['A','B'].every(c=>old[`players${c}`].every((v,j)=>v===p[c][j]));
+  if(unchanged){next.scoreA=old.scoreA;next.scoreB=old.scoreB;next.winner=old.winner;}
+  else {changed++;if(old.scoreA!==null||old.scoreB!==null)invalidated++;}
+ }
+ // E.setDuelLineup invalidates Stage 3 in scratch for any changed Stage 2 lineup.
+ if(kind==='duel'&&changed===0)scratch.stage3=state.stage3;
+ if(changed)scratch.finalized=false;
+ const commit=()=>{state=scratch;save();render();notify(`${current.length} lineups saved together${invalidated?` · ${invalidated} changed match score(s) cleared`:''}`);};
+ if(invalidated){
+  confirmAction(`${invalidated} scored duel${invalidated===1?'':'s'} have changed lineups. Saving all will clear only those scores. Unchanged duel results stay confirmed. Continue?`,()=>{state=scratch;});
+  return;
+ }
+ commit();
+}
+function stage2HTML(){
+ const st=E.stage2Stats(state),v=E.verdict(state);
+ const result=st.complete?`<div class="showdown-stage-winner"><span>${st.winner?'STAGE 2 WINNER':'STAGE 2 · DRAW'}</span><strong>${st.winner?esc(club(st.winner)):'Level on wins and games'}</strong><small>${st.wA} – ${st.wB} duels · ${st.pA} – ${st.pB} games won</small></div><div class="form-actions">${v.status==='final-needed'?'<button class="primary" data-action="begin-final">CONTINUE TO THE DECIDER →</button>':'<button type="button" class="primary" data-action="view-final-verdict">View Final Verdict →</button>'}</div>`:'';
+ return `${clubBoard('STAGE 2 · CUSTOM TEAM DUEL')}<div class="layout showdown-stage-layout"><div><section class="card"><div class="stage-label"><div><div class="over">STAGE 2 · TEAM DUEL</div><h2>Custom Team Duel · ${state.stage2.matches.length} Matches</h2></div><span class="pill">${st.completed}/${st.total} COMPLETE</span></div><div class="showdown-stage2-participation">ONE DUEL PER PLAYER PER WAVE · ${state.stage2.matches.length} duel${state.stage2.matches.length===1?'':'s'} · ${state.setup.courts} courts · ${Math.max(...state.stage2.matches.map(m=>m.wave||1))} wave${Math.max(...state.stage2.matches.map(m=>m.wave||1))===1?'':'s'}</div>${E.stage2DuplicateAssignments(state).length?`<p class="showdown-duplicate-warning" role="alert">Some previously saved lineups reuse players. Edit or clear the affected duels before confirming scores or declaring a Stage 2 winner.</p>`:''}<div class="duel-cards-grid">${state.stage2.matches.map(m=>duelCard(m,'duel',state.stage2.format)).join('')}</div>${allLineupsToolbar('duel',state.stage2.matches)}${result}</section></div><div>${verdictSummary()}<details class="card showdown-collapsible"><summary>Stage 1 Standings</summary>${leaderboard()}</details></div></div>`;
+}
+function verdictSummary(){const s1=E.stage1Stats(state),s2=E.stage2Stats(state),v=E.verdict(state);return `<section class="card"><div class="over">THE FINAL VERDICT</div><h2>Championship Points</h2><div class="verdict-points"><div class="stat"><small>${esc(club('A'))}</small><strong>${v.points.A.toFixed(1)}</strong></div><div class="stat"><small>${esc(club('B'))}</small><strong>${v.points.B.toFixed(1)}</strong></div></div><p class="muted">Stage 1: ${s1.winner?esc(club(s1.winner)):'Draw'} · Stage 2: ${!state.stage2?'Skipped (Stage 1-only)':s2.complete?(s2.winner?esc(club(s2.winner)):'Draw'):'Not complete'}${state.stage3?` · Stage 3: ${E.stage3Stats(state).complete?esc(club(E.stage3Stats(state).winner)):'Not complete'}`:''}</p><small>${!state.stage2?'Stage 1-only tournament: winner determined by confirmed match wins, then total games. Unplayed fixtures are excluded. No Stage 2/3 played.':'Each stage awards 1 championship point. Stage 2/3 winner is decided by duel wins; games won are shown as supporting statistics. A drawn Stage 1 awards 0.5 to each team.'}</small></section>`;}
+function stage3HTML(){
+ const stats=E.stage3Stats(state),v=E.verdict(state),matches=E.stage3Matches(state);
+ const result=stats.complete&&stats.winner?`<div class="showdown-stage-winner"><span>STAGE 3 WINNER · SHOWDOWN CHAMPION</span><strong>${esc(club(stats.winner))}</strong><small>${stats.wA} – ${stats.wB} duels · ${stats.pA} – ${stats.pB} games won</small></div><div class="form-actions"><button class="primary" data-action="view-final-verdict">View Final Verdict →</button></div>`:stats.complete?`<div class="showdown-stage-winner"><span>STAGE 3 · EXACT DRAW</span><strong>One tie-break duel required</strong><small>Match wins ${stats.wA} – ${stats.wB} · Games ${stats.pA} – ${stats.pB}. No team is declared champion.</small></div><div class="form-actions"><button class="primary" data-action="add-final-tiebreak">+ Add Final Tie-Break Duel →</button></div>`:'';
+ return `${clubBoard('THE DECIDER · STAGE 3')}<div class="layout showdown-stage-layout"><div><section class="card"><div class="stage-label"><div><div class="over">STAGE 3 · THE DECIDER</div><h2>Custom Team Duel · ${matches.length} Matches</h2></div><span class="pill">${stats.completed}/${stats.total} COMPLETE</span></div><div class="showdown-stage2-participation">ONE DUEL PER PLAYER PER WAVE · ${matches.length} duels · ${state.setup.courts} courts · ${Math.max(...matches.map(m=>m.wave||1))} waves</div>${E.stage3DuplicateAssignments(state).length?'<p class="showdown-duplicate-warning" role="alert">Some saved Stage 3 lineups reuse players. Correct these before confirming.</p>':''}<div class="duel-cards-grid">${matches.map(m=>duelCard(m,'final',state.stage3.format)).join('')}</div>${allLineupsToolbar('final',matches)}${result}</section></div><div>${verdictSummary()}<details class="card showdown-collapsible"><summary>Stage 1 Standings</summary>${leaderboard()}</details></div></div>`;
+}
+function sdStageSummary(which){
+ const isFirst=which===1;
+ const st=isFirst?E.stage1Stats(state):which===2?E.stage2Stats(state):E.stage3Stats(state);
+ const title=which===1?'Round Robin':which===2?'Custom Team Duel':'The Decider';
+ const aWins=isFirst?st.team.A.w:st.wA;
+ const bWins=isFirst?st.team.B.w:st.wB;
+ const aPoints=isFirst?st.team.A.p:st.pA;
+ const bPoints=isFirst?st.team.B.p:st.pB;
+ const winner=st.winner?club(st.winner):'Draw';
+ const scoreTitle=isFirst?'MATCH WINS':'DUEL WINS';
+ let detail='';
+ if(isFirst){
+  const matches=E.matchPool(state).filter(m=>m.status==='completed').sort((a,b)=>(a.completedSequence??0)-(b.completedSequence??0));
+  detail=`${leaderboard()}<div class="sd-results-title">ALL STAGE 1 MATCH RESULTS · ${matches.length}/${st.total}</div><div class="sd-results-scroll"><table class="sd-results-table"><thead><tr><th>#</th><th>${esc(club('A'))}</th><th>Score</th><th>${esc(club('B'))}</th></tr></thead><tbody>${matches.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(matchSideName('A',m))}</td><td class="sd-result-score">${m.scoreA}–${m.scoreB}</td><td>${esc(matchSideName('B',m))}</td></tr>`).join('')}</tbody></table></div>`;
+ }else{
+  const matches=which===2?state.stage2?.matches||[]:E.stage3Matches(state);
+  detail=`<div class="sd-results-scroll"><div class="sd-duel-results">${matches.map((m,i)=>{
+   const a=Array.isArray(m.playersA)?m.playersA.map(playerName).join(' / '):'—';
+   const b=Array.isArray(m.playersB)?m.playersB.map(playerName).join(' / '):'—';
+   return `<div class="sd-duel-result"><span class="sd-duel-index">DUEL ${i+1}</span><div><small>${esc(club('A'))}</small><strong>${esc(a)}</strong></div><b class="sd-duel-score">${m.scoreA===null?'—':m.scoreA} – ${m.scoreB===null?'—':m.scoreB}</b><div><small>${esc(club('B'))}</small><strong>${esc(b)}</strong></div><span class="sd-duel-winner">${m.winner?`WINNER · ${esc(club(m.winner))}`:'—'}</span></div>`;
+  }).join('')}</div></div>`;
+ }
+ return `<details class="card sd-stage-summary"><summary><span class="sd-summary-number">0${which}</span><span class="sd-summary-heading"><strong>STAGE ${which} · ${title}</strong><small>Winner: ${esc(winner)} · ${st.completed??st.team.A.played}/${st.total} matches</small></span><span class="sd-summary-result">${aWins} – ${bWins}<small>${scoreTitle}</small></span><span class="sd-summary-caret" aria-hidden="true">⌄</span></summary><div class="sd-summary-body"><div class="sd-summary-facts"><span>WINNER <b>${esc(winner)}</b></span><span>${scoreTitle} <b>${aWins} – ${bWins}</b></span><span>TOTAL POINTS <b>${aPoints} – ${bPoints}</b></span></div>${detail}</div></details>`;
+}
+function finishedHTML(){
+ const v=E.verdict(state),s1=E.stage1Stats(state),s2=E.stage2Stats(state),s3=E.stage3Stats(state);
+ const finalLabel=state.stage3?'THE DECIDER · STAGE 3':state.stage2?'STAGE 2 · CUSTOM TEAM DUEL':'STAGE 1 · FINAL TEAM SCORE';
+ const name=v.champion?esc(club(v.champion)):'NO OVERALL CHAMPION';
+ const summaries=`${sdStageSummary(1)}${state.stage2&&s2.complete?sdStageSummary(2):''}${state.stage3&&s3.complete?sdStageSummary(3):''}`;
+ const championSessionName=esc(state.setup.sessionName||'TEAM SHOWDOWN');
+ const stagesCompleted=state.stage3&&s3.complete?3:state.stage2&&s2.complete?2:1;
+ const stageWinners=[
+  {number:1, winner:s1.winner?club(s1.winner):'Draw'},
+  ...(state.stage2&&s2.complete?[{number:2, winner:club(s2.winner)}]:[]),
+  ...(state.stage3&&s3.complete?[{number:3, winner:club(s3.winner)}]:[])
+ ];
+ const championChips=stageWinners.map(st=>`<span class="sd-finale-stage-pill">Stage ${st.number} · ${esc(st.winner)}</span>`).join('');
+ const trophySvg=`<svg class="sd-finale-trophy-svg" viewBox="0 0 170 112" aria-hidden="true" focusable="false">
+ <defs><linearGradient id="sdTrophyGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe7a6"/><stop offset=".34" stop-color="#dcb075"/><stop offset=".65" stop-color="#f7d998"/><stop offset="1" stop-color="#a66c37"/></linearGradient></defs>
+ <g fill="none" stroke="url(#sdTrophyGold)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".80">
+ <path d="M43 22c-12 2-20 11-20 25s8 26 20 32M127 22c12 2 20 11 20 25s-8 26-20 32"/>
+ <path d="M35 29l-8 2 5 8M27 42l-7 5 8 5M27 55l-7 8 10 3M33 68l-2 10 11 0M135 29l8 2-5 8M143 42l7 5-8 5M143 55l7 8-10 3M137 68l2 10-11 0"/>
+ </g>
+ <path d="M57 19h56c0 34-11 49-25 53v15h14v7H68v-7h14V72C68 68 57 53 57 19z" fill="url(#sdTrophyGold)"/>
+ <path d="M57 26H45c-3 0-5 3-5 6 0 17 8 25 24 26M113 26h12c3 0 5 3 5 6 0 17-8 25-24 26" stroke="url(#sdTrophyGold)" stroke-width="6" fill="none" stroke-linejoin="round"/>
+ <path d="M71 24c0 15 2 25 8 34" stroke="#fff0c8" stroke-width="4" opacity=".40" fill="none" stroke-linecap="round"/>
+ <path d="M65 94h40v8H65z" fill="url(#sdTrophyGold)"/><path d="M61 102h48v5H61z" fill="#b78653"/>
+ </svg>`;
+ const replayIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.7-5.8"/><path d="M20 4v7h-7"/></svg>`;
+ const shareIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-8 18-3.7-7.3L2 10 21 3z"/><path d="m9.3 13.7 5.5-5.4"/></svg>`;
+ return `${clubBoard(finalLabel)}<section id="showdownChampionInline" tabindex="-1" class="card showdown-champion-card sd-final-hero sd-finale-v33" aria-label="${championSessionName} championship winner">
+ <div class="sd-finale-aura" aria-hidden="true"></div><div class="sd-finale-watermark" aria-hidden="true">${trophySvg}</div><div class="sd-inline-sparkles" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i><i>✧</i><i>✦</i></div>
+ <header class="sd-finale-header"><div class="sd-finale-session" title="${championSessionName}">${championSessionName}</div><button type="button" class="sd-replay-fab sd-finale-action sd-finale-replay" data-action="replay-champion" aria-label="Replay champion celebration" title="Replay Celebration">${replayIcon}</button></header>
+ <div class="sd-finale-center"><div class="sd-finale-trophy" aria-hidden="true">${trophySvg}</div><div class="sd-finale-caption">TEAM SHOWDOWN CHAMPION</div><h1>${name}</h1><div class="sd-finale-stage-recaps">${championChips}</div></div>
+ <button type="button" class="sd-finale-action sd-finale-share" data-action="open-share-card" data-value="full" aria-label="Share final results" title="Share Final Results">${shareIcon}</button>
+ </section><div class="layout sd-finished-layout"><div class="sd-stage-summary-list"><div class="sd-summary-list-heading"><div class="sd-summary-list-heading-copy"><span>OFFICIAL RESULTS</span><h2>Stage-by-Stage Summary</h2><small>${stagesCompleted===3?'Three stages completed':stagesCompleted===2?'Two stages completed':s1.team.A.played<s1.total?`Stage 1 closed early · ${s1.team.A.played}/${s1.total} matches scored`:'Stage 1 completed'}</small></div></div>${summaries}</div><div>${verdictSummary()}</div></div>`;
+}
+/* v0.8.38 — Share Results public viewer. Read-only, stage-complete and player-level. */
+function viewerHTML(){
+ const s1=E.stage1Stats(state),s2=E.stage2Stats(state),s3=E.stage3Stats(state),v=E.verdict(state);
+ const matches1=E.matchPool(state).filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).slice().sort((a,b)=>(a.completedSequence??a.sequence??9999)-(b.completedSequence??b.sequence??9999)||String(a.id).localeCompare(String(b.id)));
+ const matches2=state.stage2?.matches||[],matches3=E.stage3Matches(state);
+ const multiStage=!!(state.stage2||state.stage3);
+ const niceFmt=f=>f?(f.startsWith('total')?'Total of ':'First to ')+String(f).slice(-1):'—';
+ const fn=(id)=>esc(playerName(id));
+ const pair=(team,i)=>esc(pairName(team,i));
+ const fmt1=niceFmt(state.setup.format),fmt2=niceFmt(state.stage2?.format),fmt3=niceFmt(state.stage3?.format);
+ const score=(m)=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)?`${m.scoreA} <span class="sr-dash">–</span> ${m.scoreB}`:'—';
+ const fmtPts=n=>Number.isInteger(n)?`${n}.0`:Number(n).toFixed(1);
+ const champ=v.champion?esc(club(v.champion)):'RESULTS';
+ const hasChampion=['champion','stage1-champion'].includes(v.status);
+ const stageData=[
+  {n:1,name:'Round Robin',fmt:fmt1,stats:s1,exists:true,winner:s1.winner,detail:`${s1.team.A.w}–${s1.team.B.w} match wins`,note:`${s1.team.A.p}–${s1.team.B.p} games`,nMatches:s1.total,played:s1.team.A.played},
+  {n:2,name:'Team Duel',fmt:fmt2,stats:s2,exists:!!state.stage2,winner:s2.winner,detail:`${s2.wA}–${s2.wB} duel wins`,note:`${s2.pA}–${s2.pB} games`,nMatches:s2.total,played:s2.completed},
+  {n:3,name:'The Decider',fmt:fmt3,stats:s3,exists:!!state.stage3,winner:s3.winner,detail:`${s3.wA}–${s3.wB} duel wins`,note:`${s3.pA}–${s3.pB} games`,nMatches:s3.total,played:s3.completed}
+ ];
+ const badge=(winner)=>winner?`<span class="sr-win">${esc(club(winner))}</span>`:'<span class="sr-draw">DRAW</span>';
+ const stageCards=stageData.filter(st=>st.exists).reverse().map(st=>`<div class="sr-stage-card"><div class="sr-eyebrow">${multiStage?'STAGE '+st.n+' · ':''}${esc(st.name)}</div><h3>${st.winner?badge(st.winner):'DRAW'}</h3><div class="sr-stage-metric">${esc(st.detail)}</div><div class="sr-stage-detail">${esc(st.fmt)} · ${st.played}/${st.nMatches} matches</div></div>`).join('');
+ // Every registered player has an individual record. Stage 1 belongs to the fixed pair;
+ // Stage 2/3 are counted only if the player's ID occurs in that duel's actual lineup.
+ const individual={A:[],B:[]};
+ for(const c of ['A','B']){
+  const other=c==='A'?'B':'A';
+  state.roster[c].forEach((rosterPair,i)=>rosterPair.players.forEach(pl=>{
+   const rec={id:pl.id,name:pl.name||pl.id,team:c,pairIndex:i,w:0,l:0,t:0,for:0,against:0,history:[]};
+   const add=(stage,m,opponents,partner,context)=>{
+    if(!Number.isInteger(m.scoreA)||!Number.isInteger(m.scoreB))return;
+    const pf=c==='A'?m.scoreA:m.scoreB,pa=c==='A'?m.scoreB:m.scoreA,decision=m.winner===c?'W':m.winner===null?'T':'L';
+    if(decision==='W')rec.w++;else if(decision==='L')rec.l++;else rec.t++;
+    rec.for+=pf;rec.against+=pa;
+    rec.history.push({stage,opponents,partner,context,for:pf,against:pa,decision});
+   };
+   matches1.filter(m=>individualActive()?[m[c==='A'?'a':'b'],m[c==='A'?'a2':'b2']].includes(i):m[c==='A'?'a':'b']===i)
+    .forEach(m=>add(1,m,individualActive()?esc(matchSideName(other,m)):pair(other,m[other==='A'?'a':'b']),individualActive()?pair(c,m[c==='A'?'a':'b']===i?m[c==='A'?'a2':'b2']:m[c==='A'?'a':'b']):rosterPair.players.filter(p=>p.id!==pl.id).map(p=>esc(p.name)).join(' / ')||'—',`Court ${m.court||'—'}`));
+   for(const [stage,matches] of [[2,matches2],[3,matches3]])for(const m of matches){
+    const mine=m[c==='A'?'playersA':'playersB']||[];
+    if(!mine.includes(pl.id))continue;
+    const rival=m[other==='A'?'playersA':'playersB']||[];
+    add(stage,m,rival.map(fn).join(' / '),mine.filter(id=>id!==pl.id).map(fn).join(' / ')||'—',`Duel ${String(m.id||'').match(/\d+$/)?.[0]||'—'} · Court ${m.court||'—'}`);
+   }
+   rec.diff=rec.for-rec.against;
+   individual[c].push(rec);
+  }));
+ }
+ const allPersons=[...individual.A,...individual.B].sort((a,b)=>b.w-a.w||b.diff-a.diff||b.for-a.for||a.name.localeCompare(b.name));
+ const analysisOptions=allPersons.map((rec,i)=>`<option value="${i}">${esc(rec.name)} · ${esc(club(rec.team))}</option>`).join('');
+ const analysisPanels=allPersons.map((rec,i)=>{
+  const history=rec.history.slice().reverse().map(h=>`<div class="sr-analysis-match"><span class="sr-person-stage">STAGE ${h.stage}</span><div class="sr-person-opponent"><strong>vs ${h.opponents}</strong><small>With ${h.partner} · ${esc(h.context)}</small></div><b>${h.for}–${h.against}</b><span class="sr-result-${h.decision.toLowerCase()}">${h.decision}</span></div>`).join('');
+  return `<div class="sr-analysis-panel" data-sr-analysis-panel="${i}" hidden><div class="sr-analysis-identity"><div><small>PERSONAL PERFORMANCE · ${esc(club(rec.team))}</small><h3>${esc(rec.name)}</h3></div><span class="sr-analysis-total">${rec.history.length} MATCHES</span></div><div class="sr-analysis-stats"><div><small>W–L–T</small><b>${rec.w}–${rec.l}–${rec.t}</b></div><div><small>DIFF</small><b>${rec.diff>0?'+':''}${rec.diff}</b></div><div><small>POINTS</small><b>${rec.for}</b></div><div><small>MATCHES PLAYED</small><b>${rec.history.length}</b></div></div><div class="sr-analysis-history"><span class="sr-analysis-history-title">PERSONAL MATCH JOURNEY <small>Latest stage first · Partner and opponent details</small></span>${history||'<p class="sr-note">No scored matches for this player.</p>'}</div></div>`;
+ }).join('');
+ const personalAnalysis=`<section class="sr-analysis" aria-label="Analyze personal performance" id="srPlayerAnalysis"><div class="sr-analysis-heading"><div><span class="sr-analysis-num">04 /</span><h2>Analyze Your Player</h2></div><span class="sr-analysis-sub">PERSONAL PERFORMANCE</span></div><div class="sr-analysis-card"><p>Choose a player to see their match history, partners and opponents.</p><label for="srAnalyzePlayer">SELECT A PLAYER</label><select id="srAnalyzePlayer" data-sr-analysis-select aria-label="Choose a player to analyze"><option value="">Choose your player</option>${analysisOptions}</select><div class="sr-analysis-empty" data-sr-analysis-empty>Choose a player to view all their scores across stages.</div>${analysisPanels}</div></section>`;
+
+ const publicTrophySvg=`<svg class="sr-cinema-cup" viewBox="0 0 240 205" aria-hidden="true" focusable="false">
+ <defs>
+  <linearGradient id="srCinemaCupFill" x1=".1" y1=".12" x2=".85" y2=".95"><stop offset="0" stop-color="#8e5933"/><stop offset=".13" stop-color="#ffedb2"/><stop offset=".37" stop-color="#d7a45d"/><stop offset=".54" stop-color="#fff0be"/><stop offset=".75" stop-color="#c08a47"/><stop offset="1" stop-color="#70451f"/></linearGradient>
+  <linearGradient id="srCinemaCupBase" x1="0" y1="0" x2="1" y2=".7"><stop offset="0" stop-color="#8b572b"/><stop offset=".32" stop-color="#f8d995"/><stop offset=".65" stop-color="#c18e4e"/><stop offset="1" stop-color="#624220"/></linearGradient>
+  <radialGradient id="srCinemaCupShine"><stop offset="0" stop-color="#ffe2a6" stop-opacity=".58"/><stop offset="1" stop-color="#ffe2a6" stop-opacity="0"/></radialGradient>
+  <filter id="srCinemaCupShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+ </defs>
+ <ellipse cx="120" cy="179" rx="76" ry="10" fill="#f6c77b" opacity=".28" filter="url(#srCinemaCupShadow)"/>
+ <ellipse cx="120" cy="87" rx="88" ry="82" fill="url(#srCinemaCupShine)"/>
+ <!-- Laurel leaves at a modest scale, not a second oversized emblem. -->
+ <g fill="none" stroke="#d7a568" stroke-width="1.9" stroke-linecap="round" opacity=".92">
+  <path d="M59 145C20 126 16 88 43 57"/><path d="M181 145c39-19 43-57 16-88"/>
+ </g>
+ <g fill="#dcab69" opacity=".90">
+  <ellipse cx="47" cy="133" rx="5" ry="12" transform="rotate(-44 47 133)"/><ellipse cx="34" cy="117" rx="4.5" ry="11" transform="rotate(-61 34 117)"/><ellipse cx="29" cy="99" rx="4" ry="10" transform="rotate(-75 29 99)"/><ellipse cx="31" cy="81" rx="4" ry="10" transform="rotate(-102 31 81)"/><ellipse cx="42" cy="64" rx="4" ry="9" transform="rotate(-137 42 64)"/>
+  <ellipse cx="193" cy="133" rx="5" ry="12" transform="rotate(44 193 133)"/><ellipse cx="206" cy="117" rx="4.5" ry="11" transform="rotate(61 206 117)"/><ellipse cx="211" cy="99" rx="4" ry="10" transform="rotate(75 211 99)"/><ellipse cx="209" cy="81" rx="4" ry="10" transform="rotate(102 209 81)"/><ellipse cx="198" cy="64" rx="4" ry="9" transform="rotate(137 198 64)"/>
+ </g>
+ <!-- Trophy handles, cup body, stem, stepped plinth -->
+ <path d="M84 48H66c-10 0-16 6-16 17 0 28 14 43 37 44M156 48h18c10 0 16 6 16 17 0 28-14 43-37 44" fill="none" stroke="url(#srCinemaCupFill)" stroke-width="9" stroke-linecap="round"/>
+ <path d="M79 43h82c-1 48-12 75-41 82-29-7-40-34-41-82z" fill="url(#srCinemaCupFill)" stroke="#ffe0a0" stroke-opacity=".85" stroke-width="1.5"/>
+ <path d="M89 49c2 29 8 51 17 60" fill="none" stroke="#fff4cb" stroke-opacity=".65" stroke-width="5" stroke-linecap="round"/>
+ <path d="M149 49c-2 30-7 45-12 54" fill="none" stroke="#754e25" stroke-opacity=".36" stroke-width="4" stroke-linecap="round"/>
+ <path d="M109 121h22v29h-22z" fill="url(#srCinemaCupBase)"/>
+ <path d="M98 150h44l8 10H90z" fill="url(#srCinemaCupBase)"/><rect x="88" y="160" width="64" height="12" rx="2" fill="url(#srCinemaCupFill)"/><rect x="80" y="171" width="80" height="10" rx="2" fill="url(#srCinemaCupBase)"/>
+ <path d="M85 175h70" stroke="#fff0bf" stroke-opacity=".55" stroke-width="1.8"/>
+ <g fill="#fff0c8"><path d="M165 21l2.8 8.6 8.7 2.5-8.7 2.5-2.8 8.6-2.7-8.6-8.7-2.5 8.7-2.5z"/><circle cx="62" cy="29" r="2.4" opacity=".72"/><circle cx="188" cy="50" r="1.8" opacity=".58"/></g>
+ </svg>`;
+ const pairLeaderboard=`<section class="sr-stage1-leaderboard" id="srStage1Leaderboard" aria-label="Round Robin fixed pair leaderboard">
+ <div class="sr-title-row"><div><div class="sr-eyebrow">03 / ${multiStage?'STAGE 1 · ':''}ROUND ROBIN</div><h2>${multiStage?'Stage 1':'Round Robin'} Leaderboard</h2><p>${individualActive()?"Individual players · Separate division rankings · Wins → DIFF → Points":"Fixed partners · Ranked by Wins → DIFF → Points"}</p></div><span class="sr-count" data-sr-pair-count>${s1.overallRanking.length} ${individualActive()?'PLAYERS':'PAIRS'}</span></div>
+ <div class="sr-pair-board"><div class="sr-pair-tools" role="group" aria-label="Filter Round Robin pair leaderboard"><button type="button" class="sr-pair-filter active" data-sr-pair-filter="all" aria-pressed="true">All</button><button type="button" class="sr-pair-filter" data-sr-pair-filter="A" aria-pressed="false" title="Team A">${esc(club('A'))}</button><button type="button" class="sr-pair-filter" data-sr-pair-filter="B" aria-pressed="false" title="Team B">${esc(club('B'))}</button></div><div class="sr-pair-head"><span>#</span><span>PLAYERS</span><span>W–L–T</span><span>DIFF</span><span>P</span><span>G</span></div>
+ <div class="sr-pair-rows">${(individualActive()&&individualMulti()?E.stage1DivisionStandings(state):[{id:'all',label:individualActive()?'INDIVIDUAL PLAYERS':'FIXED PARTNERS',rows:s1.overallRanking}]).map(div=>`<div class="sr-person-division-heading">${esc(div.label)}</div>${div.rows.map(r=>`<div class="sr-pair-row" data-sr-pair-team="${r.team}"><span class="sr-pair-rank">${String(r.divisionRank??r.rank).padStart(2,'0')}</span><span class="sr-pair-name"><strong>${pair(r.team,r.index)}</strong><small>${esc(club(r.team))}</small></span><span class="sr-pair-stat">${r.w}–${r.l}–${r.d}</span><span class="sr-pair-stat ${r.diff>0?'sr-pair-pos':''}">${r.diff>0?'+':''}${r.diff}</span><span class="sr-pair-stat">${r.p}</span><span class="sr-pair-stat">${r.played}</span></div>`).join('')}`).join('')}</div>
+ <p class="sr-pair-legend">W–L–T: Wins · Losses · Ties <span>·</span> DIFF: Games won − lost <span>·</span> P: Games won <span>·</span> G: Matches played</p></div></section>`;
+ const resultCell=m=>!Number.isInteger(m.scoreA)?'<span class="sr-note">PENDING</span>':m.winner?`<b class="sr-win-label">${esc(club(m.winner))}${m.scoreA===m.scoreB?' · TB':''}</b>`:'<span class="sr-note">Draw</span>';
+ const scoredMatches=(arr,stage)=>arr.map((m,i)=>({...m,__p5Original:i+1})).reverse().map((m,i)=>{
+  const isRound=stage===1;
+  const a=isRound?(individualActive()?esc(matchSideName('A',m)):pair('A',m.a)):(m.playersA||[]).map(fn).join(' / ');
+  const b=isRound?(individualActive()?esc(matchSideName('B',m)):pair('B',m.b)):(m.playersB||[]).map(fn).join(' / ');
+  const court=isRound?`Court ${m.court||'—'}`:`Wave ${m.wave||Math.floor((m.__p5Original-1)/Math.max(1,state.setup.courts))+1} · Court ${m.court||'—'}`;
+  return `<div class="sr-match"><div class="sr-match-number"><b>${isRound?'MATCH':'DUEL'} ${String(m.__p5Original).padStart(2,'0')}</b><small>${court}</small></div><div class="sr-match-teams"><span>${a||'—'}</span><b>${score(m)}</b><span>${b||'—'}</span></div><div class="sr-match-winner">${resultCell(m)}</div></div>`;
+ }).join('');
+ const sections=[
+  {num:1, name:'Round Robin',arr:matches1,format:fmt1,defaultOpen:false},
+  ...(state.stage2?[{num:2,name:'Custom Team Duel',arr:matches2,format:fmt2,defaultOpen:true}]:[]),
+  ...(state.stage3?[{num:3,name:'The Decider',arr:matches3,format:fmt3,defaultOpen:true}]:[])
+ ];
+ const matchSections=sections.slice().reverse().map(s=>`<details class="sr-section sr-match-section" ${s.defaultOpen?'open':''}><summary><span class="sr-section-icon">0${s.num}</span><span class="sr-section-label"><strong>${multiStage?'Stage '+s.num+' · ':''}${s.name}</strong><small>${s.format} · ${s.arr.filter(m=>Number.isInteger(m.scoreA)&&Number.isInteger(m.scoreB)).length} match results</small></span><span class="sr-section-chevron">⌄</span></summary><div class="sr-matches">${scoredMatches(s.arr,s.num)}</div></details>`).join('');
+  const lastStage=state.stage3?3:state.stage2?2:1;
+  const coverStatus=hasChampion?'COMPLETED':'IN PROGRESS';
+  const dayDate=(()=>{const v=state.setup.date,m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||'');if(!m)return niceGameDate(v);const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));return new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}).format(d).replace(/^([^,]+),\s*/,'$1 · ');})();
+  const cover=`<section class="sr-official-cover" aria-label="Official Team Showdown results cover"><div class="sr-cover-inner"><div class="sr-cover-brand">TEAM SHOWDOWN</div><div class="sr-cover-rule" aria-hidden="true"></div><div class="sr-cover-title">OFFICIAL RESULTS</div><div class="sr-cover-session">${esc(state.setup.sessionName||'TEAM SHOWDOWN')}</div><div class="sr-cover-subtitle">${coverStatus}</div><div class="sr-cover-facts">DAY · DATE: ${esc(dayDate)} <span>·</span> ${individualActive()?`${state.setup.pairs*2} individual players`:`${state.setup.pairs*2} fixed pairs`} <span>·</span> ${multiStage?lastStage+' stages':'ROUND ROBIN'}</div><div class="sr-cover-venue">VENUE <span>·</span> PADEL 5IVE, KELAPA GADING</div></div></section>`;
+  return `<div class="sr-root" aria-label="Shared Team Showdown results">
+  ${cover}
+ <section class="sr-hero sr-cinematic ${hasChampion?'sr-has-winner':'sr-awaiting'}" aria-label="${hasChampion?'Congratulations to the championship winner':'Championship result'}">
+  <div class="sr-cinema-arches" aria-hidden="true"></div><div class="sr-cinema-stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  ${hasChampion?`<button type="button" class="sr-cinema-action sr-cinema-replay" data-sr-replay aria-label="Replay champion celebration" title="Replay celebration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.6 6M4 4v7h7"/></svg></button>`:''}
+  <div class="sr-cinema-inner"><div class="sr-cinema-spotlight" aria-hidden="true"></div>
+   <div class="sr-trophy-wrap" aria-hidden="true">${publicTrophySvg}</div>
+   <div class="sr-cinema-congrats">${hasChampion?'CONGRATULATIONS':'THE FINAL VERDICT'}</div>
+   <div class="sr-cinema-divider" aria-hidden="true"></div>
+   <div class="sr-champ-label">${hasChampion?'TEAM SHOWDOWN CHAMPION':'RESULTS IN PROGRESS'}</div>
+   <h1>${hasChampion?champ:'AWAITING FINAL RESULT'}</h1>
+   <div class="sr-cinema-points"><span>CHAMPIONSHIP POINTS</span><strong>${esc(club('A'))} <b>${fmtPts(v.points.A)}</b> <i>—</i> <b>${fmtPts(v.points.B)}</b> ${esc(club('B'))}</strong></div>
+  </div>
+  ${hasChampion?`<button type="button" class="sr-cinema-action sr-cinema-share" data-sr-share aria-label="Share championship results" title="Share results"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5M5 13v7h14v-7"/></svg></button>`:''}
+ </section>
+ <section class="sr-stage-grid" aria-label="Stage results">${stageCards}</section>
+ <section class="sr-content">
+ <div class="sr-title-row sr-matches-heading"><div><div class="sr-eyebrow">02 / MATCH HISTORY</div><h2>Full Match Scores</h2><p>${multiStage?'Latest stage and latest match first':'Latest match first'} · tap to expand or collapse</p></div></div>${matchSections}
+ ${pairLeaderboard}
+ ${personalAnalysis}
+ <div class="sr-public-footer"><span>TEAM SHOWDOWN · RESULTS REPORT</span><span>Read-only tournament record</span></div></section></div>`;
+}
+
+// v0.8.45: public-only celebration replay and native URL sharing.
+document.addEventListener('click',async e=>{
+ const replay=e.target.closest?.('[data-sr-replay]');
+ if(replay&&viewOnly){const hero=replay.closest('.sr-cinematic');if(!hero)return;hero.classList.remove('sr-replaying');void hero.offsetWidth;hero.classList.add('sr-replaying');return;}
+ const share=e.target.closest?.('[data-sr-share]');

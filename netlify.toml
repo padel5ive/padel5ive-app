@@ -49,3 +49,10 @@
   to = "/results/showdown/index.html"
   status = 200
   force = true
+
+# Staging: Individual v0.9.7 native public result links.
+[[redirects]]
+  from = "/i/*"
+  to = "/modes/club-match/index.html"
+  status = 200
+  force = true

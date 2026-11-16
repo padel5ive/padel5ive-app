@@ -1,0 +1,1000 @@
+return edges.filter(e=>e.capacity===0).sort((a,b)=>a.cost-b.cost||a.m.a-b.m.a||a.m.b-b.m.b).map(e=>e.m);
+}
+/* v0.8.6 · Production-directed scheduling hardening.
+   HARD: unique cross-team fixture, never double-book a pair, maximize occupied
+   courts.  SOFT: fair court exposure / recovery and diverse division rotation.
+   A single LOCKED fixture is honored on the next free court when legal.
+   For rare multi-free transitions, maximum occupancy is also checked before
+   accepting a prior lock; a stale lock is withdrawn before reoptimizing.
+   Assigned or completed matches are never reshuffled. */
+function courtPlacement(state,chosen,free,pinnedId=null){
+ if(!chosen.length)return [];
+ const n=state.setup.pairs,courts=state.setup.courts;
+ const histories={A:Array.from({length:n},()=>Array(courts).fill(0)),B:Array.from({length:n},()=>Array(courts).fill(0))};
+ const recent={A:Array(n).fill(null),B:Array(n).fill(null)};
+ const history=matchPool(state).filter(m=>['active','completed'].includes(m.status)&&Number.isInteger(m.court)&&m.court>0)
+   .sort((a,b)=>(a.sequence||0)-(b.sequence||0));
+ for(const m of history){
+  histories.A[m.a][m.court-1]++;histories.B[m.b][m.court-1]++;
+  recent.A[m.a]=m.court;recent.B[m.b]=m.court;
+ }
+ function penalty(m,c){const ix=c-1;
+  // Smaller historical per-pair court counts get preferential placement.
+  // Avoid immediate return to the same court where possible.
+  return histories.A[m.a][ix]*12+histories.B[m.b][ix]*12+
+   (recent.A[m.a]===c?5:0)+(recent.B[m.b]===c?5:0);
+ }
+ const fixed=pinnedId?chosen.find(m=>m.id===pinnedId):null;
+ const used=new Set();let best=null,bestCost=Infinity;
+ const rest=chosen.filter(m=>m!==fixed);
+ const fixedCourt=fixed?free[0]:null;
+ if(fixed)used.add(fixedCourt);
+ function visit(i,placed,cost){
+  if(i===rest.length){if(cost<bestCost){bestCost=cost;best=placed.slice();}return;}
+  const m=rest[i];for(const court of free){if(used.has(court))continue;
+   used.add(court);placed.push({m,court});visit(i+1,placed,cost+penalty(m,court));placed.pop();used.delete(court);
+  }
+ }
+ visit(0,[],fixed?penalty(fixed,fixedCourt):0);
+ return [...(fixed?[{m:fixed,court:fixedCourt}]:[]),...(best||[])];
+}
+function fillAvailableCourts(state){if(individualMode(state))return individualFill(state);
+ if(state.stage!=='stage1'||state.stage1Closed)return [];
+ ensureArrival(state);
+ const active=liveCourts(state),busyA=new Set(active.map(m=>m.a)),busyB=new Set(active.map(m=>m.b));
+ const free=Array.from({length:state.setup.courts},(_,i)=>i+1).filter(c=>!active.some(m=>m.court===c));
+ if(!free.length){updateNextQueue(state);return [];}
+ const locked=lockedNextMatch(state);
+ const optimal=dispatchMatching(state,free.length,busyA,busyB);
+ let chosen=optimal,pinnedId=null;
+ if(locked&&!busyA.has(locked.a)&&!busyB.has(locked.b)){
+  const rest=dispatchMatching(state,free.length-1,new Set([...busyA,locked.a]),new Set([...busyB,locked.b]));
+  if(1+rest.length===optimal.length){chosen=[locked,...rest];pinnedId=locked.id;}
+  else {
+   // With >1 newly freed courts, this old lock now prevents another
+   // legally playable fixture. Clear it before making a new MAXIMAL batch.
+   // This state cannot occur in normal sequential single-score dispatch.
+   state.lockedNextMatchId=null;
+  }
+ }
+ const placed=courtPlacement(state,chosen,free,pinnedId);
+ const assigned=[];
+ for(const {m,court} of placed){
+  m.court=court;m.wave=null;m.status='active';m.sequence=++state.dispatchSequence;
+  assigned.push(m);
+ }
+ if(locked&&assigned.some(m=>m.id===locked.id))state.lockedNextMatchId=null;
+ updateNextQueue(state);
+ return assigned;
+}
+function assignCourtResult(state,matchId,a,b){
+ const m=matchPool(state).find(m=>m.id===matchId);
+ if(!m||m.status!=='active')throw Error('Only a live court match can be completed');
+ const sc=validateScore(state.setup.format,a,b,false);
+ Object.assign(m,{scoreA:sc.a,scoreB:sc.b,winner:sc.winner,status:'completed',completedSequence:++state.dispatchSequence});
+ state.stage3=null;state.finalized=false;
+ const assigned=fillAvailableCourts(state);
+ return {saved:m,assigned};
+}
+function amendCourtResult(state,matchId,a,b){
+ const m=matchPool(state).find(m=>m.id===matchId);
+ if(!m||m.status!=='completed')throw Error('Recorded match not found');
+ const sc=validateScore(state.setup.format,a,b,false);
+ Object.assign(m,{scoreA:sc.a,scoreB:sc.b,winner:sc.winner});
+ state.stage3=null;state.finalized=false;
+ return sc;
+}
+function courtStatus(state){const all=matchPool(state);return {
+ live:liveCourts(state),pending:pendingMatches(state),completed:all.filter(m=>m.status==='completed'),
+ idleCourts:Array.from({length:state.setup.courts},(_,i)=>i+1).filter(c=>!liveCourts(state).some(m=>m.court===c)),
+ total:all.length
+};}
+function isValidLineup(state,club,ids){const all=state.roster[club].flatMap(p=>p.players.map(q=>q.id));return Array.isArray(ids)&&ids.length===2&&ids[0]!==ids[1]&&ids.every(id=>all.includes(id));}
+function setStage1Result(state,matchId,a,b,tieWinner=null){const m=state.schedule.flat().find(m=>m.id===matchId);if(!m)throw Error('Match not found');const sc=validateScore(state.setup.format,a,b,false,tieWinner);const changed=m.scoreA!==sc.a||m.scoreB!==sc.b||m.winner!==sc.winner;Object.assign(m,{scoreA:sc.a,scoreB:sc.b,winner:sc.winner});if(changed){state.stage3=null;state.finalized=false;}return sc;}
+function makeStage2(state,count,format=state.setup.format){if(!stage1Stats(state).complete)throw Error('Finish all Stage 1 matches first');if(!allowedDuels(state.setup.pairs,2).includes(count))throw Error('Stage 2 allows 1–10 duels');if(!formats.includes(format))throw Error('Invalid format');const cap=Math.max(1,Math.min(state.setup.courts,state.setup.pairs));state.stage2={format,matches:Array.from({length:count},(_,i)=>({id:`duel-${i+1}`,court:i%cap+1,wave:Math.floor(i/cap)+1,playersA:['',''],playersB:['',''],scoreA:null,scoreB:null,winner:null}))};state.stage='stage2';state.finalized=false;return state.stage2;}
+// Stage 2 one-appearance policy: ALL duels reserve players, including later waves.
+function stage2AssignedPlayers(state,exceptId=null){
+ const assigned={A:new Map(),B:new Map()};
+ for(const match of state.stage2?.matches||[]){
+  if(match.id===exceptId)continue;
+  const current=state.stage2?.matches.find(m=>m.id===exceptId);if(current&&match.wave!==current.wave)continue;
+  for(const c of ['A','B'])for(const id of match[`players${c}`]||[]){if(id&&!assigned[c].has(id))assigned[c].set(id,match.id);}
+ }
+ return assigned;
+}
+function assertStage2DuelAvailable(state,duelId,idsA,idsB){
+ const used=stage2AssignedPlayers(state,duelId);
+ for(const [c,ids] of [['A',idsA],['B',idsB]])for(const playerId of ids){
+  const duel=used[c].get(playerId);
+  if(duel){
+   const player=state.roster[c].flatMap(p=>p.players).find(p=>p.id===playerId);
+   throw Error(`${player?.name||'Player'} (${state.setup.clubs[c]||`Team ${c}`}) is already assigned to Duel ${duel.split('-').pop()}. Each player can play only once in Stage 2.`);
+  }
+ }
+ return true;
+}
+function stage2DuplicateAssignments(state){
+ const seen={A:new Map(),B:new Map()},conflicts=[];
+ for(const m of state.stage2?.matches||[])for(const c of ['A','B'])for(const id of m[`players${c}`]||[]){
+  if(!id)continue;
+  const key=(m.wave||1)+':'+id;
+  if(seen[c].has(key))conflicts.push({club:c,playerId:id,first:seen[c].get(key),second:m.id});
+  else seen[c].set(key,m.id);
+ }
+ return conflicts;
+}
+function clearDuelLineup(state,id){
+ const m=state.stage2?.matches.find(m=>m.id===id);if(!m)throw Error('Duel not found');
+ Object.assign(m,{playersA:['',''],playersB:['',''],scoreA:null,scoreB:null,winner:null});
+ state.stage3=null;state.finalized=false;return m;
+}
+function setDuelLineup(state,id,idsA,idsB){const m=state.stage2?.matches.find(m=>m.id===id);if(!m)throw Error('Duel not found');if(!isValidLineup(state,'A',idsA)||!isValidLineup(state,'B',idsB))throw Error('Choose two distinct registered players from each team');
+ assertStage2DuelAvailable(state,id,idsA,idsB);
+ const unchanged=idsA.every((id,i)=>m.playersA[i]===id)&&idsB.every((id,i)=>m.playersB[i]===id);
+ if(unchanged)return m;
+ m.playersA=idsA.slice();m.playersB=idsB.slice();m.scoreA=null;m.scoreB=null;m.winner=null;state.stage3=null;state.finalized=false;return m;}
+function setDuelScore(state,id,a,b,tieWinner=null){const m=state.stage2?.matches.find(m=>m.id===id);if(!m)throw Error('Duel not found');if(!isValidLineup(state,'A',m.playersA)||!isValidLineup(state,'B',m.playersB))throw Error('Complete the lineup first');assertStage2DuelAvailable(state,id,m.playersA,m.playersB);const sc=validateScore(state.stage2.format,a,b,true,tieWinner);const changed=m.scoreA!==sc.a||m.scoreB!==sc.b||m.winner!==sc.winner;Object.assign(m,{scoreA:sc.a,scoreB:sc.b,winner:sc.winner});if(changed){state.stage3=null;state.finalized=false;}return sc;}
+function stage3AssignedPlayers(state,exceptId=null){const used={A:new Map(),B:new Map()};for(const m of stage3Matches(state)){
+ if(m.id===exceptId)continue;const current=stage3Match(state,exceptId);if(current&&m.wave!==current.wave)continue;for(const c of ['A','B'])for(const id of m[`players${c}`]||[])if(id&&!used[c].has(id))used[c].set(id,m.id);
+ }return used;}
+function stage3DuplicateAssignments(state){const used={A:new Set(),B:new Set()},collisions=[];for(const m of stage3Matches(state))for(const c of ['A','B'])for(const id of m[`players${c}`]||[]){if(!id)continue;const key=(m.wave||1)+':'+id;if(used[c].has(key))collisions.push({club:c,playerId:id,duel:m.id});else used[c].add(key);}return collisions;}
+function stage3Match(state,id){return stage3Matches(state).find(m=>m.id===id)||null;}
+function startFinal(state,format=state.setup.format,count=1){
+ if(verdict(state).status!=='final-needed'&&verdict(state).status!=='stage1-draw')throw Error('The Decider is available only when the series is tied');
+ if(!formats.includes(format)||!allowedDuels(state.setup.pairs,3).includes(count))throw Error('Choose 1–5 duels and a valid match format');
+ const cap=Math.max(1,Math.min(state.setup.courts,state.setup.pairs));state.stage3={format,matches:Array.from({length:count},(_,i)=>({id:`final-${i+1}`,court:i%cap+1,wave:Math.floor(i/cap)+1,playersA:['',''],playersB:['',''],scoreA:null,scoreB:null,winner:null}))};
+ state.stage='stage3';state.finalized=false;return state.stage3;
+}
+function addFinalTieBreaker(state){
+ const stats=stage3Stats(state),list=stage3Matches(state);
+ if(state.stage!=='stage3'||!stats.complete||stats.winner||list.length>=5)throw Error('Additional tie-breaker is available only after an exact tie in 2 or 4 duels');
+ const next=list.length+1;const existing=state.stage3.matches;
+ existing.push({id:`final-${next}`,court:1,wave:Math.max(...existing.map(m=>m.wave||1))+1,playersA:['',''],playersB:['',''],scoreA:null,scoreB:null,winner:null,tiebreaker:true});
+ state.finalized=false;return existing[existing.length-1];
+}
+function setFinalLineup(state,idsA,idsB,id='final-1'){
+ const m=stage3Match(state,id);if(!m)throw Error('Decider match not found');
+ if(!isValidLineup(state,'A',idsA)||!isValidLineup(state,'B',idsB))throw Error('Select two different registered players from each team');
+ const assigned=stage3AssignedPlayers(state,m.id);
+ for(const c of ['A','B'])for(const pid of (c==='A'?idsA:idsB))if(assigned[c].has(pid))throw Error('A player can take part in only one duel per stage');
+ const changed=idsA.some((v,i)=>v!==m.playersA[i])||idsB.some((v,i)=>v!==m.playersB[i]);
+ if(changed)Object.assign(m,{playersA:idsA.slice(),playersB:idsB.slice(),scoreA:null,scoreB:null,winner:null});return m;
+}
+function clearFinalLineup(state,id){const m=stage3Match(state,id);if(!m)throw Error('Decider match not found');Object.assign(m,{playersA:['',''],playersB:['',''],scoreA:null,scoreB:null,winner:null});state.finalized=false;return m;}
+function setFinalScore(state,a,b,tieWinner=null,id='final-1'){
+ const m=stage3Match(state,id);if(!m||!isValidLineup(state,'A',m.playersA)||!isValidLineup(state,'B',m.playersB))throw Error('Complete decider lineup first');
+ const assigned=stage3AssignedPlayers(state,m.id);for(const c of ['A','B'])for(const pid of m[`players${c}`])if(assigned[c].has(pid))throw Error('A player can take part in only one duel per stage');
+ const sc=validateScore(state.stage3.format,a,b,true,tieWinner);Object.assign(m,{scoreA:sc.a,scoreB:sc.b,winner:sc.winner});return sc;
+}
+function migrateLegacySchedule(state){
+ // v0.9.7 accepts saved v0.9.5/0.9.6 sessions without discarding scores,
+ // live fixture assignments, player names, or pending partner combinations.
+ // Legacy hard wave barriers and 5-court opening-only mode migrate to
+ // universal continuous dispatch, with no forced new tournament.
+ if(individualMode(state)&&state.stage!=='setup'&&state?.setup){
+  state.setup.schedulingStrategy='universal-continuous';
+  state.balancedWaveFallback=false;
+ }
+ if(!Array.isArray(state.schedule)||!state.schedule.length||!state.schedule.flat().some(m=>!m.status))return state;
+ const matches=state.schedule.flat();let seq=0;
+ for(const m of matches){
+   if(m.status)continue;
+   const recorded=m.scoreA!==null&&m.scoreB!==null;
+   m.status=recorded?'completed':'pending';
+   if(recorded){m.sequence=++seq;m.completedSequence=seq;}else {m.court=null;m.sequence=null;m.completedSequence=null;}
+   m.wave=null;
+ }
+ state.schedule=[matches];state.dispatchSequence=seq;state.activeWave=0;
+ if(state.stage==='stage1')fillAvailableCourts(state);
+ return state;
+}
+function validateSavedState(s){if(individualMode(s))return individualSavedState(s);
+ if(!s||s.version!==1||typeof s.stage!=='string'||!['setup','stage1','stage2choice','stage2','stage3choice','stage3','finished'].includes(s.stage))return false;
+ const t=s.setup;if(!t||!t.clubs||typeof t.clubs.A!=='string'||typeof t.clubs.B!=='string'||typeof t.date!=='string'||!(checkSetup(t.pairs,t.courts,t.format)||(s.stage==='setup'&&t.format===''&&Number.isInteger(t.pairs)&&t.pairs>=1&&t.pairs<=MAX_PAIRS&&Number.isInteger(t.courts)&&t.courts>=1&&t.courts<=MAX_COURTS&&Array.isArray(s.schedule)&&s.schedule.length===0)))return false;
+ if(t.teamColors!==undefined&&(!t.teamColors||!['A','B'].every(c=>typeof t.teamColors[c]==='string'&&/^#[0-9a-fA-F]{6}$/.test(t.teamColors[c]))))return false;
+ if(s.drawSeed!==undefined&&(!Number.isInteger(s.drawSeed)||s.drawSeed<1||s.drawSeed>0x3fffffff))return false;
+ if(t.competitionFormat==='multi'){const keys=['men','women','mixed'],ready=keys.every(k=>t.divisionCounts?.[k]!==null&&t.divisionCounts?.[k]!==undefined&&Number.isInteger(Number(t.divisionCounts[k]))&&Number(t.divisionCounts[k])>=0&&Number(t.divisionCounts[k])<=10);if(!ready&&s.stage!=='setup')return false;if(ready&&keys.reduce((n,k)=>n+Number(t.divisionCounts[k]),0)!==t.pairs)return false;}
+  if(!s.roster||!['A','B'].every(c=>Array.isArray(s.roster[c])&&s.roster[c].length===t.pairs&&s.roster[c].every(p=>Array.isArray(p.players)&&p.players.length===2&&p.players.every(x=>typeof x.id==='string'&&typeof x.name==='string'))))return false;
+ if(s.sitOut!==undefined&&(!s.sitOut||!['A','B'].every(c=>Array.isArray(s.sitOut[c])&&s.sitOut[c].length===t.pairs&&s.sitOut[c].every(x=>typeof x==='boolean'))))return false;
+ if(!Array.isArray(s.schedule)||s.schedule.length>t.pairs*t.pairs)return false;
+ if(!Number.isInteger(s.activeWave)||s.activeWave<0||s.activeWave>Math.max(0,s.schedule.length-1))return false;
+ const used=new Set(),onCourtA=new Set(),onCourtB=new Set(),courts=new Set();let count=0;
+ for(const wave of s.schedule){if(!Array.isArray(wave))return false;for(const m of wave){
+   if(!m||!Number.isInteger(m.a)||!Number.isInteger(m.b)||m.a<0||m.b<0||m.a>=t.pairs||m.b>=t.pairs)return false;
+   const key=`${m.a}:${m.b}`;if(used.has(key))return false;used.add(key);count++;
+   if(m.status){
+     if(!['pending','active','completed'].includes(m.status))return false;
+     if(m.status==='active'){
+       if(!Number.isInteger(m.court)||m.court<1||m.court>t.courts||courts.has(m.court)||onCourtA.has(m.a)||onCourtB.has(m.b))return false;
+       courts.add(m.court);onCourtA.add(m.a);onCourtB.add(m.b);
+     }
+     if(m.status==='pending'&&(m.scoreA!==null||m.scoreB!==null))return false;
+     if(m.status==='completed'&&(m.scoreA===null||m.scoreB===null))return false;
+   }else if(!Number.isInteger(m.court)||m.court<1||m.court>t.courts)return false;
+   if(m.scoreA!==null||m.scoreB!==null){try{const v=validateScore(t.format,m.scoreA,m.scoreB);if(m.winner!==v.winner)return false;}catch(e){return false;}}
+ }}
+ const expected=t.competitionFormat==='multi'?['men','women','mixed'].reduce((sum,key)=>sum+(Number(t.divisionCounts?.[key])||0)**2,0):t.pairs*t.pairs;
+ if(s.schedule.length>0&&count!==expected)return false;
+ if(s.stage!=='setup'&&count!==expected)return false;
+ if(s.stage2!==null){if(!s.stage2||!formats.includes(s.stage2.format)||!Array.isArray(s.stage2.matches)||!allowedDuels(t.pairs,2).includes(s.stage2.matches.length))return false;}
+ if(s.stage3!==null&&(!s.stage3||!formats.includes(s.stage3.format)||!allowedDuels(t.pairs,3).includes(stage3Matches(s).length)))return false;
+ // v0.8.34 QA hardening: a restored backup must never bypass the scoring rules.
+ // A saved lineup may be unfinished; saved RESULTS must always be legal and consistent.
+ const checkRestoredDuels=(list,format)=>{
+  for(const m of list){
+   if(!m||typeof m.id!=='string'||!Array.isArray(m.playersA)||!Array.isArray(m.playersB)||m.playersA.length!==2||m.playersB.length!==2)return false;
+   for(const c of ['A','B']){
+    const ids=m[`players${c}`];
+    const known=new Set(s.roster[c].flatMap(pair=>pair.players.map(player=>player.id)));
+    if(ids.some(pid=>typeof pid!=='string'||(pid&&!known.has(pid))))return false;
+    if(ids[0]&&ids[0]===ids[1])return false;
+   }
+   const absent=m.scoreA===null&&m.scoreB===null;
+   if(absent){if(m.winner!==null)return false;continue;}
+   if(m.scoreA===null||m.scoreB===null||m.playersA.some(pid=>!pid)||m.playersB.some(pid=>!pid))return false;
+   try{const legal=validateScore(format,m.scoreA,m.scoreB,true,m.winner);if(legal.winner!==m.winner)return false;}catch(e){return false;}
+  }
+  return true;
+ };
+ if(s.stage2&&!checkRestoredDuels(s.stage2.matches,s.stage2.format))return false;
+ if(s.stage3&&!checkRestoredDuels(stage3Matches(s),s.stage3.format))return false;
+ return true;
+}
+/* PADEL 5IVE TEAM SHOWDOWN v0.9.3 — Progressive checkpoints and Smart Fair Finish, fairness-safe Individual Americano engine + constrained court rescue.
+   Hard: all same-team partnerships exactly once, every opposing duo exactly once,
+   no same player simultaneously on multiple courts, no Men's/Women's crossing.
+   Soft: prefix fairness when Stage 1 stops early, opponent encounter equity,
+   recovery between matches and active court utilization. */
+function individualMode(s){return s?.setup?.competitionFormat==='individual';}
+function individualSegments(s){
+ const d=s.setup.individualDivision==='multi',c=s.setup.individualCounts||{};
+ if(!d)return [{id:'single',label:'OPEN · INDIVIDUAL',start:0,count:Number(c.single)||0}];
+ return [{id:'men',label:"MEN'S · INDIVIDUAL",start:0,count:Number(c.men)||0},
+ {id:'women',label:"WOMEN'S · INDIVIDUAL",start:Number(c.men)||0,count:Number(c.women)||0}].filter(x=>x.count>0);
+}
+function individualPlayersPerTeam(s){return individualSegments(s).reduce((sum,x)=>sum+x.count,0);}
+function individualTotalMatches(s){return individualSegments(s).reduce((sum,x)=>sum+x.count*(x.count-1)/2,0);}
+function individualIsValidSetup(s){const c=s.setup.individualCounts||{};
+ if(s.setup.individualDivision==='multi')return ['men','women'].every(k=>Number.isInteger(c[k])&&c[k]>=4&&c[k]<=20);
+ return Number.isInteger(c.single)&&c.single>=4&&c.single<=20;
+}
+function individualRandom(seed){let x=(seed|0)||123456789;return function(){x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};}
+function individualShuffle(list,rnd){for(let i=list.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list;}
+function individualRoundRobin(n,rnd){const N=n+(n%2),dummy=n,ring=individualShuffle(Array.from({length:n},(_,i)=>i),rnd);if(n%2)ring.push(dummy);const out=[];
+ for(let r=0;r<N-1;r++){
+  let pairs=[];for(let k=0;k<N/2;k++){const x=ring[k],y=ring[N-1-k];if(x!==dummy&&y!==dummy)pairs.push([Math.min(x,y),Math.max(x,y)]);}
+  individualShuffle(pairs,rnd);out.push(pairs);
+  ring.splice(1,0,ring.pop());
+ }
+ return out;
+}
+// Minimum-cost perfect one-to-one pairing between partner duos of opposing teams.
+function individualAssignOpponents(aPairs,bPairs,encounters,rnd){
+ const size=aPairs.length,dp=new Float64Array(1<<size).fill(Infinity),prev=new Int16Array(1<<size).fill(-1),prior=new Int32Array(1<<size).fill(-1),pop=new Uint8Array(1<<size);
+ for(let mask=1;mask<(1<<size);mask++)pop[mask]=pop[mask>>1]+(mask&1);
+ dp[0]=0;
+ for(let mask=0;mask<(1<<size)-1;mask++){
+  if(!Number.isFinite(dp[mask]))continue;const row=pop[mask],[a1,a2]=aPairs[row];
+  for(let j=0;j<size;j++)if(!(mask&(1<<j))){const [b1,b2]=bPairs[j],next=mask|(1<<j);
+   let cost=0;for(const a of [a1,a2])for(const b of [b1,b2]){const old=encounters[a][b];cost+=old*old*3+old*35;}
+   cost+=rnd()*.1;
+   if(dp[mask]+cost<dp[next]){dp[next]=dp[mask]+cost;prev[next]=j;prior[next]=mask;}
+  }
+ }
+ const matched=Array(size).fill(null);let mask=(1<<size)-1;
+ for(let i=size-1;i>=0;i--){const j=prev[mask];if(j<0)throw Error('Individual opponent assignment failed');matched[i]=bPairs[j];mask=prior[mask];}
+ for(let i=0;i<size;i++)for(const a of aPairs[i])for(const b of matched[i])encounters[a][b]++;
+ return matched;
+}
+function individualBalanceOpponents(fixtures, rnd) {
+ const n=1+Math.max(...fixtures.map(m=>Math.max(m.a,m.a2,m.b,m.b2)))-Math.min(...fixtures.map(m=>Math.min(m.a,m.a2,m.b,m.b2)));
+ const offset=Math.min(...fixtures.map(m=>Math.min(m.a,m.a2)));
+ const encounter=Array.from({length:n},()=>new Uint8Array(n));
+ function pairs(m){return [m.a-offset,m.a2-offset];}
+ for(const m of fixtures)for(const a of pairs(m))for(const b of [m.b-offset,m.b2-offset])encounter[a][b]++;
+ const penalty=v=>v===0?14:v===1?0:v===2?0:v===3?90:v===4?450:450+(v-4)*600;
+ let score=0;for(const r of encounter)for(const v of r)score+=penalty(v);
+ let best=score;
+ const tries=Math.max(5000,fixtures.length*1300);
+ for(let step=0;step<tries;step++){
+  const i=Math.floor(rnd()*fixtures.length),j=Math.floor(rnd()*fixtures.length);if(i===j)continue;
+  const x=fixtures[i],y=fixtures[j];
+  const same= x.b===y.b&&x.b2===y.b2; if(same)continue;
+  const diff=new Map();
+  const bump=(a,b,delta)=>{const k=(a-offset)*n+b-offset;diff.set(k,(diff.get(k)||0)+delta);};
+  for(const a of [x.a,x.a2]){for(const b of [x.b,x.b2])bump(a,b,-1);for(const b of [y.b,y.b2])bump(a,b,1);}
+  for(const a of [y.a,y.a2]){for(const b of [y.b,y.b2])bump(a,b,-1);for(const b of [x.b,x.b2])bump(a,b,1);}
+  let delta=0;
+  for(const [k,v] of diff)if(v){const a=Math.floor(k/n),b=k%n,old=encounter[a][b];delta+=penalty(old+v)-penalty(old);}
+  const temperature=step<tries*.2?16:step<tries*.5?6:step<tries*.85?2:0;
+  if(delta<=0||(temperature>0&&rnd()<Math.exp(-delta/temperature))){
+   for(const [k,v] of diff)if(v)encounter[Math.floor(k/n)][k%n]+=v;
+   [x.b,y.b]=[y.b,x.b];[x.b2,y.b2]=[y.b2,x.b2];score+=delta;
+  }
+ }
+ return {score,best};
+}
+
+// Optimization keeps every precomputed round a disjoint one-factor on BOTH teams.
+// Allowed moves: (1) swap B partner duos within one round; or (2) swap an
+// entire B round matching with another round. Neither move can duplicate a
+// teammate combination or create a player conflict within its planned round.
+function individualBalanceOpponentsRoundSafe(fixtures, rnd) {
+ const offset=Math.min(...fixtures.map(m=>Math.min(m.a,m.a2)));
+ const n=1+Math.max(...fixtures.map(m=>Math.max(m.a,m.a2,m.b,m.b2)))-offset;
+ const encounter=Array.from({length:n},()=>new Uint8Array(n));
+ const byRound=new Map();for(const m of fixtures){const list=byRound.get(m.plannedRound)||[];list.push(m);byRound.set(m.plannedRound,list);
+  for(const a of [m.a,m.a2])for(const b of [m.b,m.b2])encounter[a-offset][b-offset]++;
+ }
+ const groups=[...byRound.values()];
+ const penalty=v=>v===0?14:v===1?0:v===2?0:v===3?90:v===4?450:450+(v-4)*600;
+ const size=fixtures.length,tries=Math.max(4000,size*1000);
+ for(let step=0;step<tries;step++){
+  const whole=step%17===0&&groups.length>1;
+  let x=[],y=[];
+  if(whole){const g=groups[Math.floor(rnd()*groups.length)];let h=groups[Math.floor(rnd()*groups.length)];if(g===h)continue;x=g;y=h;}
+  else {const g=groups[Math.floor(rnd()*groups.length)];if(g.length<2)continue;
+   const i=Math.floor(rnd()*g.length),j=Math.floor(rnd()*g.length);if(i===j)continue;x=[g[i]];y=[g[j]];}
+  if(x.length!==y.length)continue;
+  const diffs=new Map();
+  const bump=(a,b,v)=>{const key=(a-offset)*n+(b-offset);diffs.set(key,(diffs.get(key)||0)+v);};
+  for(let i=0;i<x.length;i++){
+   const a=x[i],b=y[i];
+   for(const p of [a.a,a.a2]){for(const q of [a.b,a.b2])bump(p,q,-1);for(const q of [b.b,b.b2])bump(p,q,1);}
+   for(const p of [b.a,b.a2]){for(const q of [b.b,b.b2])bump(p,q,-1);for(const q of [a.b,a.b2])bump(p,q,1);}
+  }
+  let delta=0;for(const [key,v] of diffs)if(v){const row=Math.floor(key/n),col=key%n,old=encounter[row][col];delta+=penalty(old+v)-penalty(old);}
+  const temperature=step<tries*.2?20:step<tries*.5?7:step<tries*.85?3:0;
+  if(delta<=0||(temperature>0&&rnd()<Math.exp(-delta/temperature))){
+   for(const [key,v] of diffs)if(v)encounter[Math.floor(key/n)][key%n]+=v;
+   for(let i=0;i<x.length;i++){[x[i].b,y[i].b]=[y[i].b,x[i].b];[x[i].b2,y[i].b2]=[y[i].b2,x[i].b2];}
+  }
+ }
+}
+
+function individualBuildDivision(n,start,division,rnd){
+ const ar=individualRoundRobin(n,rnd),br=individualRoundRobin(n,rnd);
+ // Each pair of teammates on either side appears once. Shuffling the
+ // opponent rounds and matching their pairs controls cross-team encounters.
+ individualShuffle(br,rnd);
+ const encounters=Array.from({length:n},()=>Array(n).fill(0)),fixtures=[];
+ for(let r=0;r<ar.length;r++){
+  const A=ar[r],B=individualAssignOpponents(A,br[r],encounters,rnd);
+  for(let i=0;i<A.length;i++){
+   const [x,y]=A[i],[u,v]=B[i];
+   fixtures.push({id:`ia-${division}-${start+x}-${start+y}`,
+    a:start+x,a2:start+y,b:start+u,b2:start+v,division,
+    court:null,wave:null,plannedRound:r+1,status:'pending',sequence:null,completedSequence:null,
+    scoreA:null,scoreB:null,winner:null});
+  }
+ }
+ individualBalanceOpponentsRoundSafe(fixtures,rnd);
+ return fixtures;
+}
+function individualCreateMatches(s){
+ s.equalization=null;
+ const {courts,format}=s.setup;
+ if(!individualIsValidSetup(s)||!Number.isInteger(courts)||courts<1||courts>5||!formats.includes(format))throw Error('Individual Americano requires 4–20 players per team per selected division and 1–5 courts');
+ if(!s.setup.clubs.A?.trim()||!s.setup.clubs.B?.trim())throw Error('Enter both team names');
+ const n=individualPlayersPerTeam(s);
+ if(['A','B'].some(c=>s.roster[c].length!==n))throw Error('Registration count does not match the selected divisions');
+ for(const c of ['A','B']){
+  const seen=new Set();for(const p of s.roster[c]){
+   if(!Array.isArray(p.players)||p.players.length!==1||!p.players[0].name?.trim())throw Error('Complete every individual player name');
+   const key=p.players[0].name.trim().toLocaleLowerCase();if(seen.has(key))throw Error('Duplicate player in '+c+': '+p.players[0].name);
+   seen.add(key);
+  }
+ }
+ s.drawSeed=(Math.floor(Math.random()*0x3fffffff)+1);
+ const rnd=individualRandom(s.drawSeed);
+ const fixtures=individualSegments(s).flatMap(d=>individualBuildDivision(d.count,d.start,d.id,rnd));
+ s.schedule=[individualShuffle(fixtures,rnd)];
+ s.activeWave=0;s.dispatchSequence=0;s.nextMatchQueue=[];s.lockedNextMatchId=null;
+ // A 10-vs-10 division fits exactly five courts, so use strict alternate
+ // 5-match waves. Other sizes preserve the audited continuous scheduler.
+ s.setup.schedulingStrategy='universal-continuous';
+ s.balancedWaveFallback=false;s.stage='stage1';s.stage1Closed=false;s.stage2=null;s.stage3=null;s.finalized=false;
+ s.arrival={A:Array(n).fill(true),B:Array(n).fill(true)};
+ s.sitOut={A:Array(n).fill(false),B:Array(n).fill(false)};s.openingShuffle=0;
+ individualFill(s);return s;
+}
+function individualPlayersOf(m,c){return c==='A'?[m.a,m.a2]:[m.b,m.b2];}
+function individualEligible(s,m){const arrival=ensureArrival(s),out=ensureSitOut(s);
+ return ['A','B'].every(c=>individualPlayersOf(m,c).every(i=>arrival[c][i]!==false&&out[c][i]!==true));
+}
+function individualBusy(s){const busy={A:new Set(),B:new Set()};for(const m of liveCourts(s))for(const c of ['A','B'])for(const i of individualPlayersOf(m,c))busy[c].add(i);return busy;}
+function individualDisjoint(m,busy){return ['A','B'].every(c=>individualPlayersOf(m,c).every(i=>!busy[c].has(i)));}
+function individualCounts(s){const n=s.setup.pairs,counts={A:Array(n).fill(0),B:Array(n).fill(0)},last={A:Array(n).fill(-10000),B:Array(n).fill(-10000)};
+ for(const m of matchPool(s))if(m.status==='completed'||m.status==='active')for(const c of ['A','B'])for(const i of individualPlayersOf(m,c)){
+  counts[c][i]++;last[c][i]=Math.max(last[c][i],m.sequence||0);
+ }
+ return {counts,last};
+}
+/* v0.9.3 Progressive Fairness Checkpoints — SOFT goals, never a gate.
+   For n players / team each match gives two appearances per team.
+   Exact gap-zero checkpoints can occur every n/2 matches (even n),
+   or every n matches (odd n). Live bookings are counted separately. */
+function individualCheckpointSnapshot(s){
+ const ledger=individualCounts(s).counts,all=matchPool(s);
+ return individualSegments(s).map(seg=>{
+  const block=seg.count%2?seg.count:seg.count/2;
+  const completed=all.filter(m=>m.division===seg.id&&m.status==='completed').length;
+  const booked=all.filter(m=>m.division===seg.id&&(m.status==='completed'||m.status==='active')).length;
+  const total=seg.count*(seg.count-1)/2;
+  const counts={};for(const c of ['A','B']){
+   const arr=ledger[c].slice(seg.start,seg.start+seg.count);
+   counts[c]={min:Math.min(...arr),max:Math.max(...arr),gap:Math.max(...arr)-Math.min(...arr)};
+  }
+  return {division:seg.id,label:seg.label,playersPerTeam:seg.count,block,total,
+   completed,booked,nextCompleted:Math.min(total,(Math.floor(completed/block)+1)*block),
+   nextBooked:Math.min(total,(Math.floor(booked/block)+1)*block),
+   targetGamesAtNextBooked:Math.min(seg.count-1,Math.floor(booked/block)+1),A:counts.A,B:counts.B,
+   bookedGap:Math.max(counts.A.gap,counts.B.gap)};
+ });
+}
+/* v0.9.7 — participation equity. These are per-player appearances, not
+   raw men's/women's match counts. Total Team A/B booked appearances are
+   necessarily equal for each real match, but individual distribution need not be. */
+function individualParticipationMetrics(s,counts){
+ const segments=individualSegments(s),groups=[];
+ let worst=0,spread=0,variance=0;
+ const mean=[];
+ for(const d of segments){
+  let sideMean=0;
+  for(const c of ['A','B']){
+   const arr=counts[c].slice(d.start,d.start+d.count),mn=Math.min(...arr),mx=Math.max(...arr);
+   const avg=arr.reduce((a,b)=>a+b,0)/d.count;
+   const v=arr.reduce((a,b)=>a+(b-avg)*(b-avg),0)/d.count;
+   const gap=mx-mn;
+   worst=Math.max(worst,gap);spread+=gap*gap;variance+=v;
+   groups.push({division:d.id,side:c,gap,min:mn,max:mx,mean:avg,variance:v});sideMean+=avg;
+  }
+  mean.push({division:d.id,players:d.count,perPlayer:sideMean/2});
+ }
+ const crossMeanDelta=mean.length>1?Math.max(...mean.map(x=>x.perPlayer))-Math.min(...mean.map(x=>x.perPlayer)):0;
+ return {worst,spread,variance,crossMeanDelta,groups,divisionMeans:mean};
+}
+function individualProjectedQuality(s,base,edges){
+ const counts={A:base.A.slice(),B:base.B.slice()};
+ for(const m of edges)for(const c of ['A','B'])for(const i of individualPlayersOf(m,c))counts[c][i]++;
+ return individualParticipationMetrics(s,counts);
+}
+function individualCardinality(s,freeCount,blocked,exclude){
+ const n=s.setup.pairs,ledger=individualCounts(s),segments=individualSegments(s);
+ const segmentOf=Array(n);for(const seg of segments)for(let i=seg.start;i<seg.start+seg.count;i++)segmentOf[i]=seg;
+ const minima={A:new Map(),B:new Map()},eligibleCount=new Map();
+ for(const seg of segments){
+  for(const c of ['A','B']){const viable=Array.from({length:seg.count},(_,i)=>i+seg.start).filter(i=>ensureArrival(s)[c][i]!==false&&!pairIsSitOut(s,c,i));
+   minima[c].set(seg.id,viable.length?Math.min(...viable.map(i=>ledger.counts[c][i])):0);
+  }
+  eligibleCount.set(seg.id,seg.count);
+ }
+ // Completed+LIVE fixtures belong to the fairness ledger; unfinished scheduled
+ // rounds are SOFT checkpoints, not dependencies or hard dispatch barriers.
+ const firstPendingRound=new Map();
+ for(const m of pendingMatches(s)){
+  const old=firstPendingRound.get(m.division);
+  if(old===undefined||m.plannedRound<old)firstPendingRound.set(m.division,m.plannedRound);
+ }
+ const dispatchNumber=(s.dispatchSequence||0)+1;
+ const fresh=pendingMatches(s).filter(m=>individualEligible(s,m)&&individualDisjoint(m,blocked)&&m.id!==exclude);
+ const cap=(m)=>['A','B'].every(c=>individualPlayersOf(m,c).every(i=>ledger.counts[c][i]===minima[c].get(segmentOf[m.a].id)));
+ const bounded=fresh.filter(cap);
+ // Fairness guard: do not send someone to their third booked match while
+ // another available player still has one; wait for active courts if needed.
+ const pool=fresh; // Never block every legal fixture solely because some players are ahead in booked matches.
+ // Previously met individual opponents matter when Stage 1 ends early.
+ // This is SOFT scoring: never discard a valid fixture just to improve diversity.
+ const encounterHistory=Array.from({length:n},()=>new Uint8Array(n));
+ for(const old of matchPool(s))if(old.status==='active'||old.status==='completed'){
+  for(const a of [old.a,old.a2])for(const b of [old.b,old.b2])encounterHistory[a][b]++;
+ }
+ const candidates=pool.map(m=>{
+  const seg=segmentOf[m.a],bias=0;
+  let cost=bias;
+  // Reward completion of earlier planned partner-rotation blocks. This
+  // influences match order only; it never removes a legal fixture.
+  const roundDelay=Math.max(0,(m.plannedRound||1)-(firstPendingRound.get(m.division)||1));
+  cost+=Math.min(7,roundDelay)*65;
+  // Evaluate prospective booked gaps on BOTH teams in this division.
+  // Unlike a hard gap guard, this remains a soft cost if no better
+  // combination is legal, so courts cannot deadlock for fairness alone.
+  for(const c of ['A','B']){
+   const arr=ledger.counts[c].slice(seg.start,seg.start+seg.count);
+   const oldGap=Math.max(...arr)-Math.min(...arr);
+   for(const i of individualPlayersOf(m,c))arr[i-seg.start]++;
+   const newGap=Math.max(...arr)-Math.min(...arr);
+   cost+=250*(newGap*newGap-oldGap*oldGap);
+  }
+  for(const a of [m.a,m.a2])for(const b of [m.b,m.b2]){
+   const met=encounterHistory[a][b];
+   cost+=met===0?-42:met===1?85:met===2?350:1250+(met-3)*850;
+  }
+  for(const c of ['A','B'])for(const i of individualPlayersOf(m,c)){
+   const q=ledger.counts[c][i]-minima[c].get(seg.id),gap=dispatchNumber-ledger.last[c][i];
+   cost+=q*750+q*q*525+q*q*q*425;
+   if(gap<=s.setup.courts)cost+=180;
+   if(gap<=s.setup.courts*2)cost+=65;
+   cost-=Math.min(90,Math.max(0,gap-s.setup.courts)*7);
+  }
+  cost+=(seededDrawRank(m.a*37+m.a2,m.b*37+m.b2,(s.drawSeed||1)+(s.openingShuffle||0))*1e-9)*10;
+  return {m,cost};
+ }).sort((a,b)=>a.cost-b.cost||a.m.id.localeCompare(b.m.id));
+ if(freeCount<=0||!candidates.length)return [];
+ // Bounded beam search: chooses maximum disjoint candidate count first, then
+ // lowest fairness + recovery burden. Four players are reserved per fixture.
+ const width=28,branch=18;
+ let beam=[{edges:[],busy:{A:new Set(blocked.A),B:new Set(blocked.B)},cost:0}];
+ let best=beam[0];
+ for(let depth=0;depth<freeCount;depth++){
+  const next=[];
+  for(const node of beam){
+   let taken=0;
+   for(const e of candidates){
+    if(node.edges.some(x=>x.id===e.m.id)||!individualDisjoint(e.m,node.busy))continue;
+    const newBusy={A:new Set(node.busy.A),B:new Set(node.busy.B)};
+    for(const c of ['A','B'])for(const i of individualPlayersOf(e.m,c))newBusy[c].add(i);
+    next.push({edges:[...node.edges,e.m],busy:newBusy,cost:node.cost+e.cost});
+    if(++taken>=branch)break;
+   }
+  }
+  if(!next.length)break;
+  // Preserve diversity of first choices so scarce late fixtures do not starve.
+  // v0.9.4: rank equal-size candidate SETS by both teams' projected
+  // participation spread, not only the sum of each fixture's local cost.
+  // Soft objective only: cardinality still grows first; never block courts.
+  const fairnessOf=edges=>{
+   if(!edges.length)return 0;
+   const counts={A:ledger.counts.A.slice(),B:ledger.counts.B.slice()};
+   for(const m of edges)for(const c of ['A','B'])for(const i of individualPlayersOf(m,c))counts[c][i]++;
+   let worst=0,combined=0,vari=0;
+   for(const seg of segments)for(const c of ['A','B']){
+    const arr=counts[c].slice(seg.start,seg.start+seg.count),mn=Math.min(...arr),mx=Math.max(...arr),avg=arr.reduce((x,y)=>x+y,0)/arr.length;
+    worst=Math.max(worst,mx-mn);combined+=(mx-mn)**2;
+    for(const x of arr)vari+=(x-avg)**2;
+   }
+   // Normalize division balance by player count; comparing raw completed
+   // match totals is invalid when Men's / Women's rosters differ.
+   const byDiv=segments.map(d=>{
+    let a=0;for(let i=d.start;i<d.start+d.count;i++)a+=counts.A[i];
+    return a/d.count;
+   });
+   const cross=byDiv.length>1?Math.max(...byDiv)-Math.min(...byDiv):0;
+   return worst*worst*950+combined*290+vari*140+cross*cross*2300;
+  };
+  for(const x of next)x.rank=x.cost+fairnessOf(x.edges);
+  next.sort((a,b)=>a.rank-b.rank);
+  const seen=new Set();beam=[];
+  for(const x of next){const k=x.edges.map(m=>m.id).sort().join('|');if(seen.has(k))continue;seen.add(k);beam.push(x);if(beam.length>=width)break;}
+  best=beam[0];
+ }
+ // Independent multi-start greedy cross-check when the bounded beam is short.
+ // It samples different starts rather than trusting one frontier ordering.
+ if(best.edges.length<freeCount){
+  let winner=best.edges;
+  const maxPool=Math.min(450,candidates.length);
+  for(let pass=0;pass<32&&winner.length<freeCount;pass++){
+   const taken={A:new Set(blocked.A),B:new Set(blocked.B)},chosen=[];
+   const ordered=candidates.slice(0,maxPool);
+   const offset=(pass*53+(s.drawSeed||1))%Math.max(1,ordered.length);
+   if(pass%3!==0){
+    // Spread alternatives through the candidate list, not just the cheapest 18.
+    ordered.sort((a,b)=>{
+     const ka=(a.cost*0.78)+((seededDrawRank(a.m.a+a.m.a2*31,a.m.b+a.m.b2*23,pass*997+(s.drawSeed||1)))*2200);
+     const kb=(b.cost*0.78)+((seededDrawRank(b.m.a+b.m.a2*31,b.m.b+b.m.b2*23,pass*997+(s.drawSeed||1)))*2200);
+     return ka-kb;
+    });
+   }else if(ordered.length)ordered.push(...ordered.splice(0,offset));
+   for(const entry of ordered){
+    const m=entry.m;if(!individualDisjoint(m,taken))continue;
+    chosen.push(m);for(const c of ['A','B'])for(const i of individualPlayersOf(m,c))taken[c].add(i);
+    if(chosen.length>=freeCount)break;
+   }
+   if(chosen.length>winner.length)winner=chosen;
+  }
+  return winner;
+ }
+ return best.edges;
+}
+function individualLocked(s){
+ if(s.stage!=='stage1'||s.stage1Closed)return null;
+ const m=pendingMatches(s).find(m=>m.id===s.lockedNextMatchId);
+ if(!m||!individualEligible(s,m)||!individualDisjoint(m,individualBusy(s))){s.lockedNextMatchId=null;return null;}
+ return m;
+}
+function individualEnsureLock(s){
+ // Continuous Balanced uses the same tested locked next-match behavior.
+ if(s.equalization?.status==='running')return null;
+ const current=individualLocked(s);if(current)return current;
+ if(s.stage!=='stage1'||s.stage1Closed||liveCourts(s).length!==s.setup.courts)return null;
+ const m=individualCardinality(s,1,individualBusy(s),null)[0]||null;
+ s.lockedNextMatchId=m?.id||null;return m;
+}
+function individualPreview(s,limit=5){
+ if(s.stage!=='stage1'||s.stage1Closed)return [];
+ // Court-by-court continuous preview; no round/wave barrier.
+ if(s.equalization?.status==='running'){
+  const busy=individualBusy(s),planned=s.equalization.ids.map(id=>pendingMatches(s).find(m=>m.id===id)).filter(Boolean).slice(0,limit);
+  return planned.map(m=>({id:m.id,a:m.a,a2:m.a2,b:m.b,b2:m.b2,division:m.division,locked:false,ready:individualEligible(s,m)&&individualDisjoint(m,busy)}));
+ }
+ const locked=individualEnsureLock(s),busy=individualBusy(s),free=new Set();
+ const initial=locked?[locked]:[];
+ const extraBusy={A:new Set(busy.A),B:new Set(busy.B)};
+ if(locked)for(const c of ['A','B'])for(const i of individualPlayersOf(locked,c))extraBusy[c].add(i);
+ const available=individualCardinality(s,limit-initial.length,extraBusy,locked?.id);
+ const pending=pendingMatches(s).filter(m=>!initial.some(x=>x.id===m.id)&&!available.some(x=>x.id===m.id)&&individualEligible(s,m));
+ const list=[...initial,...available,...pending.slice(0,Math.max(0,limit-initial.length-available.length))].slice(0,limit);
+ return list.map(m=>({id:m.id,a:m.a,a2:m.a2,b:m.b,b2:m.b2,division:m.division,
+ locked:m.id===locked?.id,ready:individualDisjoint(m,busy)}));
+}
+function individualCourtPlacement(s,chosen,free,pinned){
+ const hist={A:new Map(),B:new Map()},latest={A:new Map(),B:new Map()};
+ for(const m of matchPool(s).filter(x=>['active','completed'].includes(x.status)&&x.court).sort((a,b)=>(a.sequence||0)-(b.sequence||0)))for(const c of ['A','B'])for(const i of individualPlayersOf(m,c)){
+  const key=i+':'+m.court;hist[c].set(key,(hist[c].get(key)||0)+1);latest[c].set(i,m.court);
+ }
+ const rest=chosen.filter(m=>m.id!==pinned),p=chosen.find(m=>m.id===pinned),place=p?[{m:p,court:free[0]}]:[],remaining=free.filter(c=>!p||c!==free[0]);
+ for(const m of rest){
+  remaining.sort((a,b)=>{
+   const score=c=>['A','B'].reduce((sum,side)=>sum+individualPlayersOf(m,side).reduce((v,i)=>v+(hist[side].get(i+':'+c)||0)*12+(latest[side].get(i)===c?5:0),0),0);
+   return score(a)-score(b)||a-b;
+  });
+  place.push({m,court:remaining.shift()});
+ }
+ return place;
+}
+/* Constrained court rescue v0.9.1: only when the fixed opponent draw leaves
+   physical courts idle. Swap TWO PENDING opposing duos in the SAME division,
+   preserving every A/B teammate partnership and every confirmed/LIVE fixture.
+   Refuse swaps that worsen the precomputed global opponent repetition ceiling. */
+function individualRescueIdle(s){
+ if(s.stage!=='stage1'||s.stage1Closed)return [];
+ const assigned=[];
+ const total=s.setup.pairs,all=matchPool(s),segs=individualSegments(s);
+ const globallyCounted=Array.from({length:total},()=>new Uint8Array(total));
+ for(const m of all)for(const a of [m.a,m.a2])for(const b of [m.b,m.b2])globallyCounted[a][b]++;
+ const maxOriginal=segs.reduce((map,seg)=>{
+  let max=0;for(let a=seg.start;a<seg.start+seg.count;a++)for(let b=seg.start;b<seg.start+seg.count;b++)max=Math.max(max,globallyCounted[a][b]);
+  map.set(seg.id,max);return map;
+ },new Map());
+ const penalty=v=>v<=2?(v===0?15:0):v===3?250:v===4?1900:1900+(v-4)*(v-4)*3500;
+ for(let attempt=0;attempt<s.setup.courts;attempt++){
+  const active=liveCourts(s),free=Array.from({length:s.setup.courts},(_,i)=>i+1).find(c=>!active.some(m=>m.court===c));
+  if(!free)break;
+  const busy=individualBusy(s),pending=pendingMatches(s),locked=individualLocked(s),ledger=individualCounts(s);
+  // First take an unchanged legal match if the previous matching search
+  // stopped short; legal matches never need their opposing duo changed.
+  let unchanged=pending.filter(m=>m.id!==locked?.id&&individualEligible(s,m)&&individualDisjoint(m,busy));
+  const cost=m=>{
+   let t=0;for(const c of ['A','B'])for(const i of individualPlayersOf(m,c))t+=ledger.counts[c][i]**2*380+ledger.counts[c][i]*220;
+   return t;
+  };
+  unchanged.sort((a,b)=>cost(a)-cost(b));
+  let choice=unchanged[0]||null;
+  if(!choice){
+   const globallyPlayed=Array.from({length:total},()=>new Uint8Array(total));
+   for(const m of all)if(m.status==='completed'||m.status==='active')for(const a of [m.a,m.a2])for(const b of [m.b,m.b2])globallyPlayed[a][b]++;
+   const byDivision=segs.map(seg=>{
+    const list=pending.filter(m=>m.division===seg.id&&m.id!==locked?.id);
+    const a=list.filter(m=>[m.a,m.a2].every(i=>!busy.A.has(i)&&ensureArrival(s).A[i]!==false&&!pairIsSitOut(s,'A',i))).sort((x,y)=>ledger.counts.A[x.a]+ledger.counts.A[x.a2]-ledger.counts.A[y.a]-ledger.counts.A[y.a2]);
+    const b=list.filter(m=>[m.b,m.b2].every(i=>!busy.B.has(i)&&ensureArrival(s).B[i]!==false&&!pairIsSitOut(s,'B',i))).sort((x,y)=>ledger.counts.B[x.b]+ledger.counts.B[x.b2]-ledger.counts.B[y.b]-ledger.counts.B[y.b2]);
+    return {seg,a:a.slice(0,65),b:b.slice(0,65)};
+   });
+   let best=null;
+   for(const {seg,a:readyA,b:readyB} of byDivision)for(const x of readyA)for(const y of readyB){
+    if(x===y)continue;
+    const change=new Map(),add=(aa,bb,v)=>{const key=aa*total+bb;change.set(key,(change.get(key)||0)+v)};
+    for(const aa of [x.a,x.a2]){for(const bb of [x.b,x.b2])add(aa,bb,-1);for(const bb of [y.b,y.b2])add(aa,bb,1);}
+    for(const aa of [y.a,y.a2]){for(const bb of [y.b,y.b2])add(aa,bb,-1);for(const bb of [x.b,x.b2])add(aa,bb,1);}
+    let delta=0,invalid=false;
+    for(const [key,v] of change)if(v){
+     const aa=Math.floor(key/total),bb=key%total,prev=globallyCounted[aa][bb],next=prev+v;
+     if(next<0||next>Math.max(3,maxOriginal.get(seg.id))){invalid=true;break;}
+     delta+=penalty(next)-penalty(prev);
+    }
+    if(invalid)continue;
+    let futureRepeat=0;
+    for(const aa of [x.a,x.a2])for(const bb of [y.b,y.b2])futureRepeat+=globallyPlayed[aa][bb]===0?0:globallyPlayed[aa][bb]===1?24:globallyPlayed[aa][bb]===2?1700:9000;
+    const fairness=([x.a,x.a2].reduce((v,i)=>v+ledger.counts.A[i]**2*500,0)+[y.b,y.b2].reduce((v,i)=>v+ledger.counts.B[i]**2*500,0));
+    const price=fairness+futureRepeat+Math.max(0,delta)*4;
+    if(!best||price<best.price)best={x,y,change,price};
+   }
+   if(!best)break;
+   const {x,y,change}=best;
+   [x.b,y.b]=[y.b,x.b];[x.b2,y.b2]=[y.b2,x.b2];
+   for(const [k,v] of change)if(v)globallyCounted[Math.floor(k/total)][k%total]+=v;
+   choice=x;
+  }
+  if(!choice)break;
+  choice.court=free;choice.wave=null;choice.status='active';choice.sequence=++s.dispatchSequence;
+  assigned.push(choice);
+ }
+ return assigned;
+}
+
+
+/* Stage 1 Early Finish Advisor v0.9.2.
+   Project using confirmed + LIVE bookings (live must be allowed to finish),
+   never assume unplayed fixtures were scored. Each extra fixture is one
+   unused individual partnership per team, so both no-repeat guarantees stay.
+   A plan is a maximum of five additional REAL matches, never a synthetic score.
+*/
+function individualEquitySnapshot(s,counts){
+ const divisions=individualSegments(s).map(seg=>{
+  const sides={};
+  for(const c of ['A','B']){
+   const arr=counts[c].slice(seg.start,seg.start+seg.count),avg=arr.reduce((a,b)=>a+b,0)/arr.length;
+   const min=Math.min(...arr),max=Math.max(...arr);
+   sides[c]={min,max,gap:max-min,variance:arr.reduce((t,x)=>t+(x-avg)**2,0)/arr.length};
+  }
+  return {division:seg.id,label:seg.label,A:sides.A,B:sides.B,gap:Math.max(sides.A.gap,sides.B.gap)};
+ });
+ const gap=Math.max(0,...divisions.map(x=>x.gap));
+ const score=divisions.reduce((v,d)=>v+40*(d.A.gap**2+d.B.gap**2)+6*(d.A.variance+d.B.variance),0);
+ const p=individualParticipationMetrics(s,counts);
+ // Separate objective terms: individual player disparity remains primary,
+ // but inter-division imbalance is charged by per-player mean, not total matches.
+ return {gap,score:score+900*p.crossMeanDelta*p.crossMeanDelta,divisions,
+  crossMeanDelta:p.crossMeanDelta,divisionMeans:p.divisionMeans};
+}
+/* Beam lookahead evaluates the WHOLE 1–5 fixture finish, not only the
+   next greedy match. Both teams' gap/variance are scored jointly. Every
+   candidate is an unplayed legal fixture with unique partner duos. */
+function individualEqualizationOptions(s,maxMatches=5){
+ if(!individualMode(s)||s.stage!=='stage1'||s.stage1Closed)return [];
+ const original=individualCounts(s).counts;
+ const baseline=individualEquitySnapshot(s,original),baseScore=baseline.score+250*baseline.gap**2;
+ const pending=pendingMatches(s).filter(m=>individualEligible(s,m));
+ const limit=Math.min(5,Math.max(0,maxMatches),pending.length);
+ if(!limit)return [];
+ const n=s.setup.pairs,history=Array.from({length:n},()=>new Uint8Array(n));
+ for(const m of matchPool(s))if(m.status!=='pending')for(const a of [m.a,m.a2])for(const b of [m.b,m.b2])history[a][b]++;
+ const visitCost=m=>[m.a,m.a2].reduce((sum,a)=>sum+[m.b,m.b2].reduce((t,b)=>t+(history[a][b]>=2?100:history[a][b]===1?10:0),0),0);
+ const ranked=pending.map((m,i)=>({m,i,visit:visitCost(m)}));
+ const score=(counts)=>{const result=individualEquitySnapshot(s,counts);return {result,objective:result.score+250*result.gap**2};};
+ let beam=[{ids:[],used:new Set(),counts:{A:original.A.slice(),B:original.B.slice()},objective:baseScore,encounter:0}];
+ const options=[];
+ for(let depth=1;depth<=limit;depth++){
+  const next=[];
+  for(const node of beam){
+   const local=[];
+   for(const x of ranked){if(node.used.has(x.i))continue;
+    const counts={A:node.counts.A.slice(),B:node.counts.B.slice()};
+    for(const c of ['A','B'])for(const i of individualPlayersOf(x.m,c))counts[c][i]++;
+    const ev=score(counts),vis=node.encounter+x.visit;
+    local.push({ids:[...node.ids,x.m.id],used:new Set([...node.used,x.i]),counts,
+     objective:ev.objective,encounter:vis,projection:ev.result,
+     rank:ev.objective+vis*.05+seededDrawRank(x.m.a+x.m.a2*29,x.m.b+x.m.b2*43,s.drawSeed||1)*.001});
+   }
+   local.sort((a,b)=>a.rank-b.rank);
+   next.push(...local.slice(0,10));
+  }
+  if(!next.length)break;
+  next.sort((a,b)=>a.rank-b.rank);
+  const seen=new Set(),winners=[];
+  for(const node of next){const key=node.ids.slice().sort().join('|');if(seen.has(key))continue;seen.add(key);winners.push(node);if(winners.length>=12)break;}
+  beam=winners;
+  const win=beam[0];
+  options.push({count:depth,ids:win.ids.slice(),baselineGap:baseline.gap,
+   projectedGap:win.projection.gap,baselineScore:baseScore,projectedScore:win.objective,
+   projectedDivisions:win.projection.divisions,improves:win.objective+1e-6<baseScore});
+ }
+ return options;
+}
+/* Division-aware finish candidate: avoid a misleading no-op when Men's
+   and Women's have very different mean appearances. Allows a temporary
+   within-group gap cost in order to improve the BEST complete 1..5 plan.
+   Does not fabricate results, or touch already-confirmed/ACTIVE fixtures. */
+function individualDivisionRecoveryOptions(s,maxMatches=5){
+ const segments=individualSegments(s),results=[];
+ if(segments.length<2||!maxMatches||s.stage1Closed)return results;
+ const counts=individualCounts(s).counts,metrics=individualParticipationMetrics(s,counts);
+ const means=metrics.divisionMeans;
+ const target=means.reduce((a,b)=>b.perPlayer<a.perPlayer?b:a,means[0]);
+ const cross=metrics.crossMeanDelta;
+ if(cross<0.45)return results;
+ const pool=pendingMatches(s).filter(m=>m.division===target.division&&individualEligible(s,m));
+ if(!pool.length)return results;
+ const initial=individualEquitySnapshot(s,counts),baseline=initial.score+250*initial.gap*initial.gap;
+ let beam=[{ids:[],used:new Set(),counts:{A:counts.A.slice(),B:counts.B.slice()},cost:baseline,quality:initial}];
+ for(let depth=1;depth<=Math.min(5,maxMatches,pool.length);depth++){
+  const next=[];
+  for(const node of beam){const cands=[];
+   for(let i=0;i<pool.length;i++){
+    if(node.used.has(i))continue;const m=pool[i],cc={A:node.counts.A.slice(),B:node.counts.B.slice()};
+    for(const c of ['A','B'])for(const idx of individualPlayersOf(m,c))cc[c][idx]++;
+    const quality=individualEquitySnapshot(s,cc),score=quality.score+250*quality.gap*quality.gap;
+    cands.push({ids:[...node.ids,m.id],used:new Set([...node.used,i]),counts:cc,
+     cost:score,quality});
+   }
+   cands.sort((a,b)=>a.cost-b.cost);
+   next.push(...cands.slice(0,9));
+  }
+  next.sort((a,b)=>a.cost-b.cost);
+  const seen=new Set();beam=[];
+  for(const node of next){const key=node.ids.slice().sort().join(':');if(seen.has(key))continue;seen.add(key);beam.push(node);if(beam.length>=18)break;}
+  if(!beam.length)break;
+  const best=beam[0];
+  results.push({count:depth,ids:best.ids,baselineGap:initial.gap,projectedGap:best.quality.gap,
+   baselineScore:baseline,projectedScore:best.cost,projectedDivisions:best.quality.divisions,
+   improves:best.cost<baseline,reason:'proportional-division-recovery'});
+ }
+ return results;
+}
+function individualSmartFinishPlan(s,maxMatches=5){
+ const options=[...individualEqualizationOptions(s,maxMatches),...individualDivisionRecoveryOptions(s,maxMatches)];
+ const current=individualEquitySnapshot(s,individualCounts(s).counts);
+ const baseline=current.score+250*current.gap*current.gap;
+ // Evaluate all 0..5 REAL extras. Every plan is a legal unique fixture set.
+ // A small per-match cost avoids needless extras when gains are marginal.
+ const improved=options.filter(p=>p.projectedScore+35*p.count<baseline-0.01);
+ improved.sort((a,b)=>(a.projectedScore+35*a.count)-(b.projectedScore+35*b.count)||a.count-b.count);
+ if(improved.length)return {...improved[0],reason:improved[0].reason||'balanced-and-division-aware',
+  baselineCrossMeanDelta:current.crossMeanDelta,
+  projectedCrossMeanDelta:individualProjectedQuality(s,individualCounts(s).counts,improved[0].ids.map(id=>matchPool(s).find(m=>m.id===id)).filter(Boolean)).crossMeanDelta};
+ return {count:0,ids:[],baselineGap:current.gap,projectedGap:current.gap,
+  baselineScore:baseline,projectedScore:baseline,projectedDivisions:current.divisions,
+  baselineCrossMeanDelta:current.crossMeanDelta,projectedCrossMeanDelta:current.crossMeanDelta,
+  improves:false,reason:'no meaningful legal improvement within five matches'};
+}
+function individualStartSmartFinish(s){
+ if(!individualMode(s)||s.stage!=='stage1'||s.stage1Closed||s.stage2)throw Error('Smart Fair Finish requires an active Individual Stage 1');
+ if(s.equalization?.status==='running')throw Error('Cancel the current finish plan first');
+ if(stage1Stats(s).team.A.played<1)throw Error('Confirm at least one Stage 1 result first');
+ const plan=individualSmartFinishPlan(s,5);
+ const already=liveCourts(s).map(m=>m.id);
+ s.equalization={mode:'smart',status:'running',target:plan.count,ids:plan.ids.slice(),
+  existingLive:already,divisionParityLock:plan.reason==='division-parity',startedScored:stage1Stats(s).team.A.played,
+  baselineGap:plan.baselineGap,projectedGap:plan.projectedGap};
+ s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ individualFillEqualization(s);return s.equalization;
+}
+function individualFinishAfterLive(s){
+ if(!individualMode(s)||s.stage!=='stage1'||s.stage1Closed||s.stage2)throw Error('Finish After Live requires an active Individual Stage 1');
+ if(s.equalization?.status==='running')throw Error('Cancel the current finish plan first');
+ if(stage1Stats(s).team.A.played<1)throw Error('Confirm at least one Stage 1 result first');
+ s.equalization={mode:'live-only',status:'running',target:0,ids:[],
+  existingLive:liveCourts(s).map(m=>m.id),startedScored:stage1Stats(s).team.A.played,
+  baselineGap:individualFairness(s).maxBookedGap,projectedGap:individualFairness(s).maxBookedGap};
+ s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ individualFillEqualization(s);return s.equalization;
+}
+function individualFillEqualization(s){
+ const eq=s.equalization;
+ if(!eq||eq.status!=='running')return [];
+ const assigned=[];
+ if(eq.mode==='smart'&&!eq.balancedWaveCompletion&&!eq.divisionParityLock){
+  const all=matchPool(s);
+  const committed=eq.ids.filter(id=>all.some(m=>m.id===id&&m.status!=='pending'));
+  const remaining=Math.max(0,eq.target-committed.length);
+  if(remaining){
+   const next=individualSmartFinishPlan(s,remaining);
+   // A recommendation is a ceiling, never force an extra match that
+   // no longer improves fairness after scores/arrival changes.
+   eq.ids=[...committed,...next.ids];eq.target=eq.ids.length;
+   eq.projectedGap=next.projectedGap;
+  }
+ }
+ // All existing live courts remain intact; at most eq.target NEW fixtures
+ // are dispatched, and only those deliberately selected by moderator.
+ const active=liveCourts(s),free=Array.from({length:s.setup.courts},(_,i)=>i+1).filter(c=>!active.some(m=>m.court===c));
+ // A division-completion plan must not interleave Men's and Women's on court.
+ if(eq.balancedWaveCompletion&&eq.existingLive.some(id=>active.some(m=>m.id===id)))return assigned;
+ const busy=individualBusy(s),all=matchPool(s);
+ const ledger=individualCounts(s).counts;
+ const desired=eq.ids.map(id=>all.find(m=>m.id===id)).filter(m=>m&&m.status==='pending'&&individualEligible(s,m)&&individualDisjoint(m,busy));
+ desired.sort((a,b)=>{
+  const cost=m=>['A','B'].reduce((t,c)=>t+individualPlayersOf(m,c).reduce((v,i)=>v+ledger[c][i]**2,0),0);
+  return cost(a)-cost(b);
+ });
+ for(const court of free){
+  const ix=desired.findIndex(m=>individualDisjoint(m,busy));
+  if(ix<0)break;
+  const m=desired.splice(ix,1)[0];m.court=court;m.wave=null;m.status='active';m.sequence=++s.dispatchSequence;
+  assigned.push(m);
+  for(const c of ['A','B'])for(const i of individualPlayersOf(m,c))busy[c].add(i);
+ }
+ const allDone=eq.ids.every(id=>all.some(m=>m.id===id&&m.status==='completed'));
+ if(allDone&&!liveCourts(s).length){
+  eq.status='completed';s.stage1Closed=true;s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ }
+ return assigned;
+}
+function individualStartEqualization(s,extra){
+ if(!individualMode(s)||s.stage!=='stage1'||s.stage1Closed||s.stage2)throw Error('Equalization is only available during Individual Stage 1');
+ if(s.equalization?.status==='running')throw Error('Finish or cancel the existing equalization first');
+ if(stage1Stats(s).team.A.played<1)throw Error('Confirm at least one Stage 1 result first');
+ const option=individualEqualizationOptions(s,5).find(x=>x.count===extra);
+ if(!option)throw Error('No legal fixture plan for that many extra matches');
+ const existing=liveCourts(s).map(m=>m.id);
+ s.equalization={status:'running',target:extra,ids:option.ids.slice(),existingLive:existing,startedScored:stage1Stats(s).team.A.played,
+  projectedGap:option.projectedGap,baselineGap:option.baselineGap};
+ s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ individualFillEqualization(s);
+ return s.equalization;
+}
+function individualCancelEqualization(s){
+ if(s.equalization?.status!=='running')throw Error('No active equalization to cancel');
+ s.equalization=null;s.lockedNextMatchId=null;s.nextMatchQueue=[];
+ return individualFill(s); // Keep all already LIVE and confirmed fixtures untouched.
+}
+
+/* v0.9.4 LAB: opportunistic re-pairing of two strictly PENDING opposing
+   duos, only when both prospective pairs are available and booked fairness
+   is badly spread. Preserve all A/B own-partner combinations and all booked
+   results. A swap never increases the global opponent-diversity penalty. */
+function individualAdaptiveRewire(s){
+ if(s.stage!=='stage1'||s.stage1Closed||s.equalization?.status==='running')return false;
+ const all=matchPool(s),pending=all.filter(m=>m.status==='pending'&&individualEligible(s,m));
+ if(pending.length<2)return false;
+ const led=individualCounts(s).counts, busy=individualBusy(s), locked=individualLocked(s), n=s.setup.pairs;
+ const divisions=individualSegments(s), hist=Array.from({length:n},()=>new Uint8Array(n));
+ for(const m of all)for(const a of [m.a,m.a2])for(const b of [m.b,m.b2])hist[a][b]++;
+ const pen=v=>v===0?22:v===1?0:v===2?0:v===3?180:v===4?1300:1300+(v-4)*2000;
+ let chosen=null;
+ for(const seg of divisions){
+  let gap=0;for(const c of ['A','B']){const v=led[c].slice(seg.start,seg.start+seg.count);gap=Math.max(gap,Math.max(...v)-Math.min(...v));}
+  if(gap<3)continue;
+  const list=pending.filter(m=>m.division===seg.id&&m.id!==locked?.id);
+  const cost=(m,c)=>individualPlayersOf(m,c).reduce((v,i)=>v+led[c][i]*led[c][i]*500+led[c][i]*300,0);
+  const A=list.filter(m=>individualPlayersOf(m,'A').every(i=>!busy.A.has(i)))
+   .sort((x,y)=>cost(x,'A')-cost(y,'A')).slice(0,42);
+  const B=list.filter(m=>individualPlayersOf(m,'B').every(i=>!busy.B.has(i)))
+   .sort((x,y)=>cost(x,'B')-cost(y,'B')).slice(0,42);
+  const available=list.filter(m=>individualDisjoint(m,busy));
+  let current=Infinity;for(const m of available)current=Math.min(current,cost(m,'A')+cost(m,'B'));
+  for(const x of A)for(const y of B){if(x===y)continue;
+   const nextCost=cost(x,'A')+cost(y,'B');
+   if(nextCost>=current-900)continue;
+   const mods=new Map(),add=(a,b,delta)=>{const k=a*n+b;mods.set(k,(mods.get(k)||0)+delta);};
+   for(const a of [x.a,x.a2]){for(const b of [x.b,x.b2])add(a,b,-1);for(const b of [y.b,y.b2])add(a,b,1);}
+   for(const a of [y.a,y.a2]){for(const b of [y.b,y.b2])add(a,b,-1);for(const b of [x.b,x.b2])add(a,b,1);}
+   let delta=0,okay=true;
+   for(const [k,v] of mods)if(v){const aa=Math.floor(k/n),bb=k%n,old=hist[aa][bb],next=old+v;
+    if(next<0||next>3){okay=false;break;}delta+=pen(next)-pen(old);
+   }
+   if(!okay||delta>0)continue;
+   const improvement=current-nextCost;
+   const rank=improvement-delta*1.5;
+   if(!chosen||rank>chosen.rank)chosen={x,y,rank};
+  }
+ }
+ if(chosen){const {x,y}=chosen;[x.b,y.b]=[y.b,x.b];[x.b2,y.b2]=[y.b2,x.b2];return true;}
+ return false;
+}
+/* v0.9.6 · first-five-court opening allocation only (10 players per team,
+   five courts). The partner cycle is a one-factorization: each planned round
+   has five disjoint A/B duos. The opening places five Men's matches at once.
+   After the first confirmed score, ALL free courts refill continuously from
+   the global legal fixture pool (including Women's), without any wave gate.
+   Missing/Sit Out players fall back to the normal continuous dispatcher. */
+function individualBalancedWaveMode(s){
+ // This flag means SOFT continuous-balance mode, not a synchronized hard wave.
+ return individualMode(s)&&s?.setup?.schedulingStrategy==='continuous-balanced'&&s.setup.courts===5&&
+   individualSegments(s).every(d=>d.count===10)&&s.balancedWaveFallback!==true;
+}
+function individualBalancedWavePlan(s){
+ const segs=individualSegments(s);return Array.from({length:9},(_,r)=>segs.map(d=>({division:d.id,plannedRound:r+1}))).flat();
+}
+function individualBalancedCurrentWave(s){
+ const all=matchPool(s);
+ for(const w of individualBalancedWavePlan(s)){
+  const fixtures=all.filter(m=>m.division===w.division&&m.plannedRound===w.plannedRound);
+  if(fixtures.length!==5)throw Error('Balanced wave requires five legal matches per division per round');
+  if(fixtures.some(m=>m.status!=='completed'))return {...w,fixtures,
+   waveNumber:(w.plannedRound-1)*individualSegments(s).length+individualSegments(s).findIndex(d=>d.id===w.division)+1};
+ }
+ return null;
+}
+function individualBalancedPreview(s,limit=5){
+ const current=individualBalancedCurrentWave(s);
+ if(!current)return [];
+ const rest=current.fixtures.filter(m=>m.status==='pending');
+ const upcoming=rest.length?rest:(()=>{
+  const plan=individualBalancedWavePlan(s);
+  const index=plan.findIndex(w=>w.division===current.division&&w.plannedRound===current.plannedRound);
+  const next=plan[index+1];
+  return next?matchPool(s).filter(m=>m.division===next.division&&m.plannedRound===next.plannedRound):[];
+ })();
+ return upcoming.slice(0,limit).map(m=>({id:m.id,a:m.a,a2:m.a2,b:m.b,b2:m.b2,
+  division:m.division,locked:false,ready:false}));
+}

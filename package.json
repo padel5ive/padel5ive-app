@@ -11,6 +11,7 @@
     "qa:structured": "node scripts/qa-structured-pairing-lab.cjs && node scripts/qa-structured-irregular-lab.cjs && node scripts/qa-structured-matchmaking-v2.cjs",
     "qa:pr36": "node scripts/qa-pr36.cjs",
     "qa:showdown-v097": "node scripts/qa-team-showdown-v097.cjs",
-    "qa:showdown-home": "node scripts/qa-team-showdown-v097-home.cjs"
+    "qa:showdown-home": "node scripts/qa-team-showdown-v097-home.cjs",
+    "qa:showdown-public": "node scripts/qa-team-showdown-public.cjs"
   }
 }

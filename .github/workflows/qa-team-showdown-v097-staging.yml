@@ -10,6 +10,7 @@ on:
       - 'scripts/team-showdown-v097-home.cjs'
       - 'scripts/qa-team-showdown-v097-home.cjs'
       - 'scripts/qa-team-showdown-v097.cjs'
+      - 'scripts/qa-team-showdown-public.cjs'
       - 'netlify.toml'
       - 'package.json'
   workflow_dispatch:
@@ -26,4 +27,5 @@ jobs:
       - run: npm run build
       - run: node scripts/qa-team-showdown-v097.cjs
       - run: npm run qa:showdown-home
+      - run: npm run qa:showdown-public
       - run: npm run qa:pr36

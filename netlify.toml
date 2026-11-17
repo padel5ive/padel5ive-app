@@ -56,3 +56,16 @@
   to = "/modes/club-match/v097/index.html"
   status = 200
   force = true
+
+# v0.9.7 native read-only public results; older /r/ remains on First Edition.
+[[redirects]]
+  from = "/ts/*"
+  to = "/modes/club-match/v097/index.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/ts/*"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+    X-Robots-Tag = "noindex, nofollow"

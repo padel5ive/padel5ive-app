@@ -49,6 +49,14 @@ const scripts=[
 html=html.slice(0,end)+scripts+'\n'+html.slice(end);
 html=html.replace('PADEL 5IVE | Team Showdown Individual Americano Continuous Balanced v0.9.6 Offline',
  'PADEL 5IVE | Team Showdown v0.9.7 · Staging');
+// Production Integration v0.9.7: all three formats share one native
+// read-only public renderer. Keep legacy /r/ results fully untouched.
+const oldSharePrefix="(individualActive()?'/i/':'/r/')";
+if(html.split(oldSharePrefix).length!==3)throw Error('v097 share URL source drift');
+html=html.split(oldSharePrefix).join("'/ts/'");
+const oldViewerGroup='(?:r|i)';
+if(html.split(oldViewerGroup).length!==3)throw Error('v097 public viewer gate source drift');
+html=html.split(oldViewerGroup).join('(?:r|i|ts)');
 fs.writeFileSync(target,html);
 const originalCloud=fs.readFileSync('public/phase58/cloud-dashboard.js','utf8');
 const oldKey='padel5ive-team-showdown-state-v3',newKey='padel5ive-team-showdown-v090-individual-lab';
@@ -59,15 +67,15 @@ let cloud=originalCloud.replace(oldKey,newKey)
  .replace(oldMeta,"const META='p58-cloud-link-v097-'+kind");
 const boot="(()=>{'use strict';";
 if(!cloud.includes(boot))throw Error('Cloud boot changed');
-cloud=cloud.replace(boot,boot+"\nif(/^\\/(?:r|i)\\//.test(location.pathname))return;");
+cloud=cloud.replace(boot,boot+"\nif(/^\\/(?:r|i|ts)\\//.test(location.pathname))return;");
 fs.mkdirSync('public/v097',{recursive:true});
 fs.writeFileSync('public/v097/cloud-dashboard.js',cloud);
-// Public /i/ results must never be handled by the PWA's cached HTML fallback.
+// Public /i/ and /ts/ results must never be handled by the PWA's cached HTML fallback.
 // Keep the exact current production SW fingerprint: many shared-mode QA
 // checks explicitly require the already approved cache version.
 const swFile='public/sw.js';let sw=fs.readFileSync(swFile,'utf8');
 const deny="'/r/', '/u/'";
-if(sw.includes(deny))sw=sw.replace(deny,"'/r/', '/i/', '/u/'");
-else if(!sw.includes("'/i/'"))throw Error('PWA result cache bypass missing');
+if(sw.includes(deny))sw=sw.replace(deny,"'/r/', '/i/', '/ts/', '/u/'");
+else if(!sw.includes("'/i/'")||!sw.includes("'/ts/'"))throw Error('PWA result cache bypass missing');
 fs.writeFileSync(swFile,sw);
 console.log('PASS v0.9.7 staging sidecar: frozen source, native Cloud, /i/; First Edition main HTML/Cloud untouched');

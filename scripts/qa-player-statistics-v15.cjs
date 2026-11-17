@@ -96,7 +96,7 @@ assert.throws(()=>run(state,official,999),/not found/);
 for(const check of [
  'P5App.getState()','P5App.statistics()',
  "m.teams[side]","round.matches","winRate","avgScored","avgConceded","p5ps-layer",
- "data-p5ps-edit","data-p5ps-status","p5ps-status-controls","data-p5ps-close","MutationObserver","aria-modal","MATCH HISTORY",
+ "data-p5ps-edit","data-p5ps-status","p5ps-attendance-switch","data-p5ps-close","MutationObserver","aria-modal","MATCH HISTORY",
  'MOST PAIRED','MOST OPPOSED','UPCOMING'
 ])assert(js.includes(check),'Missing Player Stats component: '+check);
 assert(app.includes('.p5ps-panel'),'Stats modal CSS missing');
@@ -109,6 +109,13 @@ assert(!js.includes('data-p5ps-manage'), 'Bottom Manage Pair button must be remo
 assert(app.includes('.p5ps-panel .p5ps-title-row'), 'Inline edit pencil alignment CSS');
 assert(app.includes('.p5ps-panel .p5ps-close svg'), 'Precisely centered SVG close icon');
 assert(app.includes('.p5ps-panel .p5ps-participation'), 'Compact top participation status');
-assert(app.includes('.p5ps-panel .p5ps-status-controls'), 'Active/Sit Out segmented control styles');
+assert(app.includes('.p5ps-panel .p5ps-attendance-switch'), 'A single Active/Sit Out switch must render');
+assert(app.includes('.p5ps-panel .p5ps-switch-thumb'), 'Status switch thumb must remain aligned');
+assert(js.includes('role="switch"'), 'Single participation control should be accessible');
+assert(js.includes('aria-checked'), 'Status switch must report its state');
+assert(js.includes("data-p5ps-status=\""), 'Switch must preserve native participant-toggle path');
+assert(!js.includes('p5ps-status-controls'), 'Two-button status selector must be removed');
+assert(js.includes('Changes apply next eligible round after saving'), 'Status must not imply immediate effect');
+assert(app.includes('.p5ps-panel .p5ps-close svg'), 'SVG X size must be fixed');
 assert(app.includes('max-height:94dvh'),'Mobile stats view must fit Safari');
 console.log('PASS First Edition v1.5 Player/Pair Statistics: official rank, W/L/T, points, scored, completed/upcoming matches, partners/opponents and fixed pair, read-only');

@@ -60,6 +60,13 @@ const scripts=[
 html=html.slice(0,end)+scripts+'\n'+html.slice(end);
 html=html.replace('PADEL 5IVE | Team Showdown Individual Americano Continuous Balanced v0.9.6 Offline',
  'PADEL 5IVE | Team Showdown v0.9.7 · Staging');
+/* First Edition v1.5 HOME 404 hotfix.
+ * Native frozen v0.9.7 HTML linked ../../ from /modes/club-match/v097/,
+ * which navigated to /modes/ (404), NOT /. Do not edit the frozen engine.
+ */
+const oldBackHome='<a class="p54-back-home" href="../../" id="p54-home-link">';
+if(html.split(oldBackHome).length!==2)throw Error('First Edition v1.5 HOME link source drift');
+html=html.replace(oldBackHome,'<a class="p54-back-home" href="/" id="p54-home-link">');
 // Production Integration v0.9.7: all three formats share one native
 // read-only public renderer. Keep legacy /r/ results fully untouched.
 const oldSharePrefix="(individualActive()?'/i/':'/r/')";

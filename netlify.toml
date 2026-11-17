@@ -41,6 +41,20 @@
   status = 200
   force = true
 
+# First Edition v1.5: recover stale v0.9.7 Home links cached on iOS.
+# ../../ from /modes/club-match/v097/ used to land on /modes/ (404).
+[[redirects]]
+  from = "/modes/"
+  to = "/"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/modes"
+  to = "/"
+  status = 302
+  force = true
+
 # Dynamic public results /u/:id and /social/u/* are handled by
 # Netlify Functions config.path (avoids unsupported splat-to-query rewrites).
 

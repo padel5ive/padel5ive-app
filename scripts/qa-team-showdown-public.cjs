@@ -28,14 +28,13 @@ for(const marker of ["function shareResults(){","fetch('/api/results',{method:'P
 assert(!legacy.includes("new URL('/ts/'+encodeURIComponent("),'Older master must keep historical share URLs');
 assert.equal(occurrences(routes,'from = "/r/*"'),1,'Legacy /r/ route preserved');
 assert.equal(occurrences(routes,'from = "/ts/*"'),1,'New native /ts/ route unique');
-assert.equal(occurrences(routes,'to = "/modes/club-match/v097/index.html"'),2,'Old Individual and new /ts/ resolve to native viewer');
+assert.equal(occurrences(routes,'to = "/results/showdown/v097/index.html"'),2,'Old Individual and /ts/ use Classic master results shell');
 for(const m of ["'/ts/'",'p5-pwa-setup-prewarm-v588-1'])must(sw,m);
 for(const m of ['Cache-Control = "no-store, max-age=0"','X-Robots-Tag = "noindex, nofollow"'])must(routes,m);
 for(const m of ["getStore('team-showdown-results-v1')","if(!goodPin(request.headers.get('X-Padel-Pin')",
  "if(!/^[a-zA-Z0-9_-]{6,32}$/.test(id))","if(!data||data.schema!=='padel5ive-team-showdown-results-v1'"])must(api,m);
 for(const m of ['@page {size:A4 landscape;margin:10mm}',
- "if(state.setup.competitionFormat==='multi'||state.setup.competitionFormat==='individual'||typeof window.P5DirectPDF==='undefined')",
- "printReport();notify('Division-separated report opened",
+ "if(typeof window.P5DirectPDF==='undefined'){throw Error('Classic master PDF renderer is unavailable');}",
  "P5DirectPDF.exportShowdown(showdownReportData())",
  'function showdownReportData()','function printReport()','window.print()'])must(page,m);
 const a=page.indexOf('async function loadPublic(){'),b=page.indexOf('\nlet pendingDuelReview=',a);
@@ -69,3 +68,6 @@ const loader=page.slice(a,b);
  await invalid.load();assert.equal(invalid.viewOnly,false);
  console.log('PASS native Team Showdown v0.9.7: three public formats, signed publish/GET routes, legacy preservation, A4 Landscape print/PDF');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+// Route parity and renderer identity are independently checked against Classic master.
+require('./qa-team-showdown-v097-report-parity.cjs');

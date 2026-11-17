@@ -128,4 +128,12 @@ assert(!js.includes('p5ps-status-controls'), 'Two-button status selector must be
 assert(js.includes('Changes apply next eligible round after saving'), 'Status must not imply immediate effect');
 assert(app.includes('.p5ps-panel .p5ps-close svg'), 'SVG X size must be fixed');
 assert(app.includes('max-height:94dvh'),'Mobile stats view must fit Safari');
+assert(app.includes('v1.5.1 · Native Edit Player/Pair Name and Participation visual polish'),'Native participant modal refined');
+assert(app.includes('#p5-modal-root[data-p5ps-context] .p5-v2-modal{'),'Modal padding targets the actual global native dialog root');
+assert(app.includes('#p5-modal-root[data-p5ps-context] .p5-b3-participant-editor>label{'),'Label spacing applies to actual native editor');
+assert(app.includes('gap:11px!important;margin:0!important;padding:0!important'),'Label separated from input with explicit 11px gap');
+assert(app.includes('min-height:50px!important;margin:0!important;padding:12px 15px!important'),'Native name input is sufficiently tall with interior padding');
+assert(app.includes('padding:25px 22px 23px!important;border-radius:17px!important'),'iPhone modal maintains edge and content breathing room');
+assert(app.includes('#p5-modal-root[data-p5ps-context] .p5-v2-modal .tools{'),'Modal Cancel/Save buttons retain alignment and spacing');
+assert(!app.includes('id="p5ps-duplicate-close"'),'No redundant footer Close action');
 console.log('PASS First Edition v1.5 Player/Pair Statistics: official rank, W/L/T, points, scored, completed/upcoming matches, partners/opponents and fixed pair, read-only');

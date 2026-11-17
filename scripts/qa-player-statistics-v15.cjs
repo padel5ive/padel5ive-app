@@ -71,7 +71,7 @@ assert.equal(result.history[3].result,'UPCOMING');
 assert.equal(result.history[4].result,'UPCOMING');
 assert(result.paired.some(x=>x.name==='Vania'&&x.count===1));
 assert(result.paired.some(x=>x.name==='Neta'&&x.count===1));
-assert(result.opposed.some(x=>x.name==='Maria'&&x.count===1));
+assert(result.opposed.some(x=>x.name==='Maria'&&x.count===2),'Opponent Maria encountered in both Round 1 and Round 2');
 assert(result.opposed.some(x=>x.name==='Neta'&&x.count===1));
 assert.equal(JSON.stringify(state),stateBefore,'Statistics must leave tournament data untouched');
 const fpState={

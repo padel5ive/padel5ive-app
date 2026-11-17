@@ -63,6 +63,8 @@ async function main(){
  assert((await val(fixture))>0,'Failed to create isolated fixture');
  await until(()=>val('P5App?.getState()?.stage==="stage1"&&!!document.querySelector(".p5-b41-leaderboard")'),'stage1');
  await until(()=>val('!!document.querySelector('+JSON.stringify(name)+')'),'leaderboard names');
+ await tap('[data-p5-pr36-tab="leaderboard"]');
+ assert.equal(await val('document.querySelector("#americano").dataset.p5Pr36View'),'leaderboard','iPhone leaderboard tab must actually be selected');
  const id=await val('Number(document.querySelector('+JSON.stringify(name)+').dataset.id)');assert(Number.isInteger(id));
  await tap('#americano .p5-lb-privacy-toggle');
  assert(await val('document.querySelector(".p5-b41-leaderboard").classList.contains("p5-lb-private")'));
@@ -95,6 +97,7 @@ async function main(){
  assert.equal((await state()).sitoutPending[id],true,'Edit name changed Sit Out status');
  console.log('PASS iPhone Edit Name / Save, participation preserved');
  await tap(name);await until(isStats,'stats close');await tap('[data-p5ps-close]');await until(async()=>!(await isStats()),'close X');
+ await tap('[data-p5-pr36-tab="rounds"]');
  if(await val('!!document.querySelector("#americano [data-act=score]")')){
   const before=JSON.stringify((await state()).rounds);
   await tap('#americano [data-act="score"]');await until(isModal,'score modal');await tap(cancel);await until(async()=>!(await isModal()),'score cancel');

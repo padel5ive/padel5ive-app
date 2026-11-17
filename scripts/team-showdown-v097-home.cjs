@@ -17,10 +17,6 @@ home=swap(home,'<span class="p54-mode-name">Club Match</span>',
 home=swap(home,'<span class="p54-mode-desc">Team Showdown · Club Americano (soon)</span>',
  '<span class="p54-mode-desc">Classic · Multi-Division · Individual Americano</span>','HOME mode description');
 home=swap(home,
- "const a=activeUnified(),b=activeClub();",
- "const a=activeUnified(),b=activeClub();\n    const v=activeV097();\n    if(v)sessions.push({name:clean(v.setup.sessionName),kind:'showdown',url:'modes/club-match/v097/?intent=resume',label:'Team Showdown · v0.9.7'});\n    const saved097=parse('padel5ive-team-showdown-native-v07-archive');\n    if(Array.isArray(saved097))saved097.slice(0,4).forEach(x=>{\n      if(x?.id&&x.state?.setup?.sessionName)sessions.push({name:clean(x.state.setup.sessionName),kind:'showdown-archive',url:'modes/club-match/v097/?intent=archive&id='+encodeURIComponent(x.id),label:'Team Showdown · Saved v0.9.7'});\n    });",
- 'native resume/history card injection');
-home=swap(home,
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};",
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};\n  const activeV097=()=>{const s=parse('padel5ive-team-showdown-v090-individual-lab');return s&&s.setup&&s.stage&&s.stage!=='setup'&&s.setup.sessionName?s:null};",
  'native active-session detector');
@@ -58,7 +54,41 @@ home=swap(home,
  "!/^\\/modes\\/(unified|club-match)\\/?$/.test(url.pathname)",
  "!/^\\/modes\\/(unified|club-match(?:\\/v097)?)\\/?$/.test(url.pathname)",
  'same-origin launcher allow-list');
+// Append v0.9.7 resume OUTSIDE the frozen Home renderResume() function.
+// Legacy Cloud/History regressions execute renderResume in an isolated VM.
+const resumeUrl='/v097/home-resume.js';
+home=swap(home,'</body>','<script defer src="'+resumeUrl+'"></script>\n</body>','native resume adapter script');
 save(homePath,home);
+const resumeJs=String.raw`/* v0.9.7 isolated HOME resume badge; does not modify legacy renderResume. */
+(()=>{'use strict';
+const KEY='padel5ive-team-showdown-v090-individual-lab';
+const $=id=>document.getElementById(id);
+const finished=new Set(['champion','finished','completed','complete','final']);
+function state(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch{return null}}
+function refresh(){
+ const node=$('p54-resume');if(!node)return;
+ const existing=$('p54-v097-resume');if(existing)existing.remove();
+ const s=state();
+ if(!s?.setup?.sessionName||!s.stage||s.stage==='setup'||finished.has(String(s.stage).toLowerCase()))return;
+ if(node.hidden)node.hidden=false;
+ const button=document.createElement('button');
+ button.id='p54-v097-resume';button.type='button';button.className='p54-resume-btn';
+ button.textContent='RESUME · '+String(s.setup.sessionName).slice(0,76)+' · TEAM SHOWDOWN →';
+ button.addEventListener('click',()=>window.P5PreviewLaunch('modes/club-match/v097/?intent=resume'));
+ node.appendChild(button);
+}
+const initial=window.P5PreviewRefreshResume;
+if(typeof initial==='function')window.P5PreviewRefreshResume=function(...args){
+ const result=initial.apply(this,args);refresh();return result;
+};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
+window.addEventListener('pageshow',refresh);
+window.addEventListener('storage',e=>{if(e.key===KEY)refresh()});
+})();
+`;
+fs.mkdirSync('public/v097',{recursive:true});
+fs.writeFileSync('public/v097/home-resume.js',resumeJs);
+
 
 const cloudPath='public/phase58/cloud-home.js';let cloud=fs.readFileSync(cloudPath,'utf8');
 cloud=swap(cloud,

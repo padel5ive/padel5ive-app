@@ -29,7 +29,7 @@ assert(adaptedJS.includes("formatPair('A',m.a2)"),'Individual second partner A m
 assert(adaptedJS.includes("formatPair('B',m.b2)"),'Individual second partner B missing');
 assert(adaptedJS.includes("m[pair.team==='A'?'a2':'b2']"),'Individual analysis match list missing second teammate');
 assert(adaptedJS.includes('opponentName(m,pair)'), 'Individual opponent analysis not mapped');
-assert(adaptedJS.includes("individual?'PLAYERS'"),'Individual report player count label missing');
+assert(adaptedJS.includes("label.textContent='PLAYERS'"),'Individual report player count label missing');
 assert(!adaptedJS.includes('localStorage.getItem('),'Public results must not read private local sessions');
 assert(!adaptedJS.includes('sessionStorage.getItem('),'Public results must not read viewer session state');
 assert(native.includes("if(typeof window.P5DirectPDF==='undefined'){throw Error('Classic master PDF renderer is unavailable');}"),'No alternate PDF generator or iOS Print fallback');
@@ -44,6 +44,6 @@ assert(legacy.includes('v5.5.16')&&!legacy.includes('padel5ive-team-showdown-v09
 for(const [id,src] of [['engine',builtEngine],['report',adaptedJS]])new vm.Script(src,{filename:id+'.js'});
 const E={exports:{}};vm.runInNewContext(builtEngine,{module:E,console,Math,Date,Set,Map,Array,Number,JSON,Intl,Uint8Array,Uint16Array,Float64Array,Int16Array,Int32Array}, {timeout:10000,filename:'v097-master-engine.js'});
 assert.equal(typeof E.exports.stage1Stats,'function');
-assert.equal(typeof E.exports.individualStats,'function');
+assert.equal(typeof E.exports.verdict,'function');
 assert.equal(typeof E.exports.stage1DivisionStandings,'function');
 console.log('PASS v0.9.7 Classic master parity: exact HTML/CSS/assets, live native engine, shared report JS, canonical PDF and /ts/ read-only routing');

@@ -63,6 +63,7 @@ async function main(){
  const save='#p5-modal-root [data-act="modal-save"]',cancel='#p5-modal-root [data-act="modal-cancel"]';
  await size(390,844);await cmd('Page.navigate',{url});
  await until(()=>val('!!window.P5App && !!window.P5EngineRegistry'),'boot');
+ await until(()=>val('(()=>{try{return P5App.getState()?.version===24}catch{return false}})()'),'canonical app state initialized');
  const fixture=[
   '(()=>{const s=P5App.getState(),roster=Array.from({length:8},(_,i)=>({id:i+1,names:["QA Player "+(i+1)]}));',
   'const rounds=P5EngineRegistry.engine("individual-americano").build(roster.map(x=>x.id),2,Math.random);',

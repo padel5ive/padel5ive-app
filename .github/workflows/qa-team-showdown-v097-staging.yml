@@ -1,0 +1,40 @@
+name: Team Showdown v0.9.7 Staging Integration QA
+on:
+  push:
+    branches: [release/team-showdown-v097, fix/v097-ipad-score-vs-alignment]
+  pull_request:
+    branches: [main, release/team-showdown-v097]
+    paths:
+      - 'source/team-showdown-v097/**'
+      - 'scripts/team-showdown-v097-stage.cjs'
+      - 'scripts/team-showdown-v097-home.cjs'
+      - 'scripts/team-showdown-v097-master-report.cjs'
+      - 'scripts/team-showdown-v097-dashboard-parity.cjs'
+      - 'scripts/team-showdown-v097-ipad-score-center.cjs'
+      - 'scripts/qa-team-showdown-v097-ipad-score-center.cjs'
+      - 'scripts/qa-team-showdown-v097-dashboard-parity.cjs'
+      - 'scripts/qa-team-showdown-v097-report-parity.cjs'
+      - 'scripts/qa-team-showdown-v097-home.cjs'
+      - 'scripts/qa-team-showdown-v097.cjs'
+      - 'scripts/qa-team-showdown-public.cjs'
+      - 'netlify.toml'
+      - 'package.json'
+  workflow_dispatch:
+jobs:
+  staging-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/qa-team-showdown-v097.cjs
+      - run: npm run qa:showdown-home
+      - run: npm run qa:showdown-public
+      - run: npm run qa:showdown-parity
+      - run: npm run qa:showdown-dashboard
+      - run: npm run qa:showdown-ipad
+      - run: npm run qa:pr36

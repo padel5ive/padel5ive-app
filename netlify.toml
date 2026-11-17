@@ -49,3 +49,23 @@
   to = "/results/showdown/index.html"
   status = 200
   force = true
+
+# Legacy Individual link support: all v0.9.7 formats reuse Classic master results markup.
+[[redirects]]
+  from = "/i/*"
+  to = "/results/showdown/v097/index.html"
+  status = 200
+  force = true
+
+# v0.9.7 Classic-master results adapter; older /r/ remains untouched.
+[[redirects]]
+  from = "/ts/*"
+  to = "/results/showdown/v097/index.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/ts/*"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+    X-Robots-Tag = "noindex, nofollow"

@@ -16,6 +16,7 @@ assert(!js.includes('P5App.setState'),'Viewer cannot modify a saved state');
 const ctx={
  window:{},
  document:{readyState:'loading',addEventListener(type,listener){assert.equal(type,'DOMContentLoaded');}},
+ MutationObserver:class {constructor(callback){this.callback=callback;}observe(){}disconnect(){}},
  console,
 };
 vm.runInNewContext(js,ctx,{timeout:3000,filename:'p5-player-statistics-v15.js'});

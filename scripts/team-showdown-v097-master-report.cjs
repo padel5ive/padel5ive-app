@@ -86,7 +86,7 @@ write('public/v097/showdown-results-master.js',js);
 // (identical A4 landscape cover, typography, pagination, champion + ledgers).
 // This replaces only the alternate Safari print branch for multi/individual.
 native=swap(native,
- "if(state.setup.competitionFormat==='multi'||state.setup.competitionFormat==='individual'||typeof window.P5DirectPDF==='undefined'){ printReport();notify('Division-separated report opened · Print / Save as PDF');break; }",
+ "if(state.setup.competitionFormat==='multi'||state.setup.competitionFormat==='individual'||typeof window.P5DirectPDF==='undefined'){\n   printReport();notify('Division-separated report opened · Print / Save as PDF');break;\n }",
  "if(typeof window.P5DirectPDF==='undefined'){throw Error('Classic master PDF renderer is unavailable');}",
  'native export PDF dispatch');
 write(nativePath,native);

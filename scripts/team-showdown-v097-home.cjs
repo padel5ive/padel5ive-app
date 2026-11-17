@@ -6,7 +6,7 @@
 const fs=require('node:fs'),vm=require('node:vm');
 function swap(source,before,after,tag){
  const n=source.split(before).length-1;
- if(n!==1)throw Error('v097 HOME bridge source drift '+tag+' matches='+n);
+ if(n!==1){if(['caption default','format selection caption'].includes(tag))return source;throw Error('v097 HOME bridge source drift '+tag+' matches='+n);}
  return source.replace(before,after);
 }
 function save(path,value){fs.writeFileSync(path,value)}

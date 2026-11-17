@@ -50,17 +50,17 @@
   status = 200
   force = true
 
-# Staging: Individual v0.9.7 native public result links.
+# Legacy Individual link support: all v0.9.7 formats reuse Classic master results markup.
 [[redirects]]
   from = "/i/*"
-  to = "/modes/club-match/v097/index.html"
+  to = "/results/showdown/v097/index.html"
   status = 200
   force = true
 
-# v0.9.7 native read-only public results; older /r/ remains on First Edition.
+# v0.9.7 Classic-master results adapter; older /r/ remains untouched.
 [[redirects]]
   from = "/ts/*"
-  to = "/modes/club-match/v097/index.html"
+  to = "/results/showdown/v097/index.html"
   status = 200
   force = true
 

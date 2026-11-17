@@ -83,7 +83,7 @@
   const isSitout=options.status==='sitout';
   const pencil='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.5 5.5 3 3M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg>';
   const closeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>';
-  const edit=editable?'<button class="p5ps-edit" type="button" data-p5ps-edit aria-label="Edit '+esc(p.type.toLowerCase())+' name" title="Edit name">'+pencil+'</button>':'';
+  const edit=editable?'<button class="p5ps-edit" type="button" data-p5ps-edit aria-label="Edit '+esc(p.type.toLowerCase())+' name" title="Edit name only">'+pencil+'</button>':'';
   const participation='<div class="p5ps-participation"><div class="p5ps-participation-info"><span>PARTICIPATION</span><small>'+
     (editable?'Changes apply next eligible round after saving':'Current session status · view only')+'</small></div>'+
     '<button type="button" class="p5ps-attendance-switch '+(!isSitout?'is-on':'is-off')+'" role="switch" '+
@@ -109,7 +109,7 @@
    group('MOST OPPOSED',p.opposed,'No completed opponents yet')+'</div>'+
    '<div class="p5ps-section-row"><h3 class="p5ps-section">MATCH HISTORY</h3><span>'+p.completed+' played · '+(p.scheduled-p.completed)+' upcoming</span></div>'+
    '<div class="p5ps-games">'+(p.history.length?p.history.map(record).join(''):'<p class="p5ps-empty">No assigned matches yet.</p>')+'</div>'+
-   '<div class="p5ps-footer"><button class="p5ps-done" type="button" data-p5ps-close>Close</button></div>';
+   '';
  }
  let dialog=null,origin=null,bypass=false,oldOverflow='';
  const close=()=>{
@@ -133,19 +133,46 @@
   dialog.className='p5ps-layer';
   dialog.innerHTML='<div class="p5ps-backdrop" data-p5ps-close></div><section class="p5ps-panel" role="dialog" aria-modal="true" aria-labelledby="p5ps-title" tabindex="-1">'+view(profile,{editable,showStatus:state.stage==='stage1',status:queued?'sitout':'active'})+'</section>';
   document.body.appendChild(dialog);
-  // Edit and status selection reuse the original moderator controller. The
-  // native modal preserves participant IDs, saves to sitoutPending and applies
-  // changes only to the next eligible round. No state writes occur here.
-  const openNative=(status)=>{
+  // Two visibly separate moderator flows backed by the original safe editor:
+  // Edit Name exposes name fields ONLY; Participation exposes status ONLY.
+  // Existing native validation, Save/Cancel and queued-next-round logic remain
+  // authoritative. Never write scores, roster or session state from this view.
+  const openNative=(intent)=>{
    if(!editable||!origin||!origin.isConnected)return;
+   const mode=intent==='edit'?'name':'participation';
+   const nativeRoot=document.getElementById('p5-modal-root');
+   if(!nativeRoot)return;
    const btn=origin;close();
    bypass=true;
    try{btn.click();}finally{bypass=false;}
-   if(status==='edit'){
-    document.querySelector('[data-rename-id]')?.focus({preventScroll:true});
-   }else if(status==='active'||status==='sitout'){
-    document.querySelector('.p5-b31-status-choice [data-act="participant-toggle"][data-status="'+status+'"]')?.click();
+   if(!nativeRoot.querySelector('.p5-b3-participant-editor'))return;
+   nativeRoot.dataset.p5psContext=mode;
+   const heading=mode==='name'?'EDIT '+(profile.type==='PAIR'?'PAIR':'PLAYER')+' NAME':'PARTICIPATION · NEXT ROUND';
+   const sync=()=>{
+    const editor=nativeRoot.querySelector('.p5-b3-participant-editor');
+    if(!editor){
+     delete nativeRoot.dataset.p5psContext;
+     watcher.disconnect();
+     return;
+    }
+    const h=nativeRoot.querySelector('.p5-v2-modal > h2');
+    if(h&&h.textContent!==heading)h.textContent=heading;
+    const save=nativeRoot.querySelector('[data-act="modal-save"]');
+    const buttonText=mode==='name'?'Save Name':'Confirm Participation';
+    if(save&&save.textContent!==buttonText)save.textContent=buttonText;
+   };
+   const watcher=new MutationObserver(sync);
+   watcher.observe(nativeRoot,{childList:true});
+   if(mode==='participation'){
+    const wanted=intent==='sitout'?'sitout':'active';
+    const choice=nativeRoot.querySelector('.p5-b31-status-choice [data-act="participant-toggle"][data-status="'+wanted+'"]');
+    // Clicking sets a DRAFT only; the native Save Changes commits the
+    // requested status for the next eligible round.
+    if(choice&&choice.getAttribute('aria-pressed')!=='true')choice.click();
    }
+   sync();
+   if(mode==='name')nativeRoot.querySelector('[data-rename-id]')?.focus({preventScroll:true});
+   else nativeRoot.querySelector('.p5-b31-status-choice [data-act="participant-toggle"][aria-pressed="true"]')?.focus({preventScroll:true});
   };
   dialog.querySelector('[data-p5ps-edit]')?.addEventListener('click',()=>openNative('edit'));
   dialog.querySelector('[data-p5ps-status]')?.addEventListener('click',event=>openNative(event.currentTarget.dataset.p5psStatus));

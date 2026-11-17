@@ -84,10 +84,13 @@
   const pencil='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.5 5.5 3 3M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg>';
   const closeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>';
   const edit=editable?'<button class="p5ps-edit" type="button" data-p5ps-edit aria-label="Edit '+esc(p.type.toLowerCase())+' name" title="Edit name">'+pencil+'</button>':'';
-  const participation='<div class="p5ps-participation"><div class="p5ps-participation-info"><span>PARTICIPATION · NEXT ROUND</span><small>'+(editable?'Selection opens the existing moderator confirmation.':'Session status · view only')+'</small></div>'+
-    '<div class="p5ps-status-controls" role="group" aria-label="Participation status for next round">'+
-    '<button type="button" class="p5ps-status-btn '+(!isSitout?'is-selected':'')+'" data-p5ps-status="active" aria-pressed="'+(!isSitout)+'" '+(!editable?'disabled':'')+'>Active</button>'+
-    '<button type="button" class="p5ps-status-btn '+(isSitout?'is-selected is-sitout':'')+'" data-p5ps-status="sitout" aria-pressed="'+isSitout+'" '+(!editable?'disabled':'')+'>Sit Out</button></div></div>';
+  const participation='<div class="p5ps-participation"><div class="p5ps-participation-info"><span>PARTICIPATION · NEXT ROUND</span><small>'+(
+    isSitout?'SIT OUT · Participant will be excluded':'ACTIVE · Eligible for the next round')+'</small></div>'+
+    '<button type="button" class="p5ps-attendance-switch '+(!isSitout?'is-on':'is-off')+'" role="switch" '+
+    'aria-label="Participant active for next round" aria-checked="'+(!isSitout)+'" '+
+    'data-p5ps-status="'+(isSitout?'active':'sitout')+'" '+(!editable?'disabled':'')+'>'+
+    '<span class="p5ps-switch-track"><span class="p5ps-switch-thumb"></span></span>'+
+    '<span class="p5ps-switch-label">'+(isSitout?'SIT OUT':'ACTIVE')+'</span></button></div>';
   return '<div class="p5ps-handle" aria-hidden="true"></div>'+
    '<div class="p5ps-head"><div class="p5ps-heading"><div class="p5ps-eyebrow">PADEL 5IVE · '+esc(p.type)+' STATISTICS</div>'+
    '<div class="p5ps-title-row"><h2 id="p5ps-title">'+esc(p.name)+'</h2>'+edit+'</div><div class="p5ps-subtitle">STAGE 1 · '+esc(p.mode.replace(/[-_]/g,' ').toUpperCase())+'</div></div>'+
@@ -145,7 +148,7 @@
    }
   };
   dialog.querySelector('[data-p5ps-edit]')?.addEventListener('click',()=>openNative('edit'));
-  dialog.querySelectorAll('[data-p5ps-status]').forEach(btn=>btn.addEventListener('click',()=>openNative(btn.dataset.p5psStatus)));
+  dialog.querySelector('[data-p5ps-status]')?.addEventListener('click',event=>openNative(event.currentTarget.dataset.p5psStatus));
   dialog.addEventListener('click',event=>{
    if(event.target.closest('[data-p5ps-close]')){event.preventDefault();close();}
   });

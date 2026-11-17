@@ -7,6 +7,8 @@ on:
     paths:
       - 'source/team-showdown-v097/**'
       - 'scripts/team-showdown-v097-stage.cjs'
+      - 'scripts/team-showdown-v097-home.cjs'
+      - 'scripts/qa-team-showdown-v097-home.cjs'
       - 'scripts/qa-team-showdown-v097.cjs'
       - 'netlify.toml'
       - 'package.json'
@@ -23,4 +25,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node scripts/qa-team-showdown-v097.cjs
+      - run: npm run qa:showdown-home
       - run: npm run qa:pr36

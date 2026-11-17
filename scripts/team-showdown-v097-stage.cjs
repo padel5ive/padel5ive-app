@@ -49,6 +49,12 @@ const scripts=[
 html=html.slice(0,end)+scripts+'\n'+html.slice(end);
 html=html.replace('PADEL 5IVE | Team Showdown Individual Americano Continuous Balanced v0.9.6 Offline',
  'PADEL 5IVE | Team Showdown v0.9.7 · Staging');
+// Entry from one HOME Team Showdown tile may preselect a frozen native format.
+// Inject only into the UI bootstrap after the canonical SHA guard has passed.
+const bootNative="if(p54ClubArchiveCurrent()){state=freshState();save();}";
+if(html.split(bootNative).length!==2)throw Error('v097 native new-session bootstrap changed');
+html=html.replace(bootNative,
+ "if(p54ClubArchiveCurrent()){state=freshState();const selected=q.get('competition');if(['classic','multi','individual'].includes(selected))state.setup.competitionFormat=selected;save();}");
 fs.writeFileSync(target,html);
 const originalCloud=fs.readFileSync('public/phase58/cloud-dashboard.js','utf8');
 const oldKey='padel5ive-team-showdown-state-v3',newKey='padel5ive-team-showdown-v090-individual-lab';

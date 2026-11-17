@@ -1,0 +1,103 @@
+/* PADEL 5IVE First Edition v1.5 · read-only Player Statistics QA */
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm'),crypto=require('node:crypto');
+const read=p=>fs.readFileSync(p,'utf8');
+const app=read('public/modes/unified/index.html');
+const js=read('public/assets/p5-player-statistics-v15.js');
+const path='/assets/p5-player-statistics-v15.js';
+assert.equal(app.split('src="'+path+'"').length-1,1,'Single asset included in shared Unified dashboard');
+assert(app.includes('P5 PLAYER STATISTICS V15'),'Premium modal stylesheet installed');
+assert(app.includes('p5-leaderboard-privacy'),'Hide / Show Leaderboard feature remains installed');
+assert(app.includes('data-act="manage-participant"'),'Original participant management route not removed');
+assert(app.includes('window.P5App='),'Engine retained');
+const unavailable=/(?:fetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|\.setItem\s*\(|window\.P5App\.render\s*\()/;
+assert(!unavailable.test(js),'Read-only viewer must not mutate Cloud, cache or scoring');
+assert(!js.includes('P5App.setState'),'Viewer cannot modify a saved state');
+const ctx={
+ window:{},
+ document:{readyState:'loading',addEventListener(type,listener){assert.equal(type,'DOMContentLoaded');}},
+ console,
+};
+vm.runInNewContext(js,ctx,{timeout:3000,filename:'p5-player-statistics-v15.js'});
+const run=ctx.window.P5PlayerStatsV15?.analyze;
+assert.equal(typeof run,'function','Pure analysis function available');
+const roster=[
+ {id:101,names:['Agus']},{id:102,names:['Vania']},{id:103,names:['Maria']},{id:104,names:['Neta']},
+ {id:105,names:['Lusi']},{id:106,names:['Eve']}
+];
+const state={
+ stage:'stage1',mode:'individual-americano',roster,
+ rounds:[
+  {index:0,matches:[
+   {id:'R0C0',court:1,confirmed:true,teams:[[101,102],[103,104]],score:[4,1]},
+   {id:'R0C1',court:2,confirmed:true,teams:[[105,106],[103,101]],score:[2,2]}
+  ]},
+  {index:1,matches:[
+   {id:'R1C0',court:2,confirmed:true,teams:[[102,103],[101,104]],score:[1,4]},
+   {id:'R1C1',court:1,confirmed:false,teams:[[101,105],[104,106]],score:null}
+  ]},
+  {index:2,matches:[{id:'R2C0',court:1,confirmed:false,teams:[[101,103],[102,106]],score:[0,0]}]}
+ ]
+};
+const stateBefore=JSON.stringify(state);
+const official=[{id:101,name:'Agus',w:2,l:0,t:1,p:10,diff:6,g:3},{id:102,w:1,l:1,t:0,p:5,diff:-1,g:2},{id:105,w:0,l:0,t:1,p:2,diff:0,g:1}];
+const result=run(state,official,101);
+assert.equal(result.rank,1);
+assert.equal(result.type,'PLAYER');
+assert.equal(result.name,'Agus');
+assert.equal(result.played,3);
+assert.equal(result.w,2);
+assert.equal(result.l,0);
+assert.equal(result.t,1);
+assert.equal(result.winRate,67);
+assert.equal(result.points,10);
+assert.equal(result.diff,6);
+assert.equal(result.scored,10);
+assert.equal(result.conceded,4);
+assert.equal(result.avgScored,10/3);
+assert.equal(result.avgConceded,4/3);
+assert.equal(result.history.length,5);
+assert.equal(result.history.filter(x=>x.completed).length,3);
+assert.equal(result.history.filter(x=>!x.completed).length,2);
+assert.equal(result.history[0].own,'Agus & Vania');
+assert.equal(result.history[0].other,'Maria & Neta');
+assert.equal(result.history[0].result,'W');
+assert.equal(result.history[0].round,1);
+assert.equal(result.history[0].court,1);
+assert.equal(result.history[1].result,'T');
+assert.equal(result.history[2].result,'W');
+assert.equal(result.history[3].result,'UPCOMING');
+assert.equal(result.history[4].result,'UPCOMING');
+assert(result.paired.some(x=>x.name==='Vania'&&x.count===1));
+assert(result.paired.some(x=>x.name==='Neta'&&x.count===1));
+assert(result.opposed.some(x=>x.name==='Maria'&&x.count===1));
+assert(result.opposed.some(x=>x.name==='Neta'&&x.count===1));
+assert.equal(JSON.stringify(state),stateBefore,'Statistics must leave tournament data untouched');
+const fpState={
+ mode:'fixed-americano',stage:'stage1',
+ roster:[{id:1,names:['Frans','Fred']},{id:2,names:['Andry','Diki']},{id:3,names:['Bram','Felix']}],
+ rounds:[
+  {index:0,matches:[{id:'m1',court:1,confirmed:true,score:[5,0],teams:[[1],[2]]}]},
+  {index:1,matches:[{id:'m2',court:2,confirmed:false,score:null,teams:[[3],[1]]}]}
+ ]
+};
+const fp=run(fpState,[{id:1,w:1,l:0,t:0,p:5,diff:5,g:1}],1);
+assert.equal(fp.type,'PAIR');
+assert.equal(fp.name,'Frans & Fred');
+assert.equal(fp.paired.length,0,'Fixed pair should not pretend to have dynamic teammates');
+assert.equal(fp.opposed[0].name,'Andry & Diki');
+assert.equal(fp.history.length,2);
+assert.equal(fp.history[0].own,'Frans & Fred');
+assert.equal(fp.history[1].own,'Frans & Fred');
+const americano=run({...state,mode:'individual-mexicano'},official,101);
+assert.equal(americano.played,3,'Mexicano uses same read-only stats algorithm');
+assert.throws(()=>run(state,official,999),/not found/);
+for(const check of [
+ 'P5App.getState()','P5App.statistics()',
+ "m.teams[side]","round.matches","winRate","avgScored","avgConceded","p5ps-layer",
+ "data-p5ps-manage","data-p5ps-close","MutationObserver","aria-modal","MATCH HISTORY",
+ 'MOST PAIRED','MOST OPPOSED','UPCOMING'
+])assert(js.includes(check),'Missing Player Stats component: '+check);
+assert(app.includes('.p5ps-panel'),'Stats modal CSS missing');
+assert(app.includes('max-height:94dvh'),'Mobile stats view must fit Safari');
+console.log('PASS First Edition v1.5 Player/Pair Statistics: official rank, W/L/T, points, scored, completed/upcoming matches, partners/opponents and fixed pair, read-only');

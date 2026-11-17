@@ -129,6 +129,11 @@ assert(js.includes('Changes apply next eligible round after saving'), 'Status mu
 assert(app.includes('.p5ps-panel .p5ps-close svg'), 'SVG X size must be fixed');
 assert(app.includes('max-height:94dvh'),'Mobile stats view must fit Safari');
 assert(app.includes('v1.5.1 · Native Edit Player/Pair Name and Participation visual polish'),'Native participant modal refined');
+assert(app.includes('P5 V152 INTERACTIVE PARTICIPATION SELECTOR'),'Native two-button selector integrated at build');
+assert(app.includes('p5-b31-dual-choice'),'Shared availability selector uses two real buttons');
+assert(app.includes('data-status="active"') && app.includes('data-status="sitout"'),'Both native availability action states exist');
+assert(js.includes('root.P5Availability?.status'),'Stats status must use canonical PR36 Availability');
+assert(js.includes("'not_arrived'"),'Stats must distinguish NOT_ARRIVED from SIT_OUT');
 assert(app.includes('#p5-modal-root[data-p5ps-context] .p5-v2-modal{'),'Modal padding targets the actual global native dialog root');
 assert(app.includes('#p5-modal-root[data-p5ps-context] .p5-b3-participant-editor>label{'),'Label spacing applies to actual native editor');
 assert(app.includes('gap:11px!important;margin:0!important;padding:0!important'),'Label separated from input with explicit 11px gap');

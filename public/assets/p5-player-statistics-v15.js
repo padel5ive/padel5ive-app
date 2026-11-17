@@ -80,7 +80,7 @@
  }
  function view(p,options){
   const fixed=p.type==='PAIR',editable=!!options.editable;
-  const isSitout=options.status==='sitout';
+  const isSitout=options.status!=='active',isNotArrived=options.status==='not_arrived';
   const pencil='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.5 5.5 3 3M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg>';
   const closeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>';
   const edit=editable?'<button class="p5ps-edit" type="button" data-p5ps-edit aria-label="Edit '+esc(p.type.toLowerCase())+' name" title="Edit name only">'+pencil+'</button>':'';
@@ -90,7 +90,7 @@
     'aria-label="Participant active for next round" aria-checked="'+(!isSitout)+'" '+
     'data-p5ps-status="'+(isSitout?'active':'sitout')+'" '+(!editable?'disabled':'')+'>'+
     '<span class="p5ps-switch-track"><span class="p5ps-switch-thumb"></span></span>'+
-    '<span class="p5ps-switch-label">'+(isSitout?'SIT OUT':'ACTIVE')+'</span></button></div>';
+    '<span class="p5ps-switch-label">'+(isNotArrived?'NOT ARRIVED':isSitout?'SIT OUT':'ACTIVE')+'</span></button></div>';
   return '<div class="p5ps-handle" aria-hidden="true"></div>'+
    '<div class="p5ps-head"><div class="p5ps-heading"><div class="p5ps-eyebrow">PADEL 5IVE · '+esc(p.type)+' STATISTICS</div>'+
    '<div class="p5ps-title-row"><h2 id="p5ps-title">'+esc(p.name)+'</h2>'+edit+'</div><div class="p5ps-subtitle">STAGE 1 · '+esc(p.mode.replace(/[-_]/g,' ').toUpperCase())+'</div></div>'+
@@ -125,13 +125,18 @@
   try{profile=analyze(state,ranking,id)}catch(err){console.warn('Player stats unavailable',err);return;}
   close();origin=source||null;
   const editable=!!(origin&&origin.isConnected&&state.stage==='stage1'&&!document.body.classList.contains('p58-view-only'));
+  // Use the canonical PR36 per-player availability authority, including NOT_ARRIVED.
+  // The legacy sitout/sitoutPending fields alone are not sufficient after PR36.
+  const canonical=typeof root.P5Availability?.status==='function'
+    ?root.P5Availability.status(state,profile.id):null;
   const pending=state.sitoutPending||{};
   const saved=(state.sitout||[]).some(x=>key(x)===key(profile.id));
   const queued=Object.prototype.hasOwnProperty.call(pending,profile.id)?!!pending[profile.id]:saved;
+  const status=canonical==='NOT_ARRIVED'?'not_arrived':canonical==='SIT_OUT'?'sitout':canonical==='ACTIVE'?'active':queued?'sitout':'active';
   dialog=document.createElement('div');
   dialog.id='p5ps-layer';
   dialog.className='p5ps-layer';
-  dialog.innerHTML='<div class="p5ps-backdrop" data-p5ps-close></div><section class="p5ps-panel" role="dialog" aria-modal="true" aria-labelledby="p5ps-title" tabindex="-1">'+view(profile,{editable,showStatus:state.stage==='stage1',status:queued?'sitout':'active'})+'</section>';
+  dialog.innerHTML='<div class="p5ps-backdrop" data-p5ps-close></div><section class="p5ps-panel" role="dialog" aria-modal="true" aria-labelledby="p5ps-title" tabindex="-1">'+view(profile,{editable,showStatus:state.stage==='stage1',status})+'</section>';
   document.body.appendChild(dialog);
   // Two visibly separate moderator flows backed by the original safe editor:
   // Edit Name exposes name fields ONLY; Participation exposes status ONLY.

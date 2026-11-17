@@ -78,12 +78,21 @@
    items.length?items.slice(0,10).map((x,i)=>'<div class="p5ps-group-row"><span>'+String(i+1)+'. '+esc(x.name)+'</span><b>'+x.count+'×</b></div>').join(''):
    '<p>'+esc(empty)+'</p>')+'</div>';
  }
- function view(p){
-  const fixed=p.type==='PAIR';
+ function view(p,options){
+  const fixed=p.type==='PAIR',editable=!!options.editable;
+  const isSitout=options.status==='sitout';
+  const pencil='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.5 5.5 3 3M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg>';
+  const closeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>';
+  const edit=editable?'<button class="p5ps-edit" type="button" data-p5ps-edit aria-label="Edit '+esc(p.type.toLowerCase())+' name" title="Edit name">'+pencil+'</button>':'';
+  const participation='<div class="p5ps-participation"><div class="p5ps-participation-info"><span>PARTICIPATION · NEXT ROUND</span><small>'+(editable?'Selection opens the existing moderator confirmation.':'Session status · view only')+'</small></div>'+
+    '<div class="p5ps-status-controls" role="group" aria-label="Participation status for next round">'+
+    '<button type="button" class="p5ps-status-btn '+(!isSitout?'is-selected':'')+'" data-p5ps-status="active" aria-pressed="'+(!isSitout)+'" '+(!editable?'disabled':'')+'>Active</button>'+
+    '<button type="button" class="p5ps-status-btn '+(isSitout?'is-selected is-sitout':'')+'" data-p5ps-status="sitout" aria-pressed="'+isSitout+'" '+(!editable?'disabled':'')+'>Sit Out</button></div></div>';
   return '<div class="p5ps-handle" aria-hidden="true"></div>'+
-   '<div class="p5ps-head"><div><div class="p5ps-eyebrow">PADEL 5IVE · '+esc(p.type)+' STATISTICS</div>'+
-   '<h2 id="p5ps-title">'+esc(p.name)+'</h2><div class="p5ps-subtitle">STAGE 1 · '+esc(p.mode.replace(/[-_]/g,' ').toUpperCase())+'</div></div>'+
-   '<button class="p5ps-close" type="button" aria-label="Close statistics" data-p5ps-close>×</button></div>'+
+   '<div class="p5ps-head"><div class="p5ps-heading"><div class="p5ps-eyebrow">PADEL 5IVE · '+esc(p.type)+' STATISTICS</div>'+
+   '<div class="p5ps-title-row"><h2 id="p5ps-title">'+esc(p.name)+'</h2>'+edit+'</div><div class="p5ps-subtitle">STAGE 1 · '+esc(p.mode.replace(/[-_]/g,' ').toUpperCase())+'</div></div>'+
+   '<button class="p5ps-close" type="button" aria-label="Close statistics" data-p5ps-close>'+closeIcon+'</button></div>'+
+   (options.showStatus?participation:'')+
    '<div class="p5ps-hero"><div><small>WIN RATE</small><strong>'+p.winRate+'%</strong></div>'+
    '<div class="p5ps-rank"><small>CURRENT RANK</small><strong>'+(p.rank==null?'—':'#'+p.rank)+'</strong></div></div>'+
    '<div class="p5ps-metrics">'+metric('PLAYED',p.played)+metric('WINS',p.w,'win')+metric('LOSSES',p.l,'loss')+metric('TIES',p.t)+'</div>'+
@@ -97,8 +106,7 @@
    group('MOST OPPOSED',p.opposed,'No completed opponents yet')+'</div>'+
    '<div class="p5ps-section-row"><h3 class="p5ps-section">MATCH HISTORY</h3><span>'+p.completed+' played · '+(p.scheduled-p.completed)+' upcoming</span></div>'+
    '<div class="p5ps-games">'+(p.history.length?p.history.map(record).join(''):'<p class="p5ps-empty">No assigned matches yet.</p>')+'</div>'+
-   '<div class="p5ps-footer"><button type="button" data-p5ps-manage hidden>Manage '+esc(p.type.toLowerCase())+'</button>'+
-   '<button class="p5ps-done" type="button" data-p5ps-close>Close</button></div>';
+   '<div class="p5ps-footer"><button class="p5ps-done" type="button" data-p5ps-close>Close</button></div>';
  }
  let dialog=null,origin=null,bypass=false,oldOverflow='';
  const close=()=>{
@@ -113,20 +121,31 @@
   let profile;
   try{profile=analyze(state,ranking,id)}catch(err){console.warn('Player stats unavailable',err);return;}
   close();origin=source||null;
+  const editable=!!(origin&&origin.isConnected&&state.stage==='stage1'&&!document.body.classList.contains('p58-view-only'));
+  const pending=state.sitoutPending||{};
+  const saved=(state.sitout||[]).some(x=>key(x)===key(profile.id));
+  const queued=Object.prototype.hasOwnProperty.call(pending,profile.id)?!!pending[profile.id]:saved;
   dialog=document.createElement('div');
   dialog.id='p5ps-layer';
   dialog.className='p5ps-layer';
-  dialog.innerHTML='<div class="p5ps-backdrop" data-p5ps-close></div><section class="p5ps-panel" role="dialog" aria-modal="true" aria-labelledby="p5ps-title" tabindex="-1">'+view(profile)+'</section>';
+  dialog.innerHTML='<div class="p5ps-backdrop" data-p5ps-close></div><section class="p5ps-panel" role="dialog" aria-modal="true" aria-labelledby="p5ps-title" tabindex="-1">'+view(profile,{editable,showStatus:state.stage==='stage1',status:queued?'sitout':'active'})+'</section>';
   document.body.appendChild(dialog);
-  const manager=dialog.querySelector('[data-p5ps-manage]');
-  if(manager&&origin&&state.stage==='stage1'&&!document.body.classList.contains('p58-view-only')){
-   manager.hidden=false;
-   manager.addEventListener('click',()=>{
-    const btn=origin;
-    close();
-    if(btn&&btn.isConnected){bypass=true;try{btn.click();}finally{bypass=false;}}
-   });
-  }
+  // Edit and status selection reuse the original moderator controller. The
+  // native modal preserves participant IDs, saves to sitoutPending and applies
+  // changes only to the next eligible round. No state writes occur here.
+  const openNative=(status)=>{
+   if(!editable||!origin||!origin.isConnected)return;
+   const btn=origin;close();
+   bypass=true;
+   try{btn.click();}finally{bypass=false;}
+   if(status==='edit'){
+    document.querySelector('[data-rename-id]')?.focus({preventScroll:true});
+   }else if(status==='active'||status==='sitout'){
+    document.querySelector('.p5-b31-status-choice [data-act="participant-toggle"][data-status="'+status+'"]')?.click();
+   }
+  };
+  dialog.querySelector('[data-p5ps-edit]')?.addEventListener('click',()=>openNative('edit'));
+  dialog.querySelectorAll('[data-p5ps-status]').forEach(btn=>btn.addEventListener('click',()=>openNative(btn.dataset.p5psStatus)));
   dialog.addEventListener('click',event=>{
    if(event.target.closest('[data-p5ps-close]')){event.preventDefault();close();}
   });

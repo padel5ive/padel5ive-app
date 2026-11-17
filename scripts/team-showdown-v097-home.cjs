@@ -17,9 +17,9 @@ home=swap(home,'<span class="p54-mode-name">Club Match</span>',
 home=swap(home,'<span class="p54-mode-desc">Team Showdown · Club Americano (soon)</span>',
  '<span class="p54-mode-desc">Classic · Multi-Division · Individual Americano</span>','HOME mode description');
 home=swap(home,
- "function chooseMode(m){",
- "function chooseMode(m){\n    if(m==='Club Match'){mode=m;continueToMode();return;}",
- 'Team Showdown direct launch; format belongs to native setup');
+ "const club=m==='Club Match';const sub=document.getElementById('p54-subpanel');sub.classList.add('p54-show');",
+ "const club=m==='Club Match';const sub=document.getElementById('p54-subpanel');\n    if(club){\n      sub.classList.remove('p54-show');\n      document.getElementById('p54-options').replaceChildren();\n      document.getElementById('p54-continue').disabled=false;\n      document.getElementById('p54-caption').textContent='Team Showdown · Choose match format in Session Setup';\n      return;\n    }\n    sub.classList.add('p54-show');",
+ 'Team Showdown selected only; keep Continue as sole navigation');
 home=swap(home,
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};",
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};\n  const activeV097=()=>{const s=parse('padel5ive-team-showdown-v090-individual-lab');return s&&s.setup&&s.stage&&s.stage!=='setup'&&s.setup.sessionName?s:null};",

@@ -17,6 +17,7 @@
     "qa:showdown-dashboard": "node scripts/qa-team-showdown-v097-dashboard-parity.cjs",
     "qa:showdown-ipad": "node scripts/qa-team-showdown-v097-ipad-score-center.cjs",
     "qa:leaderboard-privacy": "node scripts/qa-leaderboard-privacy-v15.cjs",
-    "qa:player-statistics": "node scripts/qa-player-statistics-v15.cjs"
+    "qa:player-statistics": "node scripts/qa-player-statistics-v15.cjs",
+    "qa:buttons-v152": "node scripts/qa-v152-browser-buttons.cjs"
   }
 }

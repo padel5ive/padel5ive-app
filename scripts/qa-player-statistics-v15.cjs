@@ -96,9 +96,19 @@ assert.throws(()=>run(state,official,999),/not found/);
 for(const check of [
  'P5App.getState()','P5App.statistics()',
  "m.teams[side]","round.matches","winRate","avgScored","avgConceded","p5ps-layer",
- "data-p5ps-manage","data-p5ps-close","MutationObserver","aria-modal","MATCH HISTORY",
+ "data-p5ps-edit","data-p5ps-status","p5ps-status-controls","data-p5ps-close","MutationObserver","aria-modal","MATCH HISTORY",
  'MOST PAIRED','MOST OPPOSED','UPCOMING'
 ])assert(js.includes(check),'Missing Player Stats component: '+check);
 assert(app.includes('.p5ps-panel'),'Stats modal CSS missing');
+assert(js.includes('const edit=editable?'), 'Edit pencil must be shown only for editable Stage 1');
+assert(js.includes('const openNative=(status)=>'), 'Edit and participation must reuse native controller');
+assert(js.includes('btn.click();'), 'Moderator action must flow through existing Manage Participant controller');
+assert(js.includes('state.sitoutPending||{}'), 'Must show queued next-round participation status');
+assert(js.includes('options.showStatus?participation'), 'Status bar should appear only during Stage 1');
+assert(!js.includes('data-p5ps-manage'), 'Bottom Manage Pair button must be removed');
+assert(app.includes('.p5ps-panel .p5ps-title-row'), 'Inline edit pencil alignment CSS');
+assert(app.includes('.p5ps-panel .p5ps-close svg'), 'Precisely centered SVG close icon');
+assert(app.includes('.p5ps-panel .p5ps-participation'), 'Compact top participation status');
+assert(app.includes('.p5ps-panel .p5ps-status-controls'), 'Active/Sit Out segmented control styles');
 assert(app.includes('max-height:94dvh'),'Mobile stats view must fit Safari');
 console.log('PASS First Edition v1.5 Player/Pair Statistics: official rank, W/L/T, points, scored, completed/upcoming matches, partners/opponents and fixed pair, read-only');

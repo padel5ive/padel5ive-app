@@ -1,7 +1,7 @@
 /* PADEL 5IVE v1.5.2 — actual headless Chromium button & touch regression.
    Isolated localhost only. No browser packages, online sessions or Cloud writes. */
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http');
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),net=require('node:net');
 const {spawn,spawnSync}=require('node:child_process'),{setTimeout:nap}=require('node:timers/promises');
 let server,chrome,ws,profile;
 const webRoot=path.resolve('public');
@@ -23,11 +23,21 @@ async function startup(){
  for(const b of ['google-chrome','google-chrome-stable','chromium','chromium-browser']){const w=spawnSync('which',[b],{encoding:'utf8'});if(w.status===0){bin=w.stdout.trim();break}}
  assert(bin,'Missing browser executable for true UI regression');
  profile=fs.mkdtempSync(path.join(os.tmpdir(),'padel5ive-browser-'));
- chrome=spawn(bin,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{stdio:'ignore'});
- let port;
- for(let i=0;i<100;i++){await nap(150);try{port=Number(fs.readFileSync(path.join(profile,'DevToolsActivePort'),'utf8').split('\n')[0]);if(port)break}catch{}if(chrome.exitCode!==null)throw Error('Browser exited early');}
- assert(port,'Chrome debugging port unavailable');
- const tabs=await (await fetch('http://127.0.0.1:'+port+'/json/list')).json(),tab=tabs.find(t=>t.type==='page');assert(tab?.webSocketDebuggerUrl);
+ const debuggingPort=await new Promise((ok,fail)=>{const probe=net.createServer();probe.on('error',fail);probe.listen(0,'127.0.0.1',()=>{const n=probe.address().port;probe.close(()=>ok(n))})});
+ let chromeErrors='';
+ chrome=spawn(bin,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-zygote','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port='+debuggingPort,'--user-data-dir='+profile,'about:blank'],{stdio:['ignore','ignore','pipe']});
+ chrome.stderr?.on('data',chunk=>{chromeErrors+=String(chunk);if(chromeErrors.length>12000)chromeErrors=chromeErrors.slice(-12000)});
+ let tabs;
+ for(let i=0;i<140;i++){
+  await nap(160);
+  try{
+   const res=await fetch('http://127.0.0.1:'+debuggingPort+'/json/list',{signal:AbortSignal.timeout(700)});
+   if(res.ok){tabs=await res.json();if(tabs.some(x=>x.type==='page'))break}
+  }catch{}
+  if(chrome.exitCode!==null)throw Error('Chromium exited ('+chrome.exitCode+'): '+chromeErrors.slice(-2000));
+ }
+ assert(tabs?.length,'Chrome debugging port unavailable: '+bin+' ('+chrome.exitCode+'). '+chromeErrors.slice(-2200));
+ const tab=tabs.find(t=>t.type==='page');assert(tab?.webSocketDebuggerUrl);
  ws=new WebSocket(tab.webSocketDebuggerUrl);
  await new Promise((ok,fail)=>{ws.addEventListener('open',ok,{once:true});ws.addEventListener('error',fail,{once:true})});
  let id=0;const pending=new Map();

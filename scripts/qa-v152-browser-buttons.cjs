@@ -76,12 +76,13 @@ async function main(){
  await tap('[data-p5-pr36-tab="leaderboard"]');
  assert.equal(await val('document.querySelector("#americano").dataset.p5Pr36View'),'leaderboard','iPhone leaderboard tab must actually be selected');
  const id=await val('Number(document.querySelector('+JSON.stringify(name)+').dataset.id)');assert(Number.isInteger(id));
+ const selectedName=name+'[data-id="'+id+'"]';
  await tap('#americano .p5-lb-privacy-toggle');
  assert(await val('document.querySelector(".p5-b41-leaderboard").classList.contains("p5-lb-private")'));
  await tap('#americano .p5-lb-privacy-toggle');
  assert(!(await val('document.querySelector(".p5-b41-leaderboard").classList.contains("p5-lb-private")')));
  console.log('PASS iPhone Privacy HIDE / SHOW');
- await tap(name);await until(isStats,'player stats');await tap('[data-p5ps-status]');await until(isModal,'participation modal');
+ await tap(selectedName);await until(isStats,'player stats');await tap('[data-p5ps-status]');await until(isModal,'participation modal');
  assert.equal(await val('document.querySelector("#p5-modal-root").dataset.p5psContext'),'participation');
  async function participationHidden(){
   assert.equal(await val('getComputedStyle(document.querySelector("#p5-modal-root .p5-b3-participant-editor>label")).display'),'none','Name label exposed during Participation');
@@ -94,13 +95,13 @@ async function main(){
  await tap(cancel);await until(async()=>!(await isModal()),'Cancel participation');
  assert.equal((await state()).availabilityById[id],'ACTIVE','Cancel persisted draft');
  console.log('PASS iPhone Active / Sit Out / Cancel, no saved draft');
- await tap(name);await until(isStats,'stats reopen');await tap('[data-p5ps-status]');await until(isModal,'participation reopen');
+ await tap(selectedName);await until(isStats,'stats reopen');await tap('[data-p5ps-status]');await until(isModal,'participation reopen');
  await participationHidden();await tap(save);await until(async()=>!(await isModal()),'Confirm');
  assert.equal((await state()).availabilityById[id],'SIT_OUT','Confirm did not persist canonical Sit Out');
  assert((await state()).sitout.includes(id),'Sit Out must be excluded from active eligibility');
  assert((await state()).rounds.every(r=>r.matches.every(m=>!m||!m.confirmed)),'Confirmed scores changed from participation');
  console.log('PASS iPhone Confirm Participation, next-round queue and score protection');
- await tap(name);await until(isStats,'stats for edit');await tap('[data-p5ps-edit]');await until(isModal,'edit name');
+ await tap(selectedName);await until(isStats,'stats for edit');await tap('[data-p5ps-edit]');await until(isModal,'edit name');
  assert.equal(await val('document.querySelector("#p5-modal-root").dataset.p5psContext'),'name');
  assert.equal(await val('getComputedStyle(document.querySelector("#p5-modal-root .p5-b31-status-editor")).display'),'none');
  await val('(()=>{const e=document.querySelector("#p5-modal-root [data-rename-id]");e.value="QA Name Updated";e.dispatchEvent(new Event("input",{bubbles:true}))})()');
@@ -108,7 +109,7 @@ async function main(){
  assert.equal((await state()).roster.find(x=>x.id===id).names[0],'QA Name Updated');
  assert.equal((await state()).availabilityById[id],'SIT_OUT','Edit Name changed canonical availability');
  console.log('PASS iPhone Edit Name / Save, participation preserved');
- await tap(name);await until(isStats,'stats close');await tap('[data-p5ps-close]');await until(async()=>!(await isStats()),'close X');
+ await tap(selectedName);await until(isStats,'stats close');await tap('[data-p5ps-close]');await until(async()=>!(await isStats()),'close X');
  await tap('[data-p5-pr36-tab="rounds"]');
  if(await val('!!document.querySelector("#americano [data-act=score]")')){
   const before=JSON.stringify((await state()).rounds);
@@ -117,7 +118,7 @@ async function main(){
   console.log('PASS iPhone Score Entry / Cancel');
  }
  await size(1180,820);await nap(250);
- await tap(name);await until(isStats,'iPad stats');await tap('[data-p5ps-status]');await until(isModal,'iPad participation');
+ await tap(selectedName);await until(isStats,'iPad stats');await tap('[data-p5ps-status]');await until(isModal,'iPad participation');
  await participationHidden();await tap(active);
  assert.equal(await val('document.querySelector('+JSON.stringify(active)+').getAttribute("aria-pressed")'),'true');
  await tap(cancel);await until(async()=>!(await isModal()),'iPad Cancel');

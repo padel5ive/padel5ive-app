@@ -1,13 +1,15 @@
 name: Team Showdown v0.9.7 Staging Integration QA
 on:
   push:
-    branches: [release/team-showdown-v097]
+    branches: [release/team-showdown-v097, fix/v097-classic-master-report-parity]
   pull_request:
-    branches: [main]
+    branches: [main, release/team-showdown-v097]
     paths:
       - 'source/team-showdown-v097/**'
       - 'scripts/team-showdown-v097-stage.cjs'
       - 'scripts/team-showdown-v097-home.cjs'
+      - 'scripts/team-showdown-v097-master-report.cjs'
+      - 'scripts/qa-team-showdown-v097-report-parity.cjs'
       - 'scripts/qa-team-showdown-v097-home.cjs'
       - 'scripts/qa-team-showdown-v097.cjs'
       - 'scripts/qa-team-showdown-public.cjs'
@@ -28,4 +30,5 @@ jobs:
       - run: node scripts/qa-team-showdown-v097.cjs
       - run: npm run qa:showdown-home
       - run: npm run qa:showdown-public
+      - run: npm run qa:showdown-parity
       - run: npm run qa:pr36

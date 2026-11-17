@@ -15,6 +15,8 @@ on:
       - 'scripts/qa-team-showdown-v097-dashboard-parity.cjs'
       - 'scripts/qa-team-showdown-v097-report-parity.cjs'
       - 'scripts/qa-team-showdown-v097-home.cjs'
+      - 'scripts/leaderboard-privacy-v15.cjs'
+      - 'scripts/qa-leaderboard-privacy-v15.cjs'
       - 'scripts/qa-team-showdown-v097.cjs'
       - 'scripts/qa-team-showdown-public.cjs'
       - 'netlify.toml'
@@ -38,3 +40,4 @@ jobs:
       - run: npm run qa:showdown-dashboard
       - run: npm run qa:showdown-ipad
       - run: npm run qa:pr36
+      - run: npm run qa:leaderboard-privacy

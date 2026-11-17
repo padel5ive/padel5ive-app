@@ -37,15 +37,53 @@ must(legacy,'Share Final Results Link');
 assert(!legacy.includes("padel5ive-team-showdown-v090-individual-lab"),'Legacy master state must stay isolated');
 assert.equal(count(home,"modes/club-match/v097/?intent=new"),1,'Single direct Team Showdown launch route required');
 assert(!home.includes("['classic','Classic · Fixed Partner'"),'Duplicate HOME format picker must not exist');
-assert(home.includes("if(m==='Club Match'){mode=m;continueToMode();return;}"),'Team Showdown card must launch directly');
+assert(!home.includes("if(m==='Club Match'){mode=m;continueToMode();return;}"),'Team Showdown must NOT auto-launch');
+assert(home.includes("if(club){"),'Team Showdown must have a selection-only branch');
+assert(home.includes("sub.classList.remove('p54-show')"),'No HOME pairing panel for Team Showdown');
+assert(home.includes("document.getElementById('p54-continue').addEventListener('click',continueToMode)"),'Continue click must be the only way to launch');
 const chooseStart=home.indexOf('  function chooseMode(m){');
 const chooseEnd=home.indexOf('  function closeConfirm(){',chooseStart);
-assert(chooseStart>0&&chooseEnd>chooseStart,'Home chooseMode extraction markers');
-const choose=home.slice(chooseStart,chooseEnd);
-const ctx={document:{querySelectorAll(){throw Error('Team Showdown should not render HOME options')}},console};
-vm.runInNewContext("let mode='';let clicks=0;function continueToMode(){clicks++};"+choose+"chooseMode('Club Match');this.testValue={mode,clicks};",ctx);
-assert.equal(ctx.testValue.mode,'Club Match');
-assert.equal(ctx.testValue.clicks,1,'Team Showdown should launch engine after a single tap');
+const continueStart=home.indexOf('  function continueToMode(){',chooseEnd);
+const continueEnd=home.indexOf("  document.getElementById('p54-start').addEventListener",continueStart);
+assert(chooseStart>0&&chooseEnd>chooseStart&&continueStart>chooseEnd&&continueEnd>continueStart,'HOME navigation extraction markers');
+const choose=home.slice(chooseStart,chooseEnd),continueFn=home.slice(continueStart,continueEnd);
+const elements=new Map();
+function node(id){
+ if(!elements.has(id)){
+  const classes=new Set();
+  elements.set(id,{id,disabled:true,textContent:'',innerHTML:'',replaceChildren(){this.innerHTML='';this.replaced=true},
+   classList:{add(c){classes.add(c)},remove(c){classes.delete(c)},contains(c){return classes.has(c)}}});
+ }
+ return elements.get(id);
+}
+const buttons=['Americano','Mexicano','Club Match'].map(mode=>({dataset:{mode},setAttribute(k,v){this[k]=v}}));
+const context={
+ console,
+ document:{querySelectorAll:(q)=>q.startsWith('.p54-mode')?buttons:[],
+  getElementById:node},
+ activeV097:()=>null,activeUnified:()=>null,
+ roots:{unified:'modes/unified/'},route:()=>{throw Error('Legacy route used for Team Showdown')},
+ launch:(url)=>{context.launches.push(url)},launches:[]
+};
+vm.runInNewContext(
+ "let mode='',pairing='fixed',target='',pendingWhich='';"+choose+continueFn+
+ "chooseMode('Club Match');this.selected={mode,pairing};",context);
+assert.equal(context.selected.mode,'Club Match');
+assert.equal(context.launches.length,0,'Selecting Team Showdown must stay on Game Mode screen');
+assert.equal(node('p54-continue').disabled,false,'Continue must be enabled after selecting');
+assert.equal(node('p54-subpanel').classList.contains('p54-show'),false,'No duplicated Team Showdown format panel');
+assert.equal(node('p54-options').replaced,true,'Previous mode pairing options must be cleared');
+assert.equal(buttons[2]['aria-pressed'],'true','Team Showdown selection should highlight');
+vm.runInNewContext('continueToMode();',context);
+assert.equal(context.launches.length,1,'Only tapping Continue launches Team Showdown');
+assert.equal(context.launches[0],'modes/club-match/v097/?intent=new');
+vm.runInNewContext("chooseMode('Mexicano');this.mexPair=pairing;",context);
+assert.equal(node('p54-subpanel').classList.contains('p54-show'),true,'Mexicano pairing selector must still appear');
+assert.match(node('p54-options').innerHTML,/Structured Pairing/,'Mexicano options preserved');
+assert.equal(context.mexPair,'flexible');
+vm.runInNewContext("chooseMode('Americano');",context);
+assert.equal(node('p54-subpanel').classList.contains('p54-show'),true,'Americano pairing selector must still appear');
+assert.match(node('p54-options').innerHTML,/Fixed Partner/,'Americano options preserved');
 for(const [name,s] of [['HOME',home],['v0.9.7',native]]){
   let i=0;
   for(const m of s.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)){

@@ -87,15 +87,17 @@ async function main(){
   assert.equal(await val('getComputedStyle(document.querySelector("#p5-modal-root .p5-b3-participant-editor>label")).display'),'none','Name label exposed during Participation');
  }
  await participationHidden();
+ assert.equal(await val('document.querySelectorAll("#p5-modal-root .p5-b31-dual-choice button").length'),2,'Active / Sit Out must both be real buttons');
  await tap(active);assert.equal(await val('document.querySelector('+JSON.stringify(active)+').getAttribute("aria-pressed")'),'true');
  await tap(sitout);assert.equal(await val('document.querySelector('+JSON.stringify(sitout)+').getAttribute("aria-pressed")'),'true');
- assert.equal(Object.keys((await state()).sitoutPending).length,0,'Draft changed saved state before Confirm');
+ assert.equal((await state()).availabilityById[id],'ACTIVE','Draft changed canonical status before Confirm');
  await tap(cancel);await until(async()=>!(await isModal()),'Cancel participation');
- assert.equal(Object.keys((await state()).sitoutPending).length,0,'Cancel persisted draft');
+ assert.equal((await state()).availabilityById[id],'ACTIVE','Cancel persisted draft');
  console.log('PASS iPhone Active / Sit Out / Cancel, no saved draft');
  await tap(name);await until(isStats,'stats reopen');await tap('[data-p5ps-status]');await until(isModal,'participation reopen');
  await participationHidden();await tap(save);await until(async()=>!(await isModal()),'Confirm');
- assert.equal((await state()).sitoutPending[id],true,'Confirm did not queue Sit Out');
+ assert.equal((await state()).availabilityById[id],'SIT_OUT','Confirm did not persist canonical Sit Out');
+ assert((await state()).sitout.includes(id),'Sit Out must be excluded from active eligibility');
  assert((await state()).rounds.every(r=>r.matches.every(m=>!m||!m.confirmed)),'Confirmed scores changed from participation');
  console.log('PASS iPhone Confirm Participation, next-round queue and score protection');
  await tap(name);await until(isStats,'stats for edit');await tap('[data-p5ps-edit]');await until(isModal,'edit name');
@@ -104,7 +106,7 @@ async function main(){
  await val('(()=>{const e=document.querySelector("#p5-modal-root [data-rename-id]");e.value="QA Name Updated";e.dispatchEvent(new Event("input",{bubbles:true}))})()');
  await tap(save);await until(async()=>!(await isModal()),'save name');
  assert.equal((await state()).roster.find(x=>x.id===id).names[0],'QA Name Updated');
- assert.equal((await state()).sitoutPending[id],true,'Edit name changed Sit Out status');
+ assert.equal((await state()).availabilityById[id],'SIT_OUT','Edit Name changed canonical availability');
  console.log('PASS iPhone Edit Name / Save, participation preserved');
  await tap(name);await until(isStats,'stats close');await tap('[data-p5ps-close]');await until(async()=>!(await isStats()),'close X');
  await tap('[data-p5-pr36-tab="rounds"]');

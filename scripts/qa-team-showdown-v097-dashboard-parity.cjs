@@ -26,7 +26,8 @@ assert(unified.includes('PR36 IPAD LANDSCAPE REFINEMENT'),'Americano/Mexicano ma
 assert(!classic.includes(marker),'Production Classic dashboard untouched');
 assert.equal(publicResult,originalResult
  .replace('src="/assets/p5-showdown-engine.js"','src="/v097/showdown-engine.js"')
- .replace('src="/assets/p5-showdown-results-v5514.js"','src="/v097/showdown-results-master.js"'),
+ .replace('src="/assets/p5-showdown-results-v5514.js"','src="/v097/showdown-results-master.js"')
+ .replace('ROUND BY ROUND · LATEST FIRST','MATCH BY MATCH · LATEST FIRST'),
  'Approved public Share Results page unchanged');
 const style=page.match(/<style id="p5-showdown-v097-dashboard-device-parity">([\s\S]*?)<\/style>/);
 assert(style,'Dedicated parity CSS should be present');

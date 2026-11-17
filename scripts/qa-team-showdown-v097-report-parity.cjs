@@ -20,8 +20,11 @@ assert.equal(crypto.createHash('sha256').update(sourceEngine[0][2]).digest('hex'
  crypto.createHash('sha256').update(builtEngine).digest('hex'),'report and native game must run byte-identical engines');
 const expected=h
  .replace('src="/assets/p5-showdown-engine.js"','src="/v097/showdown-engine.js"')
- .replace('src="/assets/p5-showdown-results-v5514.js"','src="/v097/showdown-results-master.js"');
-assert.equal(v,expected,'Classic master result DOM/CSS/assets must remain byte-for-byte identical except script URLs');
+ .replace('src="/assets/p5-showdown-results-v5514.js"','src="/v097/showdown-results-master.js"')
+ .replace('ROUND BY ROUND · LATEST FIRST','MATCH BY MATCH · LATEST FIRST');
+assert.equal(v,expected,'Classic master result DOM/CSS/assets preserved except script URLs and accurate continuous-match caption');
+assert(v.includes('MATCH BY MATCH · LATEST FIRST'),'Continuous Share Results section must show match order, not fictional rounds');
+assert(h.includes('ROUND BY ROUND · LATEST FIRST'),'Original Classic master remains unchanged');
 assert(originalJS.includes('const match=location.pathname.match(/^\\/r\\/'),'original Classic master report must remain in place');
 assert(adaptedJS.includes('const match=location.pathname.match(/^\\/(?:ts|i)\\/'),'v097 must support /ts/ and legacy /i/');
 assert(adaptedJS.includes("const individual=data.setup.competitionFormat==='individual'"),'Individual source mapping missing');
@@ -29,6 +32,19 @@ assert(adaptedJS.includes("formatPair('A',m.a2)"),'Individual second partner A m
 assert(adaptedJS.includes("formatPair('B',m.b2)"),'Individual second partner B missing');
 assert(adaptedJS.includes("m[pair.team==='A'?'a2':'b2']"),'Individual analysis match list missing second teammate');
 assert(adaptedJS.includes('opponentName(m,pair)'), 'Individual opponent analysis not mapped');
+assert(adaptedJS.includes('const where=reportMatchTag(m,stage);'),'Match rows must use real match sequence');
+assert(!adaptedJS.includes("m.wave||m.round||'—'"),'Broken R— label must not survive in v0.9.7 viewer');
+const tagDefinition=adaptedJS.match(/const reportMatchTag=\(m,stage\)=>\{[^}]*\};/);
+assert(tagDefinition,'Stage 1 match label helper must remain testable');
+const tag=vm.runInNewContext('('+tagDefinition[0].slice('const reportMatchTag='.length,-1)+')',{esc:x=>String(x)});
+assert.equal(tag({wave:3,sequence:8},1),'R3','Real rounds retain R label');
+assert.equal(tag({round:4,sequence:11},1),'R4','Legacy round retains R label');
+assert.equal(tag({wave:null,round:null,sequence:1,completedSequence:4},1),'M01','Continuous first fixture uses dispatch sequence');
+assert.equal(tag({sequence:28,completedSequence:25},1),'M28','Continuous late fixture uses dispatch sequence');
+assert.equal(tag({sequence:null,completedSequence:5,order:10},1),'M05','Score confirmation fallback');
+assert.equal(tag({order:9},1),'M10','Deterministic history fallback');
+assert.equal(tag({},1),'MATCH','No fictitious R— fallback');
+assert.equal(tag({id:'duel-1'},2),'Mduel-1','Stage 2 labels remain unchanged');
 assert(adaptedJS.includes("label.textContent='PLAYERS'"),'Individual report player count label missing');
 assert(!adaptedJS.includes('localStorage.getItem('),'Public results must not read private local sessions');
 assert(!adaptedJS.includes('sessionStorage.getItem('),'Public results must not read viewer session state');

@@ -16,6 +16,11 @@ assert(html.includes('P5 LEADERBOARD PRIVACY v1.5'),'Privacy CSS installed');
 assert(html.includes('#americano .p5-b41-leaderboard.p5-lb-private> :not(.row.between)'),'Only the leaderboard body can be blurred');
 assert(html.includes('filter:blur(7px)!important'),'Blur must remain a visible effect');
 assert(html.includes('min-height:40px!important'),'Mobile toggle must remain touch friendly');
+assert(html.includes('v1.5.1 · Quiet luxury privacy control'),'v1.5.1 refinement CSS present');
+assert(html.includes('width:40px!important;min-width:40px!important;max-width:40px!important'),'Mobile privacy button is compact 40px touch target');
+assert(html.includes('.p5-lb-privacy-toggle span{display:none!important}'),'iPhone button is icon only with accessible aria-label');
+assert(html.includes('max-height:40px!important'),'iPhone privacy button fixed-height and aligned');
+assert(html.includes('min-width:0!important;flex:1 1 auto!important'),'Leaderboard title keeps flexible layout alongside privacy button');
 assert(!/localStorage|sessionStorage|fetch\(|XMLHttpRequest|state\.|scoreMatch|save\(/.test(js),'Privacy must never write session/engine state or send network data');
 assert(!showdown.includes(id)&&!legacy.includes(id),'Team Showdown shells must remain unchanged');
 function cls(){

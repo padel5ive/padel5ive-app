@@ -28,6 +28,8 @@ write('public/v097/showdown-engine.js',engine);
 const masterHtml=read('public/results/showdown/index.html');
 let page=swap(masterHtml,'src="/assets/p5-showdown-engine.js"','src="/v097/showdown-engine.js"','engine script URL');
 page=swap(page,'src="/assets/p5-showdown-results-v5514.js"','src="/v097/showdown-results-master.js"','report adapter URL');
+// Continuous dispatch has no round number. Describe the list by actual matches.
+page=swap(page,'ROUND BY ROUND · LATEST FIRST','MATCH BY MATCH · LATEST FIRST','continuous match list caption');
 write('public/results/showdown/v097/index.html',page);
 
 // Reuse the proven original JS renderer (navigation, leaderboard, analysis,
@@ -57,6 +59,15 @@ js=swap(js,
  "const b=stage===1?formatPair('B',m.b):selectedLineup(m,'B');",
  "const b=stage===1?(individual?[formatPair('B',m.b),formatPair('B',m.b2)].join(' & '):formatPair('B',m.b)):selectedLineup(m,'B');",
  'individual B side');
+// Public Stage 1 continuous matches have `sequence`, not `wave` or `round`.
+// Use the true assigned match number (M01..M99) and keep C1..C5 separately.
+// Real round-based historical matches continue to display R1, R2, etc.
+const stage1MatchTag="const reportMatchTag=(m,stage)=>{if(stage!==1)return 'M'+esc(m.id||'—');const round=[m.wave,m.round].find(n=>Number.isInteger(n)&&n>0);if(round)return 'R'+round;const seq=[m.sequence,m.completedSequence,Number.isInteger(m.order)?m.order+1:null].find(n=>Number.isInteger(n)&&n>0);return seq?'M'+String(seq).padStart(2,'0'):'MATCH';}; ";
+js=swap(js,'const makeMatchRow=(m,stage)=>{',stage1MatchTag+'const makeMatchRow=(m,stage)=>{','Match label helper');
+js=swap(js,
+ "const where=stage===1?`R${esc(m.wave||m.round||'—')}`:`M${esc(m.id||'—')}`;",
+ "const where=reportMatchTag(m,stage);",
+ 'Continuous Stage 1 R— regression');
 js=swap(js,
  "if(rrStage)rrStage.innerHTML=block('Round Robin',rr,1,false);",
  "if(rrStage)rrStage.innerHTML=block(individual?'Individual Americano':'Round Robin',rr,1,false);",

@@ -17,17 +17,13 @@ home=swap(home,'<span class="p54-mode-name">Club Match</span>',
 home=swap(home,'<span class="p54-mode-desc">Team Showdown · Club Americano (soon)</span>',
  '<span class="p54-mode-desc">Classic · Multi-Division · Individual Americano</span>','HOME mode description');
 home=swap(home,
+ "const a=activeUnified(),b=activeClub();",
+ "const a=activeUnified(),b=activeClub();\n    const v=activeV097();\n    if(v)sessions.push({name:clean(v.setup.sessionName),kind:'showdown',url:'modes/club-match/v097/?intent=resume',label:'Team Showdown · v0.9.7'});\n    const saved097=parse('padel5ive-team-showdown-native-v07-archive');\n    if(Array.isArray(saved097))saved097.slice(0,4).forEach(x=>{\n      if(x?.id&&x.state?.setup?.sessionName)sessions.push({name:clean(x.state.setup.sessionName),kind:'showdown-archive',url:'modes/club-match/v097/?intent=archive&id='+encodeURIComponent(x.id),label:'Team Showdown · Saved v0.9.7'});\n    });",
+ 'native resume/history card injection');
+home=swap(home,
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};",
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};\n  const activeV097=()=>{const s=parse('padel5ive-team-showdown-v090-individual-lab');return s&&s.setup&&s.stage&&s.stage!=='setup'&&s.setup.sessionName?s:null};",
  'native active-session detector');
-home=swap(home,
- "if(b)sessions.push({name:clean(b.setup.sessionName),kind:'club',url:route('club'),label:'Team Showdown'});",
- "if(b)sessions.push({name:clean(b.setup.sessionName),kind:'club',url:route('club'),label:'Team Showdown · Previous Edition'});\n    const v=activeV097();\n    if(v)sessions.push({name:clean(v.setup.sessionName),kind:'showdown',url:'modes/club-match/v097/?intent=resume',label:'Team Showdown · v0.9.7'});",
- 'native resume card');
-home=swap(home,
- "if(!sessions.length){el.hidden=true;return;}",
- "const saved097=parse('padel5ive-team-showdown-native-v07-archive');\n    if(Array.isArray(saved097))saved097.slice(0,4).forEach(x=>{\n      if(x?.id&&x.state?.setup?.sessionName)sessions.push({name:clean(x.state.setup.sessionName),kind:'showdown-archive',url:'modes/club-match/v097/?intent=archive&id='+encodeURIComponent(x.id),label:'Team Showdown · Saved v0.9.7'});\n    });\n    if(!sessions.length){el.hidden=true;return;}",
- 'native archive resume cards');
 home=swap(home,
  "'CLUB MATCH FORMAT':'PAIRING STYLE'",
  "'TEAM SHOWDOWN FORMAT':'PAIRING STYLE'",

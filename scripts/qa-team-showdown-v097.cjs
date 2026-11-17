@@ -24,7 +24,7 @@ must(cloud,'padel5ive-team-showdown-v090-individual-lab');
 must(cloud,'p58-cloud-link-v097-');
 must(routes,'from = "/i/*"');
 must(routes,'from = "/ts/*"');
-must(routes,'to = "/modes/club-match/v097/index.html"');
+must(routes,'to = "/results/showdown/v097/index.html"');
 must(sw,"'/i/'");
 must(sw,"'/ts/'");
 must(sw,"p5-pwa-setup-prewarm-v588-1");

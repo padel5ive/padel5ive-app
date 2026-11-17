@@ -101,7 +101,17 @@ for(const check of [
 ])assert(js.includes(check),'Missing Player Stats component: '+check);
 assert(app.includes('.p5ps-panel'),'Stats modal CSS missing');
 assert(js.includes('const edit=editable?'), 'Edit pencil must be shown only for editable Stage 1');
-assert(js.includes('const openNative=(status)=>'), 'Edit and participation must reuse native controller');
+assert(js.includes('const openNative=(intent)=>'), 'Edit and participation must reuse native controller');
+assert(js.includes("const mode=intent==='edit'?'name':'participation'"), 'Edit pencil and switch must open distinct scoped editor purposes');
+assert(js.includes("openNative('edit')"), 'Name pencil must open the name-only editor');
+assert(js.includes("openNative(event.currentTarget.dataset.p5psStatus)"), 'Switch must open the status-only editor');
+assert(js.includes('nativeRoot.dataset.p5psContext=mode'), 'Editor must set its visual context');
+assert(js.includes('delete nativeRoot.dataset.p5psContext'), 'Editor context must clear on modal closure');
+assert(app.includes('data-p5ps-context="name"] .p5-b3-participant-editor .p5-b31-status-editor'), 'Edit Name must hide Active/Sit Out controls');
+assert(app.includes('data-p5ps-context="participation"] .p5-b3-participant-editor>label'), 'Participation must hide name inputs');
+assert(app.includes('data-p5ps-context="participation"] .p5-b3-participant-editor>p.muted'), 'Participation must hide name-edit helper text');
+assert(!js.includes('p5ps-footer'), 'Stats detail panel must not render a duplicate bottom Close or Save footer');
+assert(js.includes('const closeIcon='), 'Statistics must keep single X close in header');
 assert(js.includes('btn.click();'), 'Moderator action must flow through existing Manage Participant controller');
 assert(js.includes('state.sitoutPending||{}'), 'Must show queued next-round participation status');
 assert(js.includes('options.showStatus?participation'), 'Status bar should appear only during Stage 1');

@@ -17,26 +17,16 @@ home=swap(home,'<span class="p54-mode-name">Club Match</span>',
 home=swap(home,'<span class="p54-mode-desc">Team Showdown · Club Americano (soon)</span>',
  '<span class="p54-mode-desc">Classic · Multi-Division · Individual Americano</span>','HOME mode description');
 home=swap(home,
+ "function chooseMode(m){",
+ "function chooseMode(m){\n    if(m==='Club Match'){mode=m;continueToMode();return;}",
+ 'Team Showdown direct launch; format belongs to native setup');
+home=swap(home,
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};",
  "const activeClub=()=>{const s=parse(KEY_CLUB);return s&&s.setup&&((s.stage&&s.stage!=='setup')||s.setup.sessionName)?s:null};\n  const activeV097=()=>{const s=parse('padel5ive-team-showdown-v090-individual-lab');return s&&s.setup&&s.stage&&s.stage!=='setup'&&s.setup.sessionName?s:null};",
  'native active-session detector');
 home=swap(home,
- "'CLUB MATCH FORMAT':'PAIRING STYLE'",
- "'TEAM SHOWDOWN FORMAT':'PAIRING STYLE'",
- 'Team Showdown Initial Setup subheading');
-home=swap(home,
- "[['showdown','Team Showdown · Fixed Partner',false,'Cross-club fixed teams'],['club-americano','Club Americano · Coming Later',true,'Rotating partners within each club']]",
- "[['classic','Classic · Fixed Partner',false,'Each pair meets every opposing pair'],['multi','Multi-Division · Fixed Partner',false,'Men / Women / Mixed'],['individual','Individual Americano',false,'Rotating teammates within each team']]",
- 'three formats');
-home=swap(home,"pairing=club?'showdown':'flexible';",
- "pairing=club?'classic':'flexible';",'format default');
-home=swap(home,
- "document.getElementById('p54-caption').textContent=club?'Team Showdown · Cross-club fixed partners':m+' · Normal / Flexible Pairing';",
- "document.getElementById('p54-caption').textContent=club?'Team Showdown · Classic · Fixed Partner':m+' · Normal / Flexible Pairing';",
- 'caption default');
-home=swap(home,
  "target=which==='club'?route('club','new'):roots.unified+'?intent=new&mode='+encodeURIComponent(mode)+'&pairing='+encodeURIComponent(pairing);",
- "target=which==='club'?'modes/club-match/v097/?intent=new&competition='+encodeURIComponent(pairing):roots.unified+'?intent=new&mode='+encodeURIComponent(mode)+'&pairing='+encodeURIComponent(pairing);",
+ "target=which==='club'?'modes/club-match/v097/?intent=new':roots.unified+'?intent=new&mode='+encodeURIComponent(mode)+'&pairing='+encodeURIComponent(pairing);",
  'selected-format route');
 home=swap(home,
  "const prior=which==='club'?activeClub():activeUnified();",
@@ -46,10 +36,6 @@ home=swap(home,
  "document.getElementById('p54-confirm-resume').addEventListener('click',()=>launch(route(pendingWhich)));",
  "document.getElementById('p54-confirm-resume').addEventListener('click',()=>launch(pendingWhich==='club'?'modes/club-match/v097/?intent=resume':route(pendingWhich)));",
  'confirmed native resume');
-home=swap(home,
- "document.getElementById('p54-caption').textContent=mode+' · '+b.dataset.label;",
- "document.getElementById('p54-caption').textContent=(mode==='Club Match'?'Team Showdown':mode)+' · '+b.dataset.label;",
- 'format selection caption');
 home=swap(home,
  "!/^\\/modes\\/(unified|club-match)\\/?$/.test(url.pathname)",
  "!/^\\/modes\\/(unified|club-match(?:\\/v097)?)\\/?$/.test(url.pathname)",

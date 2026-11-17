@@ -20,6 +20,7 @@ on:
       - 'scripts/player-statistics-v15.cjs'
       - 'scripts/qa-player-statistics-v15.cjs'
       - 'scripts/qa-v152-browser-buttons.cjs'
+      - 'scripts/participant-availability-v152.cjs'
       - 'public/assets/p5-player-statistics-v15.js'
       - 'scripts/qa-team-showdown-v097.cjs'
       - 'scripts/qa-team-showdown-public.cjs'

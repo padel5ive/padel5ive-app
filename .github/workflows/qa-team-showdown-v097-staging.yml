@@ -19,6 +19,7 @@ on:
       - 'scripts/qa-leaderboard-privacy-v15.cjs'
       - 'scripts/player-statistics-v15.cjs'
       - 'scripts/qa-player-statistics-v15.cjs'
+      - 'scripts/qa-v152-browser-buttons.cjs'
       - 'public/assets/p5-player-statistics-v15.js'
       - 'scripts/qa-team-showdown-v097.cjs'
       - 'scripts/qa-team-showdown-public.cjs'
@@ -45,3 +46,4 @@ jobs:
       - run: npm run qa:pr36
       - run: npm run qa:leaderboard-privacy
       - run: npm run qa:player-statistics
+      - run: npm run qa:buttons-v152

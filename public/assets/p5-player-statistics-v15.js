@@ -84,8 +84,8 @@
   const pencil='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.5 5.5 3 3M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"/></svg>';
   const closeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>';
   const edit=editable?'<button class="p5ps-edit" type="button" data-p5ps-edit aria-label="Edit '+esc(p.type.toLowerCase())+' name" title="Edit name">'+pencil+'</button>':'';
-  const participation='<div class="p5ps-participation"><div class="p5ps-participation-info"><span>PARTICIPATION · NEXT ROUND</span><small>'+(
-    isSitout?'SIT OUT · Participant will be excluded':'ACTIVE · Eligible for the next round')+'</small></div>'+
+  const participation='<div class="p5ps-participation"><div class="p5ps-participation-info"><span>PARTICIPATION</span><small>'+
+    (editable?'Changes apply next eligible round after saving':'Current session status · view only')+'</small></div>'+
     '<button type="button" class="p5ps-attendance-switch '+(!isSitout?'is-on':'is-off')+'" role="switch" '+
     'aria-label="Participant active for next round" aria-checked="'+(!isSitout)+'" '+
     'data-p5ps-status="'+(isSitout?'active':'sitout')+'" '+(!editable?'disabled':'')+'>'+

@@ -11,6 +11,13 @@ const must=(src,fragment)=>assert(src.includes(fragment),'Missing public/print m
 const occurrences=(src,term)=>src.split(term).length-1;
 assert.equal(occurrences(page,"new URL('/ts/'+encodeURIComponent("),2,'Both new links must use the native viewer');
 assert(!page.includes("(individualActive()?'/i/':'/r/')"),'v0.9.7 must not publish legacy /r/ pages');
+for(const m of ['property="og:site_name" content="PADEL 5IVE"',
+ 'property="og:title" content="PADEL 5IVE · Team Showdown"',
+ 'property="og:image" content="https://padel5ive.netlify.app/og-cover.jpg"',
+ 'property="og:image:width" content="1200"',
+ 'property="og:image:height" content="630"',
+ 'name="robots" content="noindex,nofollow,noarchive"'])must(page,m);
+
 for(const marker of ["function shareResults(){","fetch('/api/results',{method:'POST'","'X-Padel-Pin':pin",
  "if(!state.finalized||!['champion','stage1-champion'].includes(E.verdict(state).status))",
  "async function loadPublic(){const m=location.pathname.match(/^\\/(?:r|i|ts)\\/",

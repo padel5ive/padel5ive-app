@@ -37,7 +37,18 @@ const styles=[
  '/phase585/menu-unified-v585.css',
  '/phase5814/view-only-v5814.css'
 ].map(url=>'<link rel="stylesheet" href="'+url+'">').join('\n');
-html=html.slice(0,headEnd)+styles+'\n'+html.slice(headEnd);
+const social=[
+ '<meta name="robots" content="noindex,nofollow,noarchive">',
+ '<meta property="og:type" content="website">',
+ '<meta property="og:site_name" content="PADEL 5IVE">',
+ '<meta property="og:title" content="PADEL 5IVE · Team Showdown">',
+ '<meta property="og:description" content="Official Match Results · Beyond 5IVE. Beyond Play.">',
+ '<meta property="og:image" content="https://padel5ive.netlify.app/og-cover.jpg">',
+ '<meta property="og:image:width" content="1200">',
+ '<meta property="og:image:height" content="630">',
+ '<meta name="twitter:card" content="summary_large_image">'
+].join('\n');
+html=html.slice(0,headEnd)+social+'\n'+styles+'\n'+html.slice(headEnd);
 const target='public/modes/club-match/v097/index.html';
 fs.mkdirSync('public/modes/club-match/v097',{recursive:true});
 const end=html.lastIndexOf('</body>');if(end<0)throw Error('v097 body terminator missing');

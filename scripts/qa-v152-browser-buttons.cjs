@@ -110,7 +110,7 @@ async function main(){
  assert.equal((await state()).roster.find(x=>x.id===id).names[0],'QA Name Updated');
  assert.equal((await state()).availabilityById[id],'SIT_OUT','Edit Name changed canonical availability');
  console.log('PASS iPhone Edit Name / Save, participation preserved');
- await tap(selectedName);await until(isStats,'stats close');await tap('[data-p5ps-close]');await until(async()=>!(await isStats()),'close X');
+ await tap(selectedName);await until(isStats,'stats close');await tap('.p5ps-close[data-p5ps-close]');await until(async()=>!(await isStats()),'close X');
  await tap('[data-p5-pr36-tab="rounds"]');
  if(await val('!!document.querySelector("#americano [data-act=score]")')){
   const before=JSON.stringify((await state()).rounds);

@@ -35,7 +35,7 @@ assert(!adaptedJS.includes('sessionStorage.getItem('),'Public results must not r
 assert(native.includes("if(typeof window.P5DirectPDF==='undefined'){throw Error('Classic master PDF renderer is unavailable');}"),'No alternate PDF generator or iOS Print fallback');
 assert(!native.includes("printReport();notify('Division-separated report opened"),'Separate Multi/Individual print path forbidden');
 assert(native.includes('P5DirectPDF.exportShowdown(showdownReportData())'),'Must use canonical Classic direct PDF export');
-assert(pdf.includes('function renderShowdown(d)')&&pdf.includes('function sdCover(d,')&&pdf.includes('function sdFinal(d,')&&pdf.includes('function sdLedger(d,'),'Canonical PDF generator must preserve cover/final/ledger');
+assert(pdf.includes('function renderShowdown(d)')&&pdf.includes('function sdCover(d)')&&pdf.includes('function sdFinal(d,')&&pdf.includes('function sdLedger(d,'),'Canonical PDF generator must preserve cover/final/ledger');
 assert(pdf.includes('SD_MATCHES_PER_PAGE')&&pdf.includes('return Object.freeze({render,exportPDF,renderShowdown,exportShowdown});'),'PDF component from certified master');
 assert(native.includes("new URL('/ts/'+encodeURIComponent("),'Native share must publish new /ts/ result path');
 assert.equal(routes.split('to = "/results/showdown/v097/index.html"').length-1,2,'Legacy /i/ and current /ts/ must both open Classic-master page');

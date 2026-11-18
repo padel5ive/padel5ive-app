@@ -154,6 +154,23 @@ async function main(){
  assert.equal(JSON.stringify(replaced.rounds.slice(1)),future,'No full reshuffle of remaining matches');
  assert(replaced.rounds.every(rd=>rd.matches.filter(Boolean).every(m=>!m.confirmed)),'Substitution cannot fabricate confirmed scores');
  console.log('PASS one-match replacement: tap name, eligible resting player, Save, no future reshuffle');
+ assert.equal(current.teams[0][1],first.teams[0][1],'Replacement must NOT overwrite teammate');
+ assert.equal(current.substitutions[0].slot,0,'Replacement metadata stays on selected player slot only');
+ const firstCardSelector='#americano .p5-match-names';
+ assert.equal(await val('document.querySelector('+JSON.stringify(firstCardSelector)+')?.querySelectorAll(".p5-sub-badge").length'),1,'SUB badge must appear only on replaced name, not both teammates');
+ // Replace again within the SAME fixture; no global one-time limit.
+ await tap(selector);await until(isModal,'second replacement in same match');
+ const nextOptions=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
+ const second=nextOptions.find(x=>x!==chosen);
+ assert(second,'At least one different resting replacement should remain');
+ await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(second)+'})()');
+ await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'second replacement saved');
+ const repeated=await state(),replacedAgain=repeated.rounds[0].matches.find(m=>m?.id===targetMatchId);
+ assert.equal(replacedAgain.substitutions.length,1,'Repeated replacement updates same slot instead of duplicating substitution rows');
+ assert.equal(replacedAgain.teams[0][0],Number(second.split(':')[0]),'Second replacement takes effect in target match');
+ assert.equal(replacedAgain.teams[0][1],first.teams[0][1],'Original teammate preserved after repeated replacement');
+ assert.equal(JSON.stringify(repeated.rounds.slice(1)),future,'Repeated replacements must not reshuffle future rounds');
+ console.log('PASS repeated per-match replacement, teammate identity, single SUB badge and stable remaining rounds');
 
  // Cancel replacement from score entry must restore selected draft score.
  await tap('#americano .p5-score-tap');await until(isModal,'native score entry after replacement');

@@ -32,6 +32,24 @@ for(const [n,c] of [[3,1],[6,2],[9,3],[12,4],[15,5]]){
  const s=playCycle(n,c);console.log('PASS strict RR',n,'pairs',c,'courts',s.continuous.total,'unique matches');
  if(n===6){const old=s.rounds.length;C.nextCycle(s);assert.equal(s.continuous.cycle,2);assert(C.verify(s).valid);assert(s.rounds.length>old)}
 }
+
+/* Showdown-style provisional preview must not mutate the fixture pool. */
+const previewFixture=make(6,2);
+C.create(previewFixture,[]);
+const pendingBefore=JSON.stringify(previewFixture.continuous.queue);
+const nextPreview=C.preview(previewFixture,5);
+assert(nextPreview.length===5,'Five provisional matchups are shown');
+assert(nextPreview.every(x=>typeof x.ready==='boolean'&&x.teams.length===2),'READY/WAIT preview status present');
+assert.equal(JSON.stringify(previewFixture.continuous.queue),pendingBefore,'Preview cannot mutate pending fixtures');
+const current=C.active(previewFixture);
+const involved=new Set(current.flatMap(m=>m.teams.flat()));
+const substitute=previewFixture.roster.find(p=>!involved.has(p.id));
+assert(substitute,'A resting pair available for one-match substitution');
+current[0].substitutions=[{side:0,slot:0,fromId:current[0].teams[0][0],toId:substitute.id,toSlot:0,toName:substitute.names[0]}];
+assert(C.busyIds(previewFixture).has(substitute.id),'Substitute cannot be assigned on another court while actively playing');
+assert(C.preview(previewFixture,5).every(x=>!x.ready||!x.teams.flat().includes(substitute.id)),'Substitute held out from READY matches');
+console.log('PASS READY/WAIT preview is nonmutating and substitution-aware');
+
 const s=make(6,2);C.create(s,[]);
 const size=C.active(s).length;s.continuous.paused=true;const previous=s.rounds.length;
 C.active(s)[0].confirmed=true;C.dispatch(s);

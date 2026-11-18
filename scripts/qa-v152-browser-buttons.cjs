@@ -191,11 +191,37 @@ async function main(){
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
  await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
  await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
- await tap('#p5-modal-root [data-act="modal-save"]');await until(async()=>!(await isModal()),'continuous score confirm');
+ await tap('#p5-modal-root [data-act="modal-save"]');await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'Continuous score review');
+ assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,0,'Review step cannot auto-save a result');
+ assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m&&!m.confirmed).length,2,'Review cannot release the court');
+ await tap('#p5-modal-root [data-act="continuous-score-edit"]');
+ assert(!(await val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")')),'Edit returns to score selection');
+ await tap('#p5-modal-root [data-act="modal-save"]');await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'score review again');
+ await tap('#p5-modal-root [data-act="continuous-score-confirm"]');await until(async()=>!(await isModal()),'confirmed continuous result');
  const after=await state();
  assert.equal(after.rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,1,'Confirmed fixture retained');
  assert.equal(after.rounds.flatMap(r=>r.matches).filter(m=>m&&!m.confirmed).length,2,'Finished court immediately receives next fixture');
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'No duplicate opponent or simultaneous assignment');
+ // Team Showdown-style history: edit one confirmed score, keep other fixtures untouched.
+ await tap('#americano [data-act="continuous-history-toggle"]');
+ assert(await val('!!document.querySelector("#americano .p5-cont-history-panel:not([hidden])")'),'Match history drawer opens');
+ const editButton='#americano .p5-cont-result-area button[data-act="score"]';
+ await tap(editButton);await until(isModal,'historical score edit modal');
+ const beforeEdit=await state();
+ const beforeFixtures=beforeEdit.rounds.flatMap(r=>r.matches).filter(Boolean).map(m=>({id:m.id,teams:m.teams,score:m.score,confirmed:m.confirmed}));
+ const editedId=beforeEdit.ui.modal.match.id;
+ await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="2";b.value="3";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
+ await tap('#p5-modal-root [data-act="modal-save"]');await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'history score review');
+ assert.equal((await state()).rounds.flatMap(r=>r.matches).find(m=>m?.id===editedId).score[0],3,'Historical score must remain saved until second confirm');
+ await tap('#p5-modal-root [data-act="continuous-score-confirm"]');await until(async()=>!(await isModal()),'history correction confirmed');
+ const corrected=await state();
+ const afterFixtures=corrected.rounds.flatMap(r=>r.matches).filter(Boolean);
+ assert.equal(afterFixtures.length,beforeFixtures.length,'Correcting history cannot dispatch or reshuffle fixtures');
+ assert.equal(afterFixtures.find(m=>m.id===editedId).score[0],2,'Edit Score updates historical result');
+ assert.equal(afterFixtures.find(m=>m.id===editedId).score[1],3,'Edit Score updates second team result');
+ assert(afterFixtures.filter(m=>m.id!==editedId).every((m,i)=>JSON.stringify(m.teams)===JSON.stringify(beforeFixtures.filter(x=>x.id!==editedId)[i].teams)),'Score correction preserves all other teams');
+ console.log('PASS Continuous Match History: review, correction and no remaining-round mutation');
+
  await tap('#americano [data-act="continuous-pause"]');
  assert.equal((await state()).continuous.paused,true,'Pause new dispatch');
  console.log('PASS iPhone Continuous: live dispatch per court, persisted score, unique opponents, pause');

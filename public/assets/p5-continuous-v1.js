@@ -49,7 +49,7 @@
    for(let i=0;i<c.queue.length;i++){
     const f=c.queue[i],ids=f.teams.flat();
     if(ids.length!==new Set(ids).size)continue;
-    if(ids.some(id=>running.has(id)||s.sitout?.includes(id)||(c.scheduled===0&&!allMatches(s).some(m=>m.cycle===c.cycle&&m.confirmed)&&s.arrival?.[id]===false)))continue;
+    if(ids.some(id=>running.has(id)||s.sitout?.includes(id)||s.arrival?.[id]===false))continue;
     const maxG=Math.max(...ids.map(id=>counts[id]||0));
     const minG=Math.min(...ids.map(id=>counts[id]||0));
     const recovery=ids.reduce((x,id)=>x+Math.max(0,sequence.length-1-(last[id]??-1)),0);
@@ -80,7 +80,7 @@
   for(let k=0;k<sequence.length;k++)for(const id of sequence[k].teams.flat())last[id]=k;
   return c.queue.map((fixture,index)=>{
    const ids=fixture.teams.flat();
-   const valid=ids.length===new Set(ids).size&&!ids.some(id=>s.sitout?.includes(id));
+   const valid=ids.length===new Set(ids).size&&!ids.some(id=>s.sitout?.includes(id)||s.arrival?.[id]===false);
    const ready=valid&&!ids.some(id=>busy.has(id));
    const maxG=Math.max(...ids.map(id=>counts[id]||0));
    const minG=Math.min(...ids.map(id=>counts[id]||0));

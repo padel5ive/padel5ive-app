@@ -124,6 +124,79 @@ async function main(){
  assert.equal(await val('document.querySelector('+JSON.stringify(active)+').getAttribute("aria-pressed")'),'true');
  await tap(cancel);await until(async()=>!(await isModal()),'iPad Cancel');
  console.log('PASS iPad landscape Participation Active / Cancel');
+
+ // v0.1 isolated substitution acceptance: 12 players / 2 courts has resting substitutes.
+ await size(1180,820);
+ await val([
+  '(()=>{const s=P5App.getState(),roster=Array.from({length:12},(_,i)=>({id:i+1,names:["SUB PLAYER "+(i+1)]}));',
+  'const rounds=P5EngineRegistry.engine("individual-americano").build(roster.map(p=>p.id),2,Math.random);',
+  'Object.assign(s,{stage:"stage1",mode:"individual-americano",matchFlow:"rounds",continuous:null,roster,nextId:13,courts:2,',
+  'rounds,currentRound:0,viewRound:0,initialSchedule:JSON.parse(JSON.stringify(rounds)),initialCourts:2,',
+  'sitout:[],sitoutPending:{},availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),pendingParticipants:[],',
+  'session:"SUB QA LOCAL",date:"2026-11-18",matchFormat:"total5"});',
+  'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
+ ].join(''));
+ await until(()=>val('!!document.querySelector("#americano .p5-person-action")'),'player name actions in court card');
+ const original=await state();
+ const first=original.rounds[0].matches.filter(Boolean)[0],targetMatchId=first.id;
+ const future=JSON.stringify(original.rounds.slice(1));
+ const selector='#americano .p5-match-names .p5-person-action';
+ await tap(selector);await until(isModal,'Replace Player modal');
+ assert.equal(await val('document.querySelector("#p5-modal-root .p5-v2-modal h2")?.textContent'),'REPLACE PLAYER');
+ const available=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
+ assert(available.length>=1,'12 players / 2 courts should include eligible resting substitutes');
+ const chosen=available[0],chosenId=Number(chosen.split(':')[0]);
+ await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(chosen)+'})()');
+ await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'one-match replacement confirmed');
+ const replaced=await state(),current=replaced.rounds[0].matches.find(m=>m?.id===targetMatchId);
+ assert(current.substitutions?.length===1,'Substitution metadata recorded');
+ assert.equal(current.teams[0][0],chosenId,'Individual replacement changes this one fixture');
+ assert.equal(JSON.stringify(replaced.rounds.slice(1)),future,'No full reshuffle of remaining matches');
+ assert(replaced.rounds.every(rd=>rd.matches.filter(Boolean).every(m=>!m.confirmed)),'Substitution cannot fabricate confirmed scores');
+ console.log('PASS one-match replacement: tap name, eligible resting player, Save, no future reshuffle');
+
+ // Cancel replacement from score entry must restore selected draft score.
+ await tap('#americano .p5-score-tap');await until(isModal,'native score entry after replacement');
+ const hasDual=await val('!!document.querySelector("#p5-score-a")');
+ assert(hasDual,'Latest native score selector must remain present');
+ await val('(()=>{document.querySelector("#p5-score-a").value="3";document.querySelector("#p5-score-b").value="2"})()');
+ await tap('#p5-modal-root .p5-person-action');await until(()=>val('!!document.querySelector("#p5-replacement-select")'),'replace from score entry');
+ await tap('#p5-modal-root [data-act="replace-cancel"]');await until(()=>val('!!document.querySelector("#p5-score-a")'),'score editor restored after cancel');
+ assert.equal(await val('document.querySelector("#p5-score-a").value'),'3','Score draft A retained');
+ assert.equal(await val('document.querySelector("#p5-score-b").value'),'2','Score draft B retained');
+ await tap('#p5-modal-root [data-act="modal-cancel"]');await until(async()=>!(await isModal()),'close replacement score draft');
+ console.log('PASS in-scoreboard replacement opens and Cancel restores draft inputs');
+
+ // v0.1 Continuous Americano: fixed pairs, 2 courts, strict 15 unique fixtures.
+ await size(390,844);
+ await val([
+  '(()=>{const s=P5App.getState(),roster=Array.from({length:6},(_,i)=>({id:i+1,names:["PAIR "+(i+1)+" A","PAIR "+(i+1)+" B"]}));',
+  'Object.assign(s,{stage:"stage1",mode:"fp-americano",matchFlow:"continuous",roster,nextId:7,courts:2,',
+  'rounds:[],currentRound:0,viewRound:0,sitout:[],sitoutPending:{},pendingParticipants:[],continuous:null,',
+  'availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),session:"CONTINUOUS QA LOCAL",',
+  'date:"2026-11-18",matchFormat:"total5",initialSchedule:[],initialCourts:2});',
+  'P5Continuous.create(s,[]);localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
+ ].join(''));
+ await until(()=>val('!!document.querySelector("#americano .p5-cont-stage")'),'continuous shared dashboard');
+ const start=await state();
+ assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
+ assert.equal(start.rounds.flatMap(r=>r.matches).filter(Boolean).length,2,'Two active courts dispatched');
+ assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
+ await tap('[data-p5-pr36-tab="rounds"]');
+ await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
+ await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
+ await tap('#p5-modal-root [data-act="modal-save"]');await until(async()=>!(await isModal()),'continuous score confirm');
+ const after=await state();
+ assert.equal(after.rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,1,'Confirmed fixture retained');
+ assert.equal(after.rounds.flatMap(r=>r.matches).filter(m=>m&&!m.confirmed).length,2,'Finished court immediately receives next fixture');
+ assert(await val('P5Continuous.verify(P5App.getState()).valid'),'No duplicate opponent or simultaneous assignment');
+ await tap('#americano [data-act="continuous-pause"]');
+ assert.equal((await state()).continuous.paused,true,'Pause new dispatch');
+ console.log('PASS iPhone Continuous: live dispatch per court, persisted score, unique opponents, pause');
+ await size(1180,820);
+ assert(await val('!!document.querySelector(".p5-cont-stage .p5-cont-courts")'),'iPad shared continuous dashboard rendered');
+ console.log('PASS iPad landscape Continuous shared court layout');
+
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

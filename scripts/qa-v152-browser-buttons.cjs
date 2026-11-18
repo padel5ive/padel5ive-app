@@ -312,7 +312,7 @@ async function main(){
 
  // Arrival + Reshuffle must be available until the first score of each fresh cycle.
  assert(await val('!!document.querySelector("#americano .p5-cont-arrival")'),'Pre-match arrival panel visible on Cycle 2');
- await tap('#americano [data-act="continuous-arrival-open"]');
+ if(!(await val('!!document.querySelector("#americano .p5-cont-arrival-body:not([hidden])")')))await tap('#americano [data-act="continuous-arrival-open"]');
  const previousHistory=JSON.stringify(cycleTwo.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1));
  const cycleTwoKeys=await val('P5App.getState().continuous.queue.concat(P5Continuous.active(P5App.getState()).map(m=>({key:m.fixtureKey}))).map(x=>x.key).sort().join("|")');
  await tap('#americano [data-act="continuous-arrival-toggle"][data-id="1"]');

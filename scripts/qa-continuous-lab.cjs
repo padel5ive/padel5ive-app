@@ -42,3 +42,18 @@ const fixture=[{index:0,matches:[{id:'A',teams:[[1,2],[3,4]]},{id:'B',teams:[[5,
 C.create(f,fixture);assert.equal(f.continuous.total,4);
 assert(C.verify(f).valid);
 console.log('PASS mixed/individual precomputed fixtures, stop/resume, second cycle');
+
+
+/* Parse all emitted inline JavaScript, not just the engine module.
+   This catches non-executing P5UI/score modal scripts before browser UI tests. */
+const page=fs.readFileSync('public/modes/unified/index.html','utf8');
+const inlineScripts=[...page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+let parsed=0;
+for(let i=0;i<inlineScripts.length;i++){
+ const body=inlineScripts[i][1];
+ if(!body.trim())continue;
+ try{new vm.Script(body,{filename:'unified-script-'+i+'.js'});parsed++;}
+ catch(err){throw Error('Invalid emitted inline JS script '+i+': '+err.stack);}
+}
+assert(parsed>3,'All shared app scripts should parse');
+console.log('PASS generated UI JavaScript parsed:',parsed,'inline scripts');

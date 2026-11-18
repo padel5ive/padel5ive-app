@@ -341,6 +341,7 @@ async function main(){
   'm.score=[3,2];m.confirmed=true;P5Continuous.dispatch(s);',
   'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
  ].join(''));
+ const lateDiag=await val("({arrival:P5App.getState().arrival?.[1],flow:P5App.getState().matchFlow,cycle:P5App.getState().continuous?.cycle,stage:P5App.getState().stage,html:document.querySelector("#americano")?.textContent?.includes('LATE ARRIVAL'),panel:!!document.querySelector(".p5-cont-arrival"),scored:P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&m.confirmed).length})");console.log('LATE ARRIVAL DIAG',lateDiag);
  await until(()=>val('!!document.querySelector("#americano .p5-cont-arrival")'),'late arrival panel remains after first result');
  assert(!(await val('!!document.querySelector("#americano [data-act=continuous-reshuffle]")')),'Reshuffle locked after cycle scoring');
  if(!(await val('!!document.querySelector("#americano .p5-cont-arrival-body:not([hidden])")')))await tap('#americano [data-act="continuous-arrival-open"]');

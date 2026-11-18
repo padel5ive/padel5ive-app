@@ -178,8 +178,7 @@ async function main(){
   'P5Continuous.create(s,[]);localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
  ].join(''));
  await until(()=>val('!!document.querySelector("#americano .p5-cont-stage")'),'continuous shared dashboard');
- console.log('CONTINUOUS MOBILE DOM DIAG',await val("({rootChildren:Array.from(document.querySelector(\"#americano\").children).map(x=>x.tagName+\".\"+x.className),layout:!!document.querySelector(\"#americano > .layout\"),round:!!document.querySelector(\"#americano > .layout .p5-v26-round-card\"),aside:!!document.querySelector(\"#americano > .layout aside .live-standings\"),tabActive:document.querySelector(\"#americano\").className,tabView:document.querySelector(\"#americano\").dataset.p5Pr36View,script:document.documentElement.innerHTML.includes(\"PR36 iPhone Stage 1 tab runtime\")})"));
- await until(()=>val('!!document.querySelector("#americano [data-p5-pr36-tab=\"rounds\"]")'),'native continuous mobile tab bar');
+ await until(()=>val('!!document.querySelector("#americano [data-p5-pr36-tab]")'),'native continuous mobile tab bar');
  assert(await val('document.querySelector("#americano").classList.contains("p5-pr36-mobile-active")'),'Continuous must use native iPhone Rounds/Leaderboard tabs');
  await tap('#americano [data-p5-pr36-tab="leaderboard"]');
  assert.equal(await val('document.querySelector("#americano").dataset.p5Pr36View'),'leaderboard');

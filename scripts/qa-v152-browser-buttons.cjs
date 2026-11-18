@@ -220,13 +220,24 @@ async function main(){
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
  // iPhone substitution visual regression: fixed partner keeps a single SUB badge,
  // names remain within court cards and replacement participant stays physically busy.
+ const fixedStart=await state(),fixedTarget=fixedStart.rounds.flatMap(r=>r.matches).find(m=>m&&!m.confirmed);
+ const queuedFixed=JSON.stringify(fixedStart.continuous.queue),originalFixedId=fixedTarget.teams[0][0];
  await tap('#americano .p5-cont-courts .p5-person-action');
  await until(isModal,'iPhone fixed-partner replacement modal');
+ assert.equal(await val('document.querySelector("#p5-modal-root .p5-v2-modal h2")?.textContent'),'REPLACE FIXED PAIR','Fixed Partner replacement must use whole-pair selector');
  const readyFixed=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
  assert(readyFixed.length,'Resting fixed-pair players available for substitution');
  const picked=readyFixed[0],pickedId=Number(picked.split(':')[0]);
  await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(picked)+'})()');
  await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'fixed partner substitution confirmed');
+ const fixedAfter=await state(),fixedChanged=fixedAfter.rounds.flatMap(r=>r.matches).find(m=>m?.id===fixedTarget.id);
+ assert.equal(fixedChanged.teams[0][0],pickedId,'Fixed substitution replaces the complete pair ID');
+ assert.notEqual(fixedChanged.teams[0][0],originalFixedId,'Original pair removed from selected fixture only');
+ assert.equal(fixedChanged.substitutions?.filter(x=>x.wholePair).length,1,'Whole pair substitution recorded only once');
+ assert.equal(JSON.stringify(fixedAfter.continuous.queue),queuedFixed,'Fixed pair replacement must not reshuffle remaining cycle fixtures');
+ assert.equal(await val('document.querySelector("#americano .p5-pair-replace")?.innerText.includes("PAIR "+'+pickedId+')'),true,'Replacement renders both players from the new fixed pair');
+ console.log('PASS Fixed Partner whole pair replacement, correct names, one-match scope and queue preserved');
+
  assert.equal(await val('document.querySelectorAll("#americano .p5-cont-courts .p5-sub-badge").length'),1,'Only one substituted player may get a SUB badge');
  assert(await val('P5Continuous.busyIds(P5App.getState()).has('+pickedId+')'),'Substitute is marked busy for all courts');
  const tidyCards=await val('Array.from(document.querySelectorAll("#americano .p5-cont-courts .court")).every(x=>x.scrollWidth<=x.clientWidth+3)');
@@ -276,6 +287,84 @@ async function main(){
  await size(1180,820);
  assert(await val('!!document.querySelector(".p5-cont-stage .p5-cont-courts")'),'iPad shared continuous dashboard rendered');
  console.log('PASS iPad landscape Continuous shared court layout');
+
+ // The user must be able to finish a strict cycle then browse/edit it in Cycle 2.
+ await val([
+  '(()=>{const s=P5App.getState();s.continuous.paused=false;',
+  'let steps=0;while(!P5Continuous.complete(s)&&steps++<200){',
+  'const next=P5Continuous.active(s)[0];if(!next)break;next.score=[3,2];next.confirmed=true;P5Continuous.dispatch(s);}',
+  'if(!P5Continuous.complete(s))throw Error("Could not complete Cycle 1");',
+  'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
+ ].join(''));
+ await until(()=>val('!!document.querySelector("#americano .p5-cont-cycle-complete")'),'Cycle 1 completed buttons');
+ const finishChoices=await val('Array.from(document.querySelectorAll("#americano .p5-cont-final-actions button")).map(x=>x.dataset.act)');
+ assert.deepEqual(finishChoices,['continuous-next-cycle','continuous-finish','continuous-stage2'],'Three separate terminal choices required after complete cycle');
+ const cycleOne=await state();
+ assert.equal(cycleOne.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1&&m.confirmed).length,15,'Full 15-fixture Cycle 1 preserved');
+ await tap('#americano [data-act="continuous-next-cycle"]');
+ await until(()=>val('P5App.getState().continuous.cycle===2'),'cycle 2 start');
+ const cycleTwo=await state();
+ assert.equal(cycleTwo.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1&&m.confirmed).length,15,'Cycle 1 confirmed fixtures retained into Cycle 2');
+ assert.equal(cycleTwo.continuous.total,15,'Second cycle repeats strict full-cycle target');
+ assert.equal(cycleTwo.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&!m.confirmed).length,2,'Second cycle immediately starts two eligible courts');
+ assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Cycle 2 dispatch integrity');
+ console.log('PASS Cycle 2 begins without deleting Cycle 1 history');
+
+ // Arrival + Reshuffle must be available until the first score of each fresh cycle.
+ assert(await val('!!document.querySelector("#americano .p5-cont-arrival")'),'Pre-match arrival panel visible on Cycle 2');
+ await tap('#americano [data-act="continuous-arrival-open"]');
+ const previousHistory=JSON.stringify(cycleTwo.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1));
+ const cycleTwoKeys=await val('P5App.getState().continuous.queue.concat(P5Continuous.active(P5App.getState()).map(m=>({key:m.fixtureKey}))).map(x=>x.key).sort().join("|")');
+ await tap('#americano [data-act="continuous-arrival-toggle"][data-id="1"]');
+ assert.equal((await state()).arrival[1],false,'Pair 1 marked Not Arrived');
+ assert(await val('P5Continuous.active(P5App.getState()).every(m=>!m.teams.flat().includes(1))'),'Not Arrived pair removed from current courts');
+ assert.equal(JSON.stringify((await state()).rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1)),previousHistory,'Reshuffle must never touch Cycle 1');
+ await tap('#americano [data-act="continuous-arrival-toggle"][data-id="1"]');
+ assert.equal((await state()).arrival[1],true,'Pair 1 can return Ready');
+ await tap('#americano [data-act="continuous-reshuffle"]');
+ assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Reshuffled opening schedule remains conflict-free');
+ const newKeys=await val('P5App.getState().continuous.queue.concat(P5Continuous.active(P5App.getState()).map(m=>({key:m.fixtureKey}))).map(x=>x.key).sort().join("|")');
+ assert.equal(newKeys,cycleTwoKeys,'Reshuffle reorders fixtures, never changes fixed pair opponent roster');
+ console.log('PASS Cycle 2 Arrival & Reshuffle: preserved Cycle 1 history and all RR opponents');
+
+ // Browse the older Cycle 1 and safely correct its score while Cycle 2 is running.
+ await tap('#americano [data-act="continuous-history-toggle"]');
+ await tap('#americano [data-act="continuous-history-cycle"][data-cycle="1"]');
+ const oldHistory=await state();
+ assert.equal(oldHistory.ui.contHistoryCycle,1,'Cycle 1 selected in history');
+ assert(await val('!!document.querySelector("#americano .p5-cont-fixture button[data-act=score]")'),'Archived results remain editable');
+ const pastFixture=oldHistory.rounds.flatMap(r=>r.matches).find(m=>m?.cycle===1&&m.confirmed);
+ const activeBefore=JSON.stringify(oldHistory.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2));
+ const queueBefore=JSON.stringify(oldHistory.continuous.queue);
+ await tap('#americano .p5-cont-fixture button[data-act="score"]');
+ await until(isModal,'Cycle 1 edit score');
+ await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="4";b.value="1";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}));})()');
+ await tap('#p5-modal-root [data-act="modal-save"]');
+ await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'Cycle 1 historical score review');
+ await tap('#p5-modal-root [data-act="continuous-score-confirm"]');
+ await until(async()=>!(await isModal()),'Cycle 1 score corrected');
+ const archivedCorrected=await state();
+ assert(archivedCorrected.rounds.flatMap(r=>r.matches).some(m=>m?.cycle===1&&m.score?.[0]===4&&m.score?.[1]===1),'Cycle 1 corrected score retained');
+ assert.equal(JSON.stringify(archivedCorrected.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2)),activeBefore,'Historical score correction cannot regenerate Cycle 2 courts');
+ assert.equal(JSON.stringify(archivedCorrected.continuous.queue),queueBefore,'Historical score correction cannot reorder Cycle 2 queue');
+ console.log('PASS archived Cycle 1: selectable in Cycle 2, review/edit score, no reschedule');
+
+ // Finish cycle 2 and exercise Stage 2 choice.
+ await val([
+  '(()=>{const s=P5App.getState();let steps=0;while(!P5Continuous.complete(s)&&steps++<200){',
+  'const next=P5Continuous.active(s)[0];if(!next)break;next.score=[3,2];next.confirmed=true;P5Continuous.dispatch(s);}',
+  'if(!P5Continuous.complete(s))throw Error("Could not complete Cycle 2");',
+  'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
+ ].join(''));
+ await until(()=>val('!!document.querySelector("#americano .p5-cont-final-actions")'),'Cycle 2 complete');
+ await tap('#americano [data-act="continuous-stage2"]');
+ await until(isModal,'Stage 2 confirmation');
+ await tap('#p5-modal-root [data-act="modal-save"]');
+ await until(()=>val('P5App.getState().stage==="stage1finished"'),'Stage 2 config transition');
+ assert(await val('!!document.querySelector("#ko-format")'),'Stage 2 uses native Knockout format setup');
+ assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1&&m.confirmed).length,15,'Stage 2 preserves Cycle 1');
+ console.log('PASS Stage 2 action: canonical KO configuration without dropping prior cycles');
+
 
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }

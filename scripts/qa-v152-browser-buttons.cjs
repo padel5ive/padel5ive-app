@@ -64,6 +64,18 @@ async function main(){
  await size(390,844);await cmd('Page.navigate',{url});
  await until(()=>val('!!window.P5App && !!window.P5EngineRegistry'),'boot');
  await until(()=>val('(()=>{try{return P5App.getState()?.version===24}catch{return false}})()'),'canonical app state initialized');
+ // Setup parity: Match Flow starts blank and takes entire row, just like the other fields.
+ await until(()=>val('P5App.getState().stage==="setup"&&!!document.querySelector("#setup-game")'),'initial setup');
+ await val('(()=>{const game=document.querySelector("#setup-game");game.value="Americano";game.dispatchEvent(new Event("change",{bubbles:true}));})()');
+ await until(()=>val('!!document.querySelector("#p5-match-flow-field")&&!document.querySelector("#p5-match-flow-field").hidden'),'Americano Match Flow visible');
+ const flowSetup=await val('(()=>{const label=document.querySelector("#p5-match-flow-field"),court=document.querySelector("#setup-courts");return {empty:document.querySelector("#setup-match-flow").value==="",labelWidth:label.getBoundingClientRect().width,courtWidth:court.getBoundingClientRect().width,disabled:document.querySelector("[data-act=setup-next]").disabled}})()');
+ assert(flowSetup.empty,'Fresh Americano must not preselect Match Flow');
+ assert(flowSetup.labelWidth>flowSetup.courtWidth*1.5,'Match Flow takes full responsive setup row, no right-side gap');
+ assert(flowSetup.disabled,'Continue is disabled without required Match Flow');
+ await val('(()=>{const f=document.querySelector("#setup-match-flow");f.value="rounds";f.dispatchEvent(new Event("change",{bubbles:true}));const g=document.querySelector("#setup-game");g.value="Mexicano";g.dispatchEvent(new Event("change",{bubbles:true}));})()');
+ assert(await val('document.querySelector("#p5-match-flow-field").hidden'),'Mexicano has no Continuous option');
+ console.log('PASS setup: full-width Match Flow, blank default and Americano-only option');
+
  const fixture=[
   '(()=>{const s=P5App.getState(),roster=Array.from({length:8},(_,i)=>({id:i+1,names:["QA Player "+(i+1)]}));',
   'const rounds=P5EngineRegistry.engine("individual-americano").build(roster.map(x=>x.id),2,Math.random);',
@@ -208,9 +220,7 @@ async function main(){
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
  await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
  await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
- await val('window.addEventListener("error",e=>window.__p5ReviewError=e.message+" at "+e.filename+":"+e.lineno,{once:true})');
  await tap('#p5-modal-root [data-act="modal-save"]');
- const diag=await val('(()=>({modal:document.querySelector("#p5-modal-root .p5-v2-modal")?.innerText?.slice(-700),review:!!document.querySelector("#p5-modal-root .p5-cont-score-review"),tool:document.querySelector("#p5-modal-root .tools")?.outerHTML?.slice(0,350),confirmed:P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,error:document.querySelector("#modal-error")?.textContent,appModal:P5App.getState().ui?.modal?.type,flow:P5App.getState().matchFlow,draftA:document.querySelector("#p5-score-a")?.value,draftB:document.querySelector("#p5-score-b")?.value,reviewError:window.__p5ReviewError}))()');console.log('CONTINUOUS SCORE REVIEW DIAG',diag);
  await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'Continuous score review');
  assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,0,'Review step cannot auto-save a result');
  assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m&&!m.confirmed).length,2,'Review cannot release the court');

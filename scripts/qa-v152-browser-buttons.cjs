@@ -332,6 +332,28 @@ async function main(){
  assert.equal(newKeys,cycleTwoKeys,'Reshuffle reorders fixtures, never changes fixed pair opponent roster');
  console.log('PASS Cycle 2 Arrival & Reshuffle: preserved Cycle 1 history and all RR opponents');
 
+ // Late pair can check in after scoring starts; reshuffle must be locked.
+ await tap('#americano [data-act="continuous-arrival-toggle"][data-id="1"]');
+ assert.equal((await state()).arrival[1],false,'Fixture pair marked Not Arrived before first Cycle 2 score');
+ await val([
+  '(()=>{const s=P5App.getState(),m=P5Continuous.active(s)[0];',
+  'if(!m||m.teams.flat().includes(1))throw Error("Late pair incorrectly assigned before check-in");',
+  'm.score=[3,2];m.confirmed=true;P5Continuous.dispatch(s);',
+  'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
+ ].join(''));
+ await until(()=>val('!!document.querySelector("#americano .p5-cont-arrival")'),'late arrival panel remains after first result');
+ assert(!(await val('!!document.querySelector("#americano [data-act=continuous-reshuffle]")')),'Reshuffle locked after cycle scoring');
+ if(!(await val('!!document.querySelector("#americano .p5-cont-arrival-body:not([hidden])")')))await tap('#americano [data-act="continuous-arrival-open"]');
+ const lateBefore=await state(),liveLate=lateBefore.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&!m.confirmed).map(m=>m.id);
+ const oldScore=lateBefore.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&m.confirmed).map(m=>({id:m.id,score:m.score}));
+ await tap('#americano [data-act="continuous-arrival-toggle"][data-id="1"]');
+ const lateAfter=await state();
+ assert.equal(lateAfter.arrival[1],true,'Late pair checked in successfully');
+ assert(liveLate.every(id=>lateAfter.rounds.flatMap(r=>r.matches).some(m=>m?.id===id&&!m.confirmed)),'Late check-in cannot change already assigned courts');
+ assert.deepEqual(lateAfter.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&m.confirmed).map(m=>({id:m.id,score:m.score})),oldScore,'Late arrival preserves confirmed history');
+ console.log('PASS late Check In after scores, reshuffle locked, active courts and results unchanged');
+
+
  // Browse the older Cycle 1 and safely correct its score while Cycle 2 is running.
  await tap('#americano [data-act="continuous-history-toggle"]');
  await tap('#americano [data-act="continuous-history-cycle"][data-cycle="1"]');

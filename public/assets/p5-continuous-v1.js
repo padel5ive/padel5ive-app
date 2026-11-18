@@ -49,7 +49,7 @@
    for(let i=0;i<c.queue.length;i++){
     const f=c.queue[i],ids=f.teams.flat();
     if(ids.length!==new Set(ids).size)continue;
-    if(ids.some(id=>running.has(id)||s.sitout?.includes(id)))continue;
+    if(ids.some(id=>running.has(id)||s.sitout?.includes(id)||(c.scheduled===0&&!allMatches(s).some(m=>m.cycle===c.cycle&&m.confirmed)&&s.arrival?.[id]===false)))continue;
     const maxG=Math.max(...ids.map(id=>counts[id]||0));
     const minG=Math.min(...ids.map(id=>counts[id]||0));
     const recovery=ids.reduce((x,id)=>x+Math.max(0,sequence.length-1-(last[id]??-1)),0);
@@ -94,6 +94,26 @@
   const c=s.continuous;
   return Boolean(c&&c.queue.length===0&&active(s).length===0&&c.scheduled===c.total);
  }
+
+ // Preserves prior cycles and score history. Only the never-scored current
+ // cycle may be reshuffled; its fixtures are retained, never regenerated.
+ function reshuffleOpening(s,random=Math.random){
+  const c=s.continuous;if(!c)throw Error('Continuous is not active');
+  if(allMatches(s).some(m=>m.cycle===c.cycle&&m.confirmed))throw Error('Arrival & Reshuffle is locked after the first score in this cycle');
+  const taken=allMatches(s).filter(m=>m.cycle===c.cycle);
+  const currentQueue=c.queue.concat(taken.map(m=>({key:m.fixtureKey,teams:m.originalTeams?m.originalTeams.map(t=>t.slice()):m.teams.map(t=>t.slice())})));
+  if(currentQueue.length!==c.total)throw Error('Current cycle fixture count mismatch');
+  const existingKeys=new Set(currentQueue.map(f=>f.key));
+  if(existingKeys.size!==c.total)throw Error('Opening fixtures are not unique');
+  // Fisher–Yates preserves all opponents/partner fixtures but reshuffles the
+  // opening and court allocation before anything is scored.
+  for(let i=currentQueue.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[currentQueue[i],currentQueue[j]]=[currentQueue[j],currentQueue[i]];}
+  s.rounds=s.rounds.filter(r=>!(r.matches||[]).some(m=>m?.cycle===c.cycle));
+  s.rounds.forEach((r,i)=>r.index=i);
+  c.queue=currentQueue;c.scheduled=0;c.serial=0;c.paused=false;
+  dispatch(s);
+  return active(s).length;
+ }
  function nextCycle(s,plan){
   const c=s.continuous;
   if(!complete(s))throw Error('Complete every fixture in this cycle before starting another');
@@ -114,5 +134,5 @@
     total:c.total,scheduled:c.scheduled,remaining:c.queue.length,inProgress:live.length,completed:all.filter(m=>m.confirmed).length,
     cycle:c.cycle,paused:!!c.paused,fullCycleDone:complete(s)};
  }
- root.P5Continuous=Object.freeze({create,dispatch,preview,active,count,complete,nextCycle,verify,pairKey,busyIds:s=>usedIds(active(s))});
+ root.P5Continuous=Object.freeze({create,dispatch,preview,active,count,complete,nextCycle,reshuffleOpening,verify,pairKey,busyIds:s=>usedIds(active(s))});
 })(typeof window!=='undefined'?window:globalThis);

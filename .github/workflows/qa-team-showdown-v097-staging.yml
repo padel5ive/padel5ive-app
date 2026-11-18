@@ -51,5 +51,5 @@ jobs:
       - run: npm run qa:pr36
       - run: npm run qa:leaderboard-privacy
       - run: npm run qa:player-statistics
-      - run: npm run qa:buttons-v152
       - run: npm run qa:continuous-lab
+      - run: npm run qa:buttons-v152

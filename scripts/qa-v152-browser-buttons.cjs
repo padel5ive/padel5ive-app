@@ -218,7 +218,25 @@ async function main(){
  assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
  assert.equal(start.rounds.flatMap(r=>r.matches).filter(Boolean).length,2,'Two active courts dispatched');
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
+ // iPhone substitution visual regression: fixed partner keeps a single SUB badge,
+ // names remain within court cards and replacement participant stays physically busy.
+ await tap('#americano .p5-cont-courts .p5-person-action');
+ await until(isModal,'iPhone fixed-partner replacement modal');
+ const readyFixed=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
+ assert(readyFixed.length,'Resting fixed-pair players available for substitution');
+ const picked=readyFixed[0],pickedId=Number(picked.split(':')[0]);
+ await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(picked)+'})()');
+ await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'fixed partner substitution confirmed');
+ assert.equal(await val('document.querySelectorAll("#americano .p5-cont-courts .p5-sub-badge").length'),1,'Only one substituted player may get a SUB badge');
+ assert(await val('P5Continuous.busyIds(P5App.getState()).has('+pickedId+')'),'Substitute is marked busy for all courts');
+ const tidyCards=await val('Array.from(document.querySelectorAll("#americano .p5-cont-courts .court")).every(x=>x.scrollWidth<=x.clientWidth+3)');
+ assert(tidyCards,'Continuous scorecards must not overflow after a fixed-player substitution');
+ console.log('PASS iPhone Continuous SUB: correct player slot, no overflow and no court double-booking');
+
  await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
+ const nameGeometry=await val('Array.from(document.querySelectorAll("#p5-modal-root .p5-score-dual-team strong")).map(x=>({border:getComputedStyle(x).borderTopWidth,w:x.getBoundingClientRect().width}))');
+ assert(nameGeometry.length===2&&nameGeometry.every(x=>x.border==="0px"),'Score modal team names must be borderless');
+
  await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
  await tap('#p5-modal-root [data-act="modal-save"]');
  await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'Continuous score review');

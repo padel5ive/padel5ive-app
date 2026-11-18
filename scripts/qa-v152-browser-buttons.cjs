@@ -182,7 +182,6 @@ async function main(){
  assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
  assert.equal(start.rounds.flatMap(r=>r.matches).filter(Boolean).length,2,'Two active courts dispatched');
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
- await tap('[data-p5-pr36-tab="rounds"]');
  await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
  await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
  await tap('#p5-modal-root [data-act="modal-save"]');await until(async()=>!(await isModal()),'continuous score confirm');

@@ -208,7 +208,9 @@ async function main(){
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
  await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
  await val('(()=>{const a=document.querySelector("#p5-score-a"),b=document.querySelector("#p5-score-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}))})()');
- await tap('#p5-modal-root [data-act="modal-save"]');await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'Continuous score review');
+ await tap('#p5-modal-root [data-act="modal-save"]');
+ const diag=await val('(()=>({modal:document.querySelector("#p5-modal-root .p5-v2-modal")?.innerText?.slice(-700),review:!!document.querySelector("#p5-modal-root .p5-cont-score-review"),tool:document.querySelector("#p5-modal-root .tools")?.outerHTML?.slice(0,350),confirmed:P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,error:document.querySelector("#modal-error")?.textContent,appModal:P5App.getState().ui?.modal?.type}))()');console.log('CONTINUOUS SCORE REVIEW DIAG',diag);
+ await until(()=>val('!!document.querySelector("#p5-modal-root .p5-cont-score-review")'),'Continuous score review');
  assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,0,'Review step cannot auto-save a result');
  assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m&&!m.confirmed).length,2,'Review cannot release the court');
  await tap('#p5-modal-root [data-act="continuous-score-edit"]');

@@ -8,7 +8,7 @@
  const pairKey=(a,b)=>[Number(a),Number(b)].sort((x,y)=>x-y).join(':');
  const allMatches=s=>(s.rounds||[]).flatMap(r=>(r.matches||[]).filter(Boolean));
  const active=s=>allMatches(s).filter(m=>!m.confirmed&&!m.skipped);
- const usedIds=matches=>new Set(matches.flatMap(m=>m.teams.flat()));
+ const usedIds=matches=>new Set(matches.flatMap(m=>[...m.teams.flat(),...(m.substitutions||[]).map(x=>x.toId).filter(Number.isInteger)]));
  const count=s=>{const ids=s.roster.map(p=>p.id),out=Object.fromEntries(ids.map(id=>[id,0]));
   for(const m of allMatches(s).filter(m=>m.confirmed))for(const id of m.teams.flat())if(id in out)out[id]++;
   return out;
@@ -72,6 +72,24 @@
   if(s.rounds.length){s.currentRound=s.rounds.length-1;s.viewRound=s.currentRound;}
   return created;
  }
+ function preview(s,limit=5){
+  const c=s.continuous;if(!c)return [];
+  const running=active(s),busy=usedIds(running),counts=count(s);
+  const sequence=allMatches(s);
+  const last=Object.fromEntries(s.roster.map(p=>[p.id,-1]));
+  for(let k=0;k<sequence.length;k++)for(const id of sequence[k].teams.flat())last[id]=k;
+  return c.queue.map((fixture,index)=>{
+   const ids=fixture.teams.flat();
+   const valid=ids.length===new Set(ids).size&&!ids.some(id=>s.sitout?.includes(id));
+   const ready=valid&&!ids.some(id=>busy.has(id));
+   const maxG=Math.max(...ids.map(id=>counts[id]||0));
+   const minG=Math.min(...ids.map(id=>counts[id]||0));
+   const recovery=ids.reduce((sum,id)=>sum+Math.max(0,sequence.length-1-(last[id]??-1)),0);
+   const immediate=ids.filter(id=>last[id]===sequence.length-1).length;
+   const score=-(maxG*15000+minG*1800)-immediate*800+recovery*16-index*.025;
+   return {key:fixture.key,teams:fixture.teams.map(x=>x.slice()),ready,score,index};
+  }).sort((a,b)=>Number(b.ready)-Number(a.ready)||b.score-a.score||a.index-b.index).slice(0,Math.max(0,limit));
+ }
  function complete(s){
   const c=s.continuous;
   return Boolean(c&&c.queue.length===0&&active(s).length===0&&c.scheduled===c.total);
@@ -96,5 +114,5 @@
     total:c.total,scheduled:c.scheduled,remaining:c.queue.length,inProgress:live.length,completed:all.filter(m=>m.confirmed).length,
     cycle:c.cycle,paused:!!c.paused,fullCycleDone:complete(s)};
  }
- root.P5Continuous=Object.freeze({create,dispatch,active,count,complete,nextCycle,verify,pairKey});
+ root.P5Continuous=Object.freeze({create,dispatch,preview,active,count,complete,nextCycle,verify,pairKey,busyIds:s=>usedIds(active(s))});
 })(typeof window!=='undefined'?window:globalThis);

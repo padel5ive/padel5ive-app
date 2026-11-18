@@ -178,6 +178,13 @@ async function main(){
   'P5Continuous.create(s,[]);localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
  ].join(''));
  await until(()=>val('!!document.querySelector("#americano .p5-cont-stage")'),'continuous shared dashboard');
+ await until(()=>val('!!document.querySelector("#americano [data-p5-pr36-tab=\"rounds\"]")'),'native continuous mobile tab bar');
+ assert(await val('document.querySelector("#americano").classList.contains("p5-pr36-mobile-active")'),'Continuous must use native iPhone Rounds/Leaderboard tabs');
+ await tap('#americano [data-p5-pr36-tab="leaderboard"]');
+ assert.equal(await val('document.querySelector("#americano").dataset.p5Pr36View'),'leaderboard');
+ await tap('#americano [data-p5-pr36-tab="rounds"]');
+ assert.equal(await val('document.querySelector("#americano").dataset.p5Pr36View'),'rounds');
+ console.log('PASS Continuous iPhone native Rounds/Leaderboard navigation');
  const start=await state();
  assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
  assert.equal(start.rounds.flatMap(r=>r.matches).filter(Boolean).length,2,'Two active courts dispatched');

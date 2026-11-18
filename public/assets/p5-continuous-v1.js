@@ -64,7 +64,8 @@
    const n=c.serial++;
    const m={id:'CONT'+c.cycle+'M'+(n+1),court,teams:selected.teams.map(x=>x.slice()),
     score:null,confirmed:false,cycle:c.cycle,fixtureKey:selected.key,dispatchIndex:n};
-   s.rounds.push({index:s.rounds.length,matches:[m],continuous:true});
+   const slots=Array(s.courts).fill(null);slots[court-1]=m;
+   s.rounds.push({index:s.rounds.length,matches:slots,continuous:true});
    c.scheduled++;
    created++;
   }

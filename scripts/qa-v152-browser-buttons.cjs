@@ -334,12 +334,14 @@ async function main(){
 
  // Late pair can check in after scoring starts; reshuffle must be locked.
  await tap('#americano [data-act="continuous-arrival-toggle"][data-id="1"]');
+ assert.equal((await state()).arrival[1],false,'Pre-score Not Arrived is saved immediately');
  assert.equal((await state()).arrival[1],false,'Fixture pair marked Not Arrived before first Cycle 2 score');
  await val([
   '(()=>{const s=P5App.getState(),m=P5Continuous.active(s)[0];',
   'if(!m||m.teams.flat().includes(1))throw Error("Late pair incorrectly assigned before check-in");',
+  'if(s.arrival[1]!==false)throw Error("Arrival got reset before first score");',
   'm.score=[3,2];m.confirmed=true;P5Continuous.dispatch(s);',
-  'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
+  'localStorage.setItem(P5App.key,JSON.stringify(s));if(JSON.parse(localStorage.getItem(P5App.key)).arrival[1]!==false)throw Error("Saved arrival not preserved");location.reload();return true})()'
  ].join(''));
  await until(()=>val('typeof P5App!=="undefined"&&P5App.getState().stage==="stage1"'),'reload after late match');
  const lateDiag=await val("({arrival:P5App.getState().arrival?.[1],flow:P5App.getState().matchFlow,cycle:P5App.getState().continuous?.cycle,stage:P5App.getState().stage,html:document.querySelector(\"#americano\")?.textContent?.includes(\"LATE ARRIVAL\"),panel:!!document.querySelector(\".p5-cont-arrival\"),scored:P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&m.confirmed).length})");console.log('LATE ARRIVAL DIAG',lateDiag);

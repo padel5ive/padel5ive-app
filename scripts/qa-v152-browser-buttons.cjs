@@ -168,6 +168,8 @@ async function main(){
  console.log('PASS one-match replacement: tap name, eligible resting player, Save, no future reshuffle');
  assert.equal(current.teams[0][1],first.teams[0][1],'Replacement must NOT overwrite teammate');
  assert.equal(current.substitutions[0].slot,0,'Replacement metadata stays on selected player slot only');
+ const normalCardHeight=await val('document.querySelector("#americano .court.p5sm-card")?.getBoundingClientRect().height');
+ assert(normalCardHeight>0,'Round-by-round scorecard size reference available');
  const firstCardSelector='#americano .p5-match-names';
  assert.equal(await val('document.querySelector('+JSON.stringify(firstCardSelector)+')?.querySelectorAll(".p5-sub-badge").length'),1,'SUB badge must appear only on replaced name, not both teammates');
  // Replace again within the SAME fixture; no global one-time limit.
@@ -240,6 +242,9 @@ async function main(){
 
  assert.equal(await val('document.querySelectorAll("#americano .p5-cont-courts .p5-sub-badge").length'),1,'Only one substituted player may get a SUB badge');
  assert(await val('P5Continuous.busyIds(P5App.getState()).has('+pickedId+')'),'Substitute is marked busy for all courts');
+ const continuousHeight=await val('document.querySelector("#americano .p5-cont-courts .court.p5sm-card")?.getBoundingClientRect().height');
+ console.log('SCORECARD PARITY HEIGHT',JSON.stringify({rounds:normalCardHeight,continuous:continuousHeight}));
+ assert(continuousHeight<=normalCardHeight*1.15+20,'Continuous scorecards must be as compact as native round-by-round cards');
  const tidyCards=await val('Array.from(document.querySelectorAll("#americano .p5-cont-courts .court")).every(x=>x.scrollWidth<=x.clientWidth+3)');
  assert(tidyCards,'Continuous scorecards must not overflow after a fixed-player substitution');
  console.log('PASS iPhone Continuous SUB: correct player slot, no overflow and no court double-booking');
@@ -357,6 +362,7 @@ async function main(){
   'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()'
  ].join(''));
  await until(()=>val('!!document.querySelector("#americano .p5-cont-final-actions")'),'Cycle 2 complete');
+ await val('localStorage.setItem("p5qaCompleteCycle",JSON.stringify(P5App.getState()))');
  await tap('#americano [data-act="continuous-stage2"]');
  await until(isModal,'Stage 2 confirmation');
  await tap('#p5-modal-root [data-act="modal-save"]');
@@ -364,6 +370,18 @@ async function main(){
  assert(await val('!!document.querySelector("#ko-format")'),'Stage 2 uses native Knockout format setup');
  assert.equal((await state()).rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1&&m.confirmed).length,15,'Stage 2 preserves Cycle 1');
  console.log('PASS Stage 2 action: canonical KO configuration without dropping prior cycles');
+ // Independent Finish Tournament route must use the preserved cycle scores.
+ await val('(()=>{localStorage.setItem(P5App.key,localStorage.getItem("p5qaCompleteCycle"));location.reload();return true})()');
+ await until(()=>val('!!document.querySelector("#americano [data-act=continuous-finish]")'),'restore completed Continuous tournament');
+ await tap('#americano [data-act="continuous-finish"]');
+ await until(isModal,'Finish Tournament confirmation');
+ await tap('#p5-modal-root [data-act="modal-save"]');
+ await until(()=>val('P5App.getState().stage==="champion"'),'Finish Tournament champion reveal');
+ const finalTournament=await state();
+ assert.equal(finalTournament.ko.format,'none','Finish Tournament must NOT accidentally schedule Stage 2');
+ assert.equal(finalTournament.rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).length,30,'Final result retains every scored match from two cycles');
+ console.log('PASS Finish Tournament route: champion summary, no KO and both cycles retained');
+
 
 
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');

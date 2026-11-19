@@ -126,7 +126,17 @@ async function main(){
  await tap('[data-p5-pr36-tab="rounds"]');
  if(await val('!!document.querySelector("#americano [data-act=score]")')){
   const before=JSON.stringify((await state()).rounds);
-  await tap('#americano [data-act="score"]');await until(isModal,'score modal');await tap(cancel);await until(async()=>!(await isModal()),'score cancel');
+  await tap('#americano [data-act="score"]');await until(isModal,'score modal');
+  const roundsModal=await val(`(()=>{
+   const root=document.querySelector('#p5-modal-root .p5-cont-score-clean');
+   const hint=root?.querySelector('#p5-score-dual-hint');
+   const labels=root?.querySelectorAll('.p5-polish-team-label')||[];
+   const duplicate=root?.querySelector('#modal-error');
+   return {clean:!!root, hint:hint?.textContent?.trim(), labelsHidden:Array.from(labels).every(x=>getComputedStyle(x).display==='none'), formatHidden:!!duplicate&&getComputedStyle(duplicate).display==='none', formatCount:root?.querySelectorAll('.p5-polish-entry-overline span').length};
+  })()`);
+  assert(roundsModal.clean&&roundsModal.hint==='Enter one score; the other updates.'&&roundsModal.labelsHidden&&roundsModal.formatHidden&&roundsModal.formatCount===1,'By Rounds Americano must use the same clean score entry modal as Continuous: '+JSON.stringify(roundsModal));
+  console.log('PASS By Rounds Americano score modal: single format, no Side A/B or duplicate help');
+  await tap(cancel);await until(async()=>!(await isModal()),'score cancel');
   assert.equal(JSON.stringify((await state()).rounds),before,'Score Cancel modified matches');
   console.log('PASS iPhone Score Entry / Cancel');
  }

@@ -44,9 +44,10 @@ for(let seed=1;seed<=20;seed++){
   const prior=JSON.stringify(m.rounds),base=nativeMX(m,rank,rnd(seed*100+ri)),changed=ctx.P5StructuredMX.next(m,rank,rnd(seed*100+ri));
   assert.equal(JSON.stringify(m.rounds),prior,'Past rounds mutated');
   assert.deepEqual(changed.matches.flatMap(x=>x.teams.flat()).sort((a,b)=>a-b),base.matches.flatMap(x=>x.teams.flat()).sort((a,b)=>a-b));
-  const h=ctx.P5StructuredMX.confirmedHistory(m.rounds),ranks={};for(let i=1;i<=18;i++)ranks[i]=(i-1)%9;
+  const h={...ctx.P5StructuredMX.confirmedHistory(m.rounds),...ctx.P5StructuredMXDiversityLab.courtHistory(m.rounds)},ranks={};for(let i=1;i<=18;i++)ranks[i]=(i-1)%9;
   const before=ctx.P5StructuredMXDiversityLab.metrics(base.matches,h,ranks),after=ctx.P5StructuredMXDiversityLab.metrics(changed.matches,h,ranks);
   assert(after.opponentRepeat<=before.opponentRepeat&&after.partnerRepeat<=before.partnerRepeat&&after.fixtureRepeat<=before.fixtureRepeat,'Mexicano diversity regression');
+  assert(after.quartetRepeat<=before.quartetRepeat&&after.courtRepeat<=before.courtRepeat,'Mexicano all-role court encounters must not worsen');
   assert(after.rankPenalty<=before.rankPenalty+420,'Mexicano ranking penalty regression');
   if(after.opponentRepeat<before.opponentRepeat||after.partnerRepeat<before.partnerRepeat)improved++;
   changed.matches.forEach(x=>{x.confirmed=true;x.score=[2,2];});m.rounds.push(changed);

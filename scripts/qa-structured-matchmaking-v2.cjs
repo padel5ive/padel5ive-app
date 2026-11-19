@@ -119,6 +119,48 @@ for(const [name,initialAbsent,currentAbsent] of [
  else asymmetric++;
  protectedHistory++;
 }
+// Staggered late-arrival regression: two people return after Round 2,
+// another two after Round 4. Each rebuild must treat the confirmed prefix as
+// immutable and recompute only unscored future opponent assignments.
+{
+ const s=make(9,3,[8,9,17,18]);
+ const initial=ctx.P5Structured.build(s,rand(707));
+ const play=(rows)=>{for(const rd of rows)for(const m of rd.matches){
+  m.score=[3,2];m.confirmed=true;
+ }};
+ s.rounds=initial.slice(0,2);play(s.rounds);s.currentRound=1;
+ const firstHistory=JSON.stringify(s.rounds);
+ s.sitout=[9,18];
+ const future1=ctx.P5Structured.rebuild(s,rand(708));
+ assert.equal(JSON.stringify(s.rounds),firstHistory,'First staged return changed prior scores');
+ assert(future1.length>=2,'First return must permit later rounds');
+ s.rounds=s.rounds.concat(future1);
+ s.rounds=s.rounds.slice(0,4);play(s.rounds.slice(2));s.currentRound=3;
+ const secondHistory=JSON.stringify(s.rounds);
+ s.sitout=[];
+ const future2=ctx.P5Structured.rebuild(s,rand(709));
+ assert.equal(JSON.stringify(s.rounds),secondHistory,'Second staged return changed prior scores');
+ assert(future2.length>0,'Second return must generate the remaining schedule');
+ const complete=s.rounds.concat(future2);
+ const counted=new Set();
+ for(const rd of complete){
+  const used=new Set(),courts=new Set();
+  for(const m of rd.matches.filter(Boolean)){
+   assert(!courts.has(m.court),'Staggered return booked one court twice');
+   courts.add(m.court);
+   for(const team of m.teams){
+    assert.equal(team.length,2);
+    assert(s.roster.find(p=>p.id===team[0]).group==='A'&&s.roster.find(p=>p.id===team[1]).group==='B');
+    for(const id of team){assert(!used.has(id),'Staggered return booked same player twice');used.add(id);counted.add(id);}
+   }
+  }
+ }
+ assert.equal(counted.size,18,'Returned participants were never scheduled');
+ assert(complete.slice(0,4).every(rd=>rd.matches.every(m=>m.confirmed&&m.score?.length===2)),
+  'Prior confirmed scores were changed during staged return');
+ console.log('PASS Structured 18-player staggered arrival: two returns, certified court capacity, all players reached, confirmed history untouched');
+}
+
 // A future scored fixture cannot silently be rebuilt.
 {
  const s=make(9,3);s.rounds=ctx.P5Structured.build(s,rand(321));s.currentRound=2;

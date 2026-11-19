@@ -61,3 +61,43 @@
  #americano .p5-cont-history-panel .p5-cont-fixtures{max-height:285px!important}
  #americano .p5-cont-courts .p5-match-names{gap:3px!important;min-height:30px!important}
 }
+
+
+/* Shared Resting Players / Pairs: same visual rhythm in By Rounds and Court by Court.
+   3 balanced columns on typical iPhones, 2 on narrower screens; no chip clipping. */
+#americano .p5-v26-flow-combo>.p5-rest-card .court-flow-rest {
+ display:block!important;width:100%!important;min-height:0!important;
+ margin:0!important;padding:0!important;border:0!important;
+}
+#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list {
+ display:grid!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ align-items:stretch!important;justify-content:stretch!important;
+ gap:7px!important;
+ width:100%!important;min-width:0!important;height:auto!important;
+ min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;
+}
+#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip {
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;max-width:100%!important;min-width:0!important;
+ box-sizing:border-box!important;min-height:31px!important;height:auto!important;
+ margin:0!important;padding:6px 7px!important;
+ background:#223542!important;border:1px solid rgba(139,159,172,.3)!important;
+ border-radius:8px!important;color:#e0e4e6!important;
+ font-size:11px!important;font-weight:600!important;letter-spacing:.01em!important;
+ line-height:1.3!important;text-align:center!important;
+ white-space:normal!important;overflow-wrap:anywhere!important;
+}
+#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-empty {
+ grid-column:1/-1;text-align:left;
+}
+@media(max-width:359px){
+ #americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ }
+}
+@media(min-width:700px){
+ #americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ }
+}

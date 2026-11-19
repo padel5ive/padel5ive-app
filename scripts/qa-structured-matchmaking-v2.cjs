@@ -25,7 +25,7 @@ function section(from,to){const a=html.indexOf(from),b=html.indexOf(to,a+from.le
 section('window.P5Fair532=(function','/* PADEL 5IVE Phase 5.0.4');
 section('window.P5Structured=(function','window.P5EngineStructured=');
 for(const name of assets)vm.runInContext(fs.readFileSync('public/assets/'+name,'utf8'),ctx,{timeout:30000,filename:name});
-assert.equal(ctx.P5Structured.structuredMatchmakingVersion,'2.3','Active encounter+partner-diversity adapter absent');
+assert.equal(ctx.P5Structured.structuredMatchmakingVersion,'2.4','Active encounter, partner, and rest-recovery adapter absent');
 const rand=(seed)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);
  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 function make(n,c,sit=[]){return {mode:'structured-americano',courts:c,sitout:sit.slice(),

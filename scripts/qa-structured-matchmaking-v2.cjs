@@ -213,6 +213,24 @@ for(const [name,initialAbsent,currentAbsent] of [
  }
  assert(!revised[0].matches.some(m=>m.teams.some(t=>t.includes(p1)&&t.includes(p2))),
   'Kosy/Raffy remain partners in successive rounds despite available changes');
+
+ // Another observed case: Hans and Indri shared one court in R4, R5 and R6,
+ // as partners once and opponents twice. R6 had a valid alternative using
+ // the same six intact teams across three courts.
+ const early=rows.slice(0,5);
+ const roundSix={...rows[5],matches:rows[5].matches.map(m=>({...m,score:null,confirmed:false}))};
+ const originalSix=JSON.stringify(roundSix),frozenFive=JSON.stringify(early);
+ assert(roundSix.matches.some(m=>m.teams.flat().includes(id.hans)&&m.teams.flat().includes(id.indri)),
+  'Screenshot R6 must reproduce Hans/Indri shared court');
+ const revisedSix=ctx.P5StructuredMatchmakingV2.rebalanceFuture(s,early,[roundSix],rand(218))[0];
+ assert(!revisedSix.matches.some(m=>m.teams.flat().includes(id.hans)&&m.teams.flat().includes(id.indri)),
+  'R6 retained third Hans/Indri encounter despite a legal alternative');
+ assert.equal(JSON.stringify(roundSix),originalSix,'R6 source schedule unexpectedly changed');
+ assert.equal(JSON.stringify(early),frozenFive,'R1–R5 confirmed scores unexpectedly changed');
+ const teamStrings=rd=>rd.matches.flatMap(m=>m.teams.map(t=>t.slice().sort((a,b)=>a-b).join(':'))).sort();
+ assert.deepEqual(teamStrings(revisedSix),teamStrings(roundSix),
+  'Avoiding Hans/Indri encounter must not change their selected teammate');
+
  console.log('PASS screenshot-based Structured 18/3: R7-R8 partner repeat repaired with no changes to scored rounds, selected players or court slots');
 }
 

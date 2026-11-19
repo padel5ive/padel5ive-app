@@ -21,6 +21,11 @@ on:
       - 'scripts/qa-player-statistics-v15.cjs'
       - 'scripts/qa-v152-browser-buttons.cjs'
       - 'scripts/participant-availability-v152.cjs'
+      - 'scripts/replace-player-lab-integrate.cjs'
+      - 'scripts/continuous-americano-lab-integrate.cjs'
+      - 'scripts/continuous-showdown-parity-lab.cjs'
+      - 'scripts/qa-continuous-lab.cjs'
+      - 'public/assets/p5-continuous-v1.js'
       - 'public/assets/p5-player-statistics-v15.js'
       - 'scripts/qa-team-showdown-v097.cjs'
       - 'scripts/qa-team-showdown-public.cjs'
@@ -47,4 +52,5 @@ jobs:
       - run: npm run qa:pr36
       - run: npm run qa:leaderboard-privacy
       - run: npm run qa:player-statistics
+      - run: npm run qa:continuous-lab
       - run: npm run qa:buttons-v152

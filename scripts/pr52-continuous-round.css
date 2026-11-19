@@ -1,0 +1,103 @@
+/* PADEL 5IVE PR52 Continuous Round: structured team and history refinement. */
+#americano .p5-cont-courts .p5-match-names {
+ display:flex!important; flex-flow:row nowrap!important;
+ align-items:center!important; justify-content:center!important;
+ gap:4px!important; width:100%!important; min-width:0!important;
+ min-height:34px!important; grid-template-columns:none!important;
+}
+#americano .p5-cont-courts .p5-match-names .p5-person-action:not(.p5-pair-replace),
+#americano .p5-cont-courts .p5-match-names .p5-person-static:not(.p5-pair-name) {
+ display:inline-flex!important; flex:1 1 0!important; flex-direction:row!important;
+ align-items:center!important; justify-content:center!important;
+ width:auto!important; min-width:0!important; max-width:100%!important;
+ min-height:30px!important; height:auto!important; padding:3px 1px!important;
+ white-space:normal!important; text-align:center!important;
+}
+#americano .p5-cont-courts .p5-match-names .p5-pair-replace {
+ flex:1 1 auto!important; max-width:100%!important;
+}
+#americano .p5-cont-courts .p5-match-names .p5-name-join {
+ display:inline-block!important; flex:0 0 auto!important;
+ min-width:9px!important; padding:0!important; margin:0!important;
+ white-space:nowrap!important; text-align:center!important;
+ font-size:11px!important; line-height:1!important;
+}
+#americano .p5-cont-courts .p5-match-names .p5-person-label {
+ min-width:0!important; max-width:100%!important;
+ text-align:center!important; overflow-wrap:anywhere!important;
+ line-height:1.25!important;
+}
+#americano .p5-cont-history-panel .p5-cont-cycle-buttons,
+#americano .p5-cont-history-panel .p5-cont-group-buttons {
+ display:flex!important; flex-flow:row nowrap!important;
+ align-items:center!important; justify-content:flex-start!important;
+ width:100%!important; max-width:100%!important; min-width:0!important;
+ height:auto!important; min-height:38px!important; gap:7px!important;
+ overflow-x:auto!important; overflow-y:hidden!important;
+ white-space:nowrap!important; margin:0!important; padding:2px 1px 7px!important;
+}
+#americano .p5-cont-history-panel .p5-cont-cycle-buttons>button,
+#americano .p5-cont-history-panel .p5-cont-group-buttons>button {
+ display:inline-flex!important; flex:0 0 auto!important;
+ align-items:center!important; justify-content:center!important;
+ width:auto!important; max-width:none!important;
+ min-width:38px!important; height:34px!important; min-height:34px!important;
+ margin:0!important; padding:6px 11px!important; line-height:1.25!important;
+ white-space:nowrap!important; overflow:visible!important;
+ transform:none!important; text-indent:0!important;
+ font-size:11px!important; letter-spacing:.015em!important;
+}
+#americano .p5-cont-history-panel .p5-cont-cycle-buttons>button {min-width:89px!important}
+#p5-modal-root .p5-cont-score-clean .p5-polish-score-note {
+ margin:9px 0 0!important; padding:0!important;
+ max-width:100%!important; line-height:1.35!important;
+ font-size:11px!important; letter-spacing:0!important;
+}
+@media(max-width:700px) {
+ #americano .p5-cont-history-panel>.p5-flex-heading{margin:0!important}
+ #americano .p5-cont-history-panel .p5-cont-fixture{
+  padding:9px 11px!important; gap:6px!important; min-height:0!important;
+ }
+ #americano .p5-cont-history-panel .p5-cont-fixtures{max-height:285px!important}
+ #americano .p5-cont-courts .p5-match-names{gap:3px!important;min-height:30px!important}
+}
+
+
+/* Shared Resting Players / Pairs: same visual rhythm in By Rounds and Court by Court.
+   3 balanced columns on typical iPhones, 2 on narrower screens; no chip clipping. */
+#americano .p5-v26-flow-combo>.p5-rest-card .court-flow-rest {
+ display:block!important;width:100%!important;min-height:0!important;
+ margin:0!important;padding:0!important;border:0!important;
+}
+#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list {
+ display:grid!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ align-items:stretch!important;justify-content:stretch!important;
+ gap:7px!important;
+ width:100%!important;min-width:0!important;height:auto!important;
+ min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;
+}
+#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip {
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;max-width:100%!important;min-width:0!important;
+ box-sizing:border-box!important;min-height:31px!important;height:auto!important;
+ margin:0!important;padding:6px 7px!important;
+ background:#223542!important;border:1px solid rgba(139,159,172,.3)!important;
+ border-radius:8px!important;color:#e0e4e6!important;
+ font-size:11px!important;font-weight:600!important;letter-spacing:.01em!important;
+ line-height:1.3!important;text-align:center!important;
+ white-space:normal!important;overflow-wrap:anywhere!important;
+}
+#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-empty {
+ grid-column:1/-1;text-align:left;
+}
+@media(max-width:359px){
+ #americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ }
+}
+@media(min-width:700px){
+ #americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ }
+}

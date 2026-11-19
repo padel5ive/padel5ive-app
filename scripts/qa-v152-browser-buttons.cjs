@@ -578,6 +578,44 @@ async function main(){
  console.log('SHARED DASHBOARD PARITY MATRIX '+JSON.stringify(paritySamples.map(({device,mode,flow,courtWidth,courtHeight,scoreHeight,modalWidth,overflow})=>({device,mode,flow,courtWidth,courtHeight,scoreHeight,modalWidth,overflow}))));
  console.log('PASS shared Americano/Mexicano UI parity (6 pairing modes + 3 continuous variants) on iPhone and iPad');
 
+
+ // PR52: visual QA for the reported 18-player / 3-court By Rounds Resting Players case.
+ for(const [device,width,height] of [['iPhone',390,844],['iPad',1194,834]]){
+  await size(width,height);
+  const fixture='(()=>{'+
+   'const s=P5App.getState(),roster=Array.from({length:18},(_,i)=>({id:i+1,names:["PLAYER "+(i+1)]}));'+
+   'const matches=[0,1,2].map(i=>({id:"rest-parity-"+i,court:i+1,teams:[[i*4+1,i*4+2],[i*4+3,i*4+4]],score:null,confirmed:false}));'+
+   'const rounds=[{index:0,matches,eligibleIds:roster.map(x=>x.id)}];'+
+   'Object.assign(s,{stage:"stage1",mode:"individual-americano",matchFlow:"rounds",continuous:null,'+
+   'roster,nextId:19,courts:3,rounds,currentRound:0,viewRound:0,session:"RESTING QA",date:"2026-11-19",matchFormat:"total5",'+
+   'initialSchedule:JSON.parse(JSON.stringify(rounds)),initialCourts:3,'+
+   'sitout:[],sitoutPending:{},availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),'+
+   'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),pendingParticipants:[],ui:{...s.ui,modal:null}});'+
+   'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()';
+  await val(fixture);
+  await until(()=>val('!!document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list")'),'By Rounds Resting UI '+device);
+  const restingLayout=await val('(()=>{'+
+   'const card=document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card"),list=card?.querySelector(".resting-pair-list");'+
+   'const chips=[...(list?.querySelectorAll(".resting-pair-chip")||[])];'+
+   'const boxes=chips.map(x=>x.getBoundingClientRect()),style=list?getComputedStyle(list):null,'+
+   'chip=chips[0]?getComputedStyle(chips[0]):null;'+
+   'const cols=style?.gridTemplateColumns?.split(" ").filter(Boolean).length;'+
+   'return {label:card?.querySelector("h3")?.textContent?.trim(),count:chips.length,'+
+   'display:style?.display,cols,gap:style?.gap,chipHeight:boxes[0]?.height,'+
+   'rows:boxes.length?new Set(boxes.map(x=>Math.round(x.top))).size:0,'+
+   'overflow:Math.max(0,...chips.map(x=>x.scrollWidth-x.clientWidth)),'+
+   'cardOverflow:card?Math.max(0,card.scrollWidth-card.clientWidth):999,'+
+   'chipBg:chip?.backgroundColor,chipFont:chip?.fontSize};'+
+   '})()');
+  assert(restingLayout.label?.startsWith('RESTING PLAYERS')&&restingLayout.count===6,
+   'All six resting players must remain visible '+JSON.stringify({device,restingLayout}));
+  assert(restingLayout.display==='grid'&&restingLayout.cols===3&&restingLayout.rows===2&&restingLayout.chipHeight>=30,
+   'Resting chips must wrap to 3 balanced columns and 2 rows '+JSON.stringify({device,restingLayout}));
+  assert(restingLayout.overflow<=2&&restingLayout.cardOverflow<=2,
+   'Resting list must not overflow on '+device+': '+JSON.stringify(restingLayout));
+  console.log('PASS By Rounds Resting Players '+device+': six balanced chips, 3x2, no overflow');
+ }
+
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

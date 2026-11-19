@@ -191,6 +191,7 @@ async function main(){
  }
 
 
+ await until(()=>val('typeof window.P5App!=="undefined" && P5App.getState().stage==="stage1"'),'browser ready after Mexicano loop');
  // v0.1 isolated substitution acceptance: 12 players / 2 courts has resting substitutes.
  await size(1180,820);
  await val([

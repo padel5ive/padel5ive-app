@@ -9,8 +9,23 @@
   if(!previous||!root.P5Structured)throw Error('P5StructuredMX must load first');
   const pair=(a,b)=>a<b?`${a}:${b}`:`${b}:${a}`;
   const sig=(a,b)=>[a.slice().sort((x,y)=>x-y).join(':'),b.slice().sort((x,y)=>x-y).join(':')].sort().join('|');
+  const four=a=>a.slice().sort((x,y)=>x-y).join(':');
+  function courtHistory(rounds){
+    const sharedCourts={},courtQuartets={},lastTogether={};
+    for(const [ri,rd] of (rounds||[]).entries())for(const m of rd.matches||[]){
+      if(!m?.confirmed||!m.teams||m.teams.length!==2)continue;
+      const all=m.teams.flat();if(all.length!==4)continue;
+      const q=four(all);courtQuartets[q]=(courtQuartets[q]||0)+1;
+      for(let i=0;i<4;i++)for(let j=i+1;j<4;j++){
+        const k=pair(all[i],all[j]);
+        sharedCourts[k]=(sharedCourts[k]||0)+1;
+        lastTogether[k]=ri;
+      }
+    }
+    return {sharedCourts,courtQuartets,lastTogether,rounds:(rounds||[]).length};
+  }
   function metrics(matches,h,ranks){
-    let partnerRepeat=0,opponentRepeat=0,opponentWeight=0,fixtureRepeat=0,rankPenalty=0,maxSpread=0;
+    let partnerRepeat=0,opponentRepeat=0,opponentWeight=0,fixtureRepeat=0,rankPenalty=0,maxSpread=0,courtRepeat=0,courtWeight=0,quartetRepeat=0,recentCourtRepeat=0;
     for(const m of matches){
       const [a,b]=m.teams,rank=a.concat(b).map(id=>ranks[id]);
       const spread=Math.max(...rank)-Math.min(...rank);maxSpread=Math.max(maxSpread,spread);
@@ -18,12 +33,20 @@
       rankPenalty+=(Math.abs(rank[0]-rank[1])+Math.abs(rank[2]-rank[3]))*30;
       for(const t of [a,b])if((h.partners[pair(t[0],t[1])]||0)>0)partnerRepeat++;
       if((h.fixtures[sig(a,b)]||0)>0)fixtureRepeat++;
+      const fourPlayers=a.concat(b);
+      if((h.courtQuartets?.[four(fourPlayers)]||0)>0)quartetRepeat++;
+      for(let i=0;i<4;i++)for(let j=i+1;j<4;j++){
+        const k=pair(fourPlayers[i],fourPlayers[j]),n=h.sharedCourts?.[k]||0;
+        if(n){courtRepeat++;courtWeight+=n*n;}
+        const distance=(h.rounds||0)-(h.lastTogether?.[k]??-999);
+        if(n&&distance<=2)recentCourtRepeat+=(distance===1?3:1);
+      }
       for(const x of a)for(const y of b){const k=h.opponents[pair(x,y)]||0;if(k){opponentRepeat++;opponentWeight+=k;}}
     }
-    return {partnerRepeat,opponentRepeat,opponentWeight,fixtureRepeat,rankPenalty,maxSpread};
+    return {partnerRepeat,opponentRepeat,opponentWeight,fixtureRepeat,rankPenalty,maxSpread,courtRepeat,courtWeight,quartetRepeat,recentCourtRepeat};
   }
   function enhance(base,s,standings,random){
-    const history=previous.confirmedHistory(s.rounds||[]);
+    const history={...previous.confirmedHistory(s.rounds||[]),...courtHistory(s.rounds||[])};
     // Honour the initial shuffle: no history exists to optimize yet.
     if(!(s.rounds||[]).some(r=>(r.matches||[]).some(m=>m&&m.confirmed)))return base;
     const groups=root.P5Structured.members(s),members=new Map(s.roster.map(p=>[p.id,p.group]));
@@ -42,7 +65,8 @@
     const maxRankExtra=Math.max(200,140*cap);
     let best=null,bestMetric=baseline,bestValue=Infinity;
     const value=m=>m.opponentRepeat*1400+m.partnerRepeat*1800+m.fixtureRepeat*6000+
-      m.opponentWeight*45+m.rankPenalty*0.06;
+      m.opponentWeight*45+m.quartetRepeat*14500+m.courtRepeat*550+
+      m.courtWeight*70+m.recentCourtRepeat*350+m.rankPenalty*0.06;
     function candidate(aIds,bIds){
       const teamOptions=[[],[]];
       for(let i=0;i<cap;i++){
@@ -55,7 +79,7 @@
         const metric=metrics(current,history,ranks);
         if(metric.maxSpread>maxSpreadLimit||metric.rankPenalty>baseline.rankPenalty+maxRankExtra)continue;
         // Pareto protection: never introduce a higher repeat count than baseline.
-        if(metric.partnerRepeat>baseline.partnerRepeat||metric.opponentRepeat>baseline.opponentRepeat||metric.fixtureRepeat>baseline.fixtureRepeat)continue;
+        if(metric.partnerRepeat>baseline.partnerRepeat||metric.opponentRepeat>baseline.opponentRepeat||metric.fixtureRepeat>baseline.fixtureRepeat||metric.quartetRepeat>baseline.quartetRepeat||metric.courtRepeat>baseline.courtRepeat)continue;
         const v=value(metric);
         if(v+1e-8<bestValue){bestValue=v;bestMetric=metric;best=current.map(m=>({teams:m.teams.map(t=>t.slice())}));}
       }
@@ -93,5 +117,5 @@
   }
   const next=(s,standings,random)=>enhance(previous.next(s,standings,random),s,standings,random);
   root.P5StructuredMX=Object.freeze({...previous,next});
-  root.P5StructuredMXDiversityLab=Object.freeze({enhance,metrics,version:'lab0.2'});
+  root.P5StructuredMXDiversityLab=Object.freeze({enhance,metrics,courtHistory,version:'lab0.3'});
 })(window);

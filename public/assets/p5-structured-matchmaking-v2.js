@@ -210,6 +210,87 @@
   }
   return {score,exact,quartets,opponent};
  }
+
+ // A completed match can feel repetitive even without an identical quartet:
+ // in the real 18-player report Kosy+Raffy partnered in adjacent rounds, while
+ // Hans+Indri shared a court in three consecutive rounds in different roles.
+ // After a LATE ARRIVAL only, allow a minimal B-side teammate exchange
+ // between unscored courts if it strictly improves whole-schedule partner
+ // coverage. Fixed/Individual/Mexicano and certified normal builds are exempt.
+ function partnerRisk(rows){
+  const seen=new Map(),last=new Map();let repeated=0,adjacent=0,recent=0;
+  for(const [ri,rd] of rows.entries())for(const m of rd.matches||[])if(m?.teams){
+   for(const t of m.teams){
+    if(t.length!==2)continue;
+    const k=key(...t),n=seen.get(k)||0,prev=last.get(k);
+    if(n)repeated++;
+    if(n&&prev===ri-1)adjacent++;
+    else if(n&&prev===ri-2)recent++;
+    seen.set(k,n+1);last.set(k,ri);
+   }
+  }
+  return {repeated,adjacent,recent};
+ }
+ function repairLatePartnerRepeats(s,prefix,future){
+  if(s?.mode!=='structured-americano'||!Array.isArray(future)||!future.length)return future;
+  const members=new Map((s.roster||[]).map(p=>[p.id,p.group]));
+  const eligible=active(s).all;
+  // Match data explicitly proves somebody was unavailable during a scored
+  // earlier round; ordinary roster shuffles must not rewrite partner cycles.
+  const returned=prefix.some(rd=>Array.isArray(rd.eligibleIds)&&
+   (rd.matches||[]).some(m=>m?.confirmed)&&
+   eligible.some(id=>!rd.eligibleIds.includes(id)));
+  if(!returned)return future;
+  const originalPrefix=JSON.stringify(prefix),originalFuture=JSON.stringify(future);
+  const output=future.slice();
+  for(let ri=0;ri<output.length;ri++){
+   const rd=output[ri],slots=(rd.matches||[]).filter(Boolean);
+   if(slots.length<2||slots.some(m=>m.confirmed||m.score!=null||m.skipped||
+      m.teams?.length!==2||m.teams.some(t=>t.length!==2||
+       members.get(t[0])!=='A'||members.get(t[1])!=='B')))continue;
+   const prefixNow=prefix.concat(output.slice(0,ri));
+   const h=history(prefixNow,eligible),originalQuality=quality(slots,h);
+   const before=partnerRisk(prefix.concat(output)),originalMatches=slots;
+   // We only touch a round that repeats a teammate from earlier rounds.
+   if(!slots.some(m=>m.teams.some(t=>(h.team.get(key(...t))||0)>0)))continue;
+   let choice=null,bestRisk=before,bestCost=Infinity;
+   const positions=slots.flatMap((m,mi)=>m.teams.map((_,ti)=>({mi,ti})));
+   for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){
+    const p=positions[i],q=positions[j];
+    const replaced=slots.map(m=>({...m,teams:m.teams.map(t=>t.slice())}));
+    const a=replaced[p.mi].teams[p.ti],b=replaced[q.mi].teams[q.ti];
+    // Same-group player swap retains a legal A+B partnership and all
+    // selected participants, rest assignments and scoring court identities.
+    if(a[1]===b[1])continue;
+    [a[1],b[1]]=[b[1],a[1]];
+    const metric=quality(replaced,h);
+    if(metric.exact>originalQuality.exact||
+       metric.quartets>originalQuality.quartets||
+       metric.opponent>originalQuality.opponent+3)continue;
+    const nextRound={...rd,matches:(rd.matches||[]).map(m=>{
+     if(!m)return m;
+     const idx=originalMatches.indexOf(m);
+     return replaced[idx];
+    })};
+    const trial=output.slice();trial[ri]=nextRound;
+    const nextRisk=partnerRisk(prefix.concat(trial));
+    const improved=nextRisk.adjacent<before.adjacent&&
+      nextRisk.repeated<=before.repeated||
+      nextRisk.adjacent===before.adjacent&&nextRisk.repeated<before.repeated;
+    if(!improved)continue;
+    const cost=nextRisk.adjacent*1000000+nextRisk.repeated*100000+
+      nextRisk.recent*15000+metric.score;
+    if(!choice||cost<bestCost){choice=nextRound;bestRisk=nextRisk;bestCost=cost;}
+   }
+   if(choice){
+    output[ri]={...choice,structuredLatePartnerRepaired:true};
+   }
+  }
+  if(JSON.stringify(prefix)!==originalPrefix||JSON.stringify(future)!==originalFuture)
+   throw Error('Partner repair mutated protected historical or original future fixtures.');
+  return output;
+ }
+
  function rebalanceFuture(s,prefix,future,random){
   if(s?.mode!=='structured-americano'||!Array.isArray(future))return future;
   const r=rng(random),preserved=JSON.stringify(prefix),past=prefix.slice();
@@ -256,7 +337,7 @@
    output.push(updated);past.push(updated);
   }
   if(JSON.stringify(prefix)!==preserved)throw Error('Late arrival changed protected match history.');
-  return output;
+  return repairLatePartnerRepeats(s,prefix,output);
  }
 
  function rebuild(s,random){
@@ -282,6 +363,6 @@
   return rebalanceFuture(s,prefix,future,r);
  }
  root.P5Structured=Object.freeze({...previous,validate,build,extend,rebuild,
-  structuredMatchmakingVersion:'2.2'});
- root.P5StructuredMatchmakingV2=Object.freeze({version:'2.2',active,history,schedule,addMissing,rebalanceFuture,quality});
+  structuredMatchmakingVersion:'2.3'});
+ root.P5StructuredMatchmakingV2=Object.freeze({version:'2.3',active,history,schedule,addMissing,rebalanceFuture,quality,partnerRisk,repairLatePartnerRepeats});
 })(window);

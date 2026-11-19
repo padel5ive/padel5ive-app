@@ -72,6 +72,17 @@ async function main(){
  assert(flowSetup.empty,'Fresh Americano must not preselect Match Flow');
  assert(flowSetup.labelWidth>flowSetup.courtWidth*1.5,'Match Flow takes full responsive setup row, no right-side gap');
  assert(flowSetup.disabled,'Continue is disabled without required Match Flow');
+
+ const flowLabels=await val('(()=>({choices:Array.from(document.querySelectorAll("#setup-match-flow option")).map(x=>({value:x.value,label:x.textContent.trim()})),hint:document.querySelector("#p5-match-flow-field .p5-match-flow-help")?.textContent.trim()}))()');
+ assert.equal(flowLabels.choices.find(x=>x.value==='rounds')?.label,'By Rounds');
+ assert.equal(flowLabels.choices.find(x=>x.value==='continuous')?.label,'Court by Court');
+ assert.equal(flowLabels.hint,'Choose how matches progress.');
+ await val('(()=>{const flow=document.querySelector("#setup-match-flow");flow.value="rounds";flow.dispatchEvent(new Event("change",{bubbles:true}));})()');
+ assert.equal(await val('document.querySelector("#p5-match-flow-field .p5-match-flow-help")?.textContent.trim()'),'All courts finish before the next round starts.');
+ await val('(()=>{const flow=document.querySelector("#setup-match-flow");flow.value="continuous";flow.dispatchEvent(new Event("change",{bubbles:true}));})()');
+ assert.equal(await val('document.querySelector("#p5-match-flow-field .p5-match-flow-help")?.textContent.trim()'),'Next match starts when a court becomes free.');
+ console.log('PASS Match Flow setup: By Rounds / Court by Court, clear contextual one-line descriptions');
+
  await val('(()=>{const f=document.querySelector("#setup-match-flow");f.value="rounds";f.dispatchEvent(new Event("change",{bubbles:true}));const g=document.querySelector("#setup-game");g.value="Mexicano";g.dispatchEvent(new Event("change",{bubbles:true}));})()');
  assert(await val('document.querySelector("#p5-match-flow-field").hidden'),'Mexicano has no Continuous option');
  console.log('PASS setup: full-width Match Flow, blank default and Americano-only option');

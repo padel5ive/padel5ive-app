@@ -216,6 +216,24 @@ async function main(){
  await tap('#americano [data-p5-pr36-tab="rounds"]');
  assert.equal(await val('document.querySelector("#americano").dataset.p5Pr36View'),'rounds');
  console.log('PASS Continuous iPhone native Rounds/Leaderboard navigation');
+
+ const compactTitle=await val('document.querySelector("#americano .p5-cont-stage .p5-v26-round-title h2")?.textContent?.trim()');
+ assert.equal(compactTitle,'CONTINUOUS ROUND','Continuous header must not repeat cycle, match format or court scoring');
+ // Exercise Structured Pairing markup under real iPhone CSS. Two players must sit on a single row.
+ const structuredLayout=await val(`(()=>{
+  const host=document.querySelector('#americano .p5-cont-courts');
+  const probe=document.createElement('div'); probe.className='court p5sm-card';
+  probe.style.cssText='position:absolute;visibility:hidden;width:310px;left:0;top:0';
+  probe.innerHTML='<div class="scorepair"><div class="pairname p5-match-names"><button class="p5-person-action"><span class="p5-person-label">1</span></button><span class="p5-name-join">&amp;</span><button class="p5-person-action"><span class="p5-person-label">A</span></button></div></div>';
+  host.appendChild(probe);
+  const names=probe.querySelectorAll('.p5-person-action');
+  const first=names[0].getBoundingClientRect(),second=names[1].getBoundingClientRect(),row=probe.querySelector('.p5-match-names').getBoundingClientRect();
+  const result={sameRow:Math.abs(first.top-second.top)<3,ordered:second.left>first.right,rowHeight:row.height};
+  probe.remove();return result;
+ })()`);
+ assert(structuredLayout.sameRow&&structuredLayout.ordered&&structuredLayout.rowHeight<65,'Structured partners must display 1 & A on a single horizontal line: '+JSON.stringify(structuredLayout));
+ console.log('PASS Continuous iPhone compact title and side-by-side Structured Pairing names');
+
  const start=await state();
  assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
  assert.equal(start.rounds.flatMap(r=>r.matches).filter(Boolean).length,2,'Two active courts dispatched');
@@ -250,6 +268,17 @@ async function main(){
  console.log('PASS iPhone Continuous SUB: correct player slot, no overflow and no court double-booking');
 
  await tap('#americano .p5-score-tap');await until(isModal,'continuous score entry');
+
+ const cleanModal=await val(`(()=>{
+   const root=document.querySelector('#p5-modal-root .p5-cont-score-clean');
+   const hint=root?.querySelector('#p5-score-dual-hint');
+   const labels=root?.querySelectorAll('.p5-polish-team-label')||[];
+   const formatError=root?.querySelector('#modal-error');
+   return {scoped:!!root,hint:hint?.textContent?.trim(),sideLabelsHidden:Array.from(labels).every(x=>getComputedStyle(x).display==='none'),formatHintHidden:!!formatError&&getComputedStyle(formatError).display==='none'};
+ })()`);
+ assert(cleanModal.scoped&&cleanModal.hint==='Enter one score; the other updates.'&&cleanModal.sideLabelsHidden&&cleanModal.formatHintHidden,'Continuous score modal should show only a single format and one helper line: '+JSON.stringify(cleanModal));
+ console.log('PASS Continuous score modal: no Side A/B, duplicate format or verbose help');
+
  const nameGeometry=await val('Array.from(document.querySelectorAll("#p5-modal-root .p5-score-dual-team strong")).map(x=>({border:getComputedStyle(x).borderTopWidth,w:x.getBoundingClientRect().width}))');
  assert(nameGeometry.length===2&&nameGeometry.every(x=>x.border==="0px"),'Score modal team names must be borderless');
 

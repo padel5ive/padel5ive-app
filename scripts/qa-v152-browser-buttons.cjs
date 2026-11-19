@@ -147,6 +147,39 @@ async function main(){
  await tap(cancel);await until(async()=>!(await isModal()),'iPad Cancel');
  console.log('PASS iPad landscape Participation Active / Cancel');
 
+ // Verify the same Stage 1 score-entry presentation in all currently registered
+ // Mexicano pairing modes. Keep the real scoring rules (Total and First-to) intact.
+ await size(390,844);
+ for(const mode of ['fp-mexicano','individual-mexicano','structured-mexicano']){
+  const fmt=mode==='fp-mexicano'?'first4':'total5';
+  await val('(()=>{const s=P5App.getState(),mode='+JSON.stringify(mode)+',fmt='+JSON.stringify(fmt)+';'+
+   'const fixed=mode==="fp-mexicano",structured=mode==="structured-mexicano";'+
+   'const roster=Array.from({length:8},(_,i)=>({id:i+1,names:fixed?["Mex "+(i+1)+" A","Mex "+(i+1)+" B"]:["Mex "+(i+1)],...(structured?{group:i<4?"A":"B"}:{})}));'+
+   'const pairs=fixed?[[[1],[2]],[[3],[4]]]:structured?[[[1,5],[2,6]],[[[3,7],[4,8]]][0]]:[[[1,2],[3,4]],[[5,6],[7,8]]];'+
+   'const matches=pairs.map((teams,i)=>({id:"mex-qa-"+i,teams,court:i+1,score:null,confirmed:false}));'+
+   'const rounds=[{index:0,matches,eligibleIds:roster.map(x=>x.id)}];'+
+   'Object.assign(s,{stage:"stage1",mode,matchFlow:"rounds",continuous:null,roster,nextId:9,courts:2,rounds,'+
+   'currentRound:0,viewRound:0,initialSchedule:JSON.parse(JSON.stringify(rounds)),initialCourts:2,'+
+   'sitout:[],sitoutPending:{},availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),'+
+   'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),session:"Mexicano Score QA",date:"2026-11-19",matchFormat:fmt});'+
+   'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()');
+  await until(()=>val('P5App.getState().mode==='+JSON.stringify(mode)+'&&!!document.querySelector("#americano [data-act=score]")'),'Mexicano mode ready: '+mode);
+  await tap('#americano [data-act="score"]');await until(isModal,'Mexicano score entry: '+mode);
+  const view=await val(`(()=>{
+   const root=document.querySelector('#p5-modal-root .p5-cont-score-clean');
+   const format=root?.querySelector('.p5-polish-entry-overline span')?.textContent?.trim();
+   const hint=root?.querySelector('#p5-score-dual-hint')?.textContent?.trim();
+   const labels=root?.querySelectorAll('.p5-polish-team-label')||[];
+   const duplicate=root?.querySelector('#modal-error');
+   return {clean:!!root,format,hint,sideLabelsHidden:Array.from(labels).every(x=>getComputedStyle(x).display==='none'),duplicateHidden:!!duplicate&&getComputedStyle(duplicate).display==='none'};
+  })()`);
+  const expected=fmt==='total5'?'Enter one score; the other updates.':'Choose the losing score; winner scores 4.';
+  assert(view.clean&&view.format===(fmt==='total5'?'TOTAL OF 5':'FIRST TO 4')&&view.hint===expected&&view.sideLabelsHidden&&view.duplicateHidden,'Mexicano shared score modal regression '+mode+': '+JSON.stringify(view));
+  await tap(cancel);await until(async()=>!(await isModal()),'Mexicano cancel: '+mode);
+  console.log('PASS Mexicano '+mode+' score input: shared compact UI, single format and original validation');
+ }
+
+
  // v0.1 isolated substitution acceptance: 12 players / 2 courts has resting substitutes.
  await size(1180,820);
  await val([

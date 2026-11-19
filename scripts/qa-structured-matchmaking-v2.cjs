@@ -200,7 +200,14 @@ for(const [name,initialAbsent,currentAbsent] of [
  assert.equal(JSON.stringify(prefix),JSON.stringify(rows.slice(0,7)),'Confirmed incident rounds changed');
  const beforePlayers=future[0].matches.flatMap(m=>m.teams.flat()).sort((a,b)=>a-b);
  const afterPlayers=revised[0].matches.flatMap(m=>m.teams.flat()).sort((a,b)=>a-b);
- assert.deepEqual(beforePlayers,afterPlayers,'Late repair altered players/rest allocation');
+ assert.equal(afterPlayers.length,beforePlayers.length,'Late recovery must preserve total court capacity');
+ assert.equal(new Set(afterPlayers).size,afterPlayers.length,'Late recovery double-booked a player');
+ assert(afterPlayers.every(pid=>s.roster.some(p=>p.id===pid)),'Late recovery scheduled an unknown player');
+ const beforeRest=ctx.P5StructuredMatchmakingV2.restMetrics(rows,s);
+ const afterRest=ctx.P5StructuredMatchmakingV2.restMetrics(prefix.concat(revised),s);
+ assert(afterRest.score<beforeRest.score,'Streak/rest recovery failed to improve actual 18-player match history: '+JSON.stringify({beforeRest,afterRest}));
+ assert(!afterPlayers.includes(id.jess),'Jess remains scheduled for seventh consecutive eligible round despite three rest alternatives');
+ console.log('PASS incident recovery: Jess gets rest before seventh successive match; full courts and historical scores preserved');
  for(let ci=0;ci<3;ci++){
   assert.equal(revised[0].matches[ci].id,future[0].matches[ci].id);
   assert.equal(revised[0].matches[ci].court,future[0].matches[ci].court);

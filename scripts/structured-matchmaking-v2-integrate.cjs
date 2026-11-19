@@ -24,14 +24,19 @@ if(!fs.existsSync('public'+asset))throw Error('Structured Matchmaking v2 asset n
 // on a late arrival or roster change. That pass can undo history-aware court
 // matching. Reapply encounter diversity at the FINAL dispatch boundary,
 // preserving the existing selected participants, partners and scored prefix.
-const controllerNeedle="    if(P5CourtRotation.applies(s))P5CourtRotation.allocate(s,optimized,prefix);\n    s.rounds=prefix.concat(optimized);";
-if(html.split(controllerNeedle).length!==2)throw Error('Structured final-round controller anchor changed');
-html=html.replace(controllerNeedle,
- "    if(P5CourtRotation.applies(s))P5CourtRotation.allocate(s,optimized,prefix);\n"+
- "    /* PR52 STRUCTURED FINAL ENCOUNTER GUARD */\n"+
+const controllerAssignments=html.match(/s\.rounds\s*=\s*prefix\.concat\(\s*optimized\s*\)\s*;/g)||[];
+if(controllerAssignments.length!==1){
+  // Fail closed with an actionable trace; never rewrite a different path.
+  const nearby=html.indexOf('P5Fair532.optimize(future,prefix');
+  throw Error('Structured late-arrival controller expected one optimized suffix assignment, found '+controllerAssignments.length+
+    ' near '+(nearby<0?'missing':html.slice(nearby,nearby+950).replace(/\s+/g,' ')));
+}
+html=html.replace(controllerAssignments[0],
+ "/* PR52 STRUCTURED FINAL ENCOUNTER GUARD */\n"+
  "    const schedulingFinal=s.mode==='structured-americano'&&window.P5StructuredMatchmakingV2?\n"+
  "      window.P5StructuredMatchmakingV2.rebalanceFuture(s,prefix,optimized,random):optimized;\n"+
  "    s.rounds=prefix.concat(schedulingFinal);");
+
 const last=html.lastIndexOf('</body>');
 if(last<0||!/^<\/body>\s*<\/html>\s*$/i.test(html.slice(last)))
  throw Error('Missing document close for Structured Matchmaking v2');

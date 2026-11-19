@@ -568,9 +568,10 @@ async function main(){
    assert(baseline,'Missing baseline for '+device+' '+kind);
    for(const x of variants){
     assert(Math.abs(x.courtWidth-baseline.courtWidth)<=4,'Court width diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.courtWidth,actual:x.courtWidth}));
-    assert(Math.abs(x.courtHeight-baseline.courtHeight)<=35,'Court height diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.courtHeight,actual:x.courtHeight}));
-    assert(Math.abs(x.scoreHeight-baseline.scoreHeight)<=6,'Score entry height diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.scoreHeight,actual:x.scoreHeight}));
-    assert(Math.abs(x.modalWidth-baseline.modalWidth)<=4,'Score modal width diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.modalWidth,actual:x.modalWidth}));
+    assert(Math.abs(x.courtHeight-baseline.courtHeight)<=7,'Court height diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.courtHeight,actual:x.courtHeight}));
+    assert(Math.abs(x.scoreHeight-baseline.scoreHeight)<=2,'Score entry height diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.scoreHeight,actual:x.scoreHeight}));
+    assert(Math.abs(x.modalWidth-baseline.modalWidth)<=2,'Score modal width diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.modalWidth,actual:x.modalWidth}));
+    assert(x.font===baseline.font&&x.roundTitleSize===baseline.roundTitleSize,'Shared dashboard typography diverges '+JSON.stringify({device,mode:x.mode,flow:x.flow,font:x.font,title:x.roundTitleSize}));
    }
   }
  }

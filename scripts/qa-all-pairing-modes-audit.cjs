@@ -45,8 +45,8 @@ function make(mode,players,courts,rules={}){
 }
 function metrics(s,rounds=s.rounds){
  const idSet=new Set(s.roster.map(x=>x.id)),gp=Object.fromEntries([...idSet].map(id=>[id,0]));
- const partners={},opponents={},fixtures={},appearance=Object.fromEntries([...idSet].map(id=>[id,[]]));
- let maxGap=0,repeatOpp=0,repeatPartner=0,repeatFixture=0,consecutiveRest=0,triplePlay=0;
+ const partners={},opponents={},fixtures={},quartets={},coCourt={},lastCoCourt={},appearance=Object.fromEntries([...idSet].map(id=>[id,[]]));
+ let maxGap=0,repeatOpp=0,repeatPartner=0,repeatFixture=0,repeatQuartet=0,peakQuartet=0,repeatCoCourt=0,peakCoCourt=0,recentCoCourt=0,consecutiveRest=0,triplePlay=0;
  for(const [r,round] of rounds.entries()){
   assert(round&&Array.isArray(round.matches),'Missing round matches '+r);
   const playing=new Set(),occupiedCourts=new Set();
@@ -62,6 +62,24 @@ function metrics(s,rounds=s.rounds){
     assert(s.roster.find(p=>p.id===t[1]).group==='B','Right group missing');
    }
    const f=fixture(...m.teams);if(fixtures[f])repeatFixture++;fixtures[f]=(fixtures[f]||0)+1;
+   // All six links in a doubles match count as encounters, regardless of
+   // teammate/opponent role. A swapped team lineup can still repeat the
+   // same four people over and over.
+   const participants=m.teams.flat();
+   if(participants.length===4){
+    const q=participants.slice().sort((a,b)=>a-b).join(':');
+    if(quartets[q])repeatQuartet++;
+    quartets[q]=(quartets[q]||0)+1;
+    peakQuartet=Math.max(peakQuartet,quartets[q]);
+    for(let ai=0;ai<4;ai++)for(let bi=ai+1;bi<4;bi++){
+     const link=key(participants[ai],participants[bi]);
+     if(coCourt[link])repeatCoCourt++;
+     if(lastCoCourt[link]===r-1)recentCoCourt++;
+     lastCoCourt[link]=r;
+     coCourt[link]=(coCourt[link]||0)+1;
+     peakCoCourt=Math.max(peakCoCourt,coCourt[link]);
+    }
+   }
    for(const t of m.teams){
     if(t.length===2){const k=key(...t);if(partners[k])repeatPartner++;partners[k]=(partners[k]||0)+1;}
     for(const id of t){
@@ -84,7 +102,7 @@ function metrics(s,rounds=s.rounds){
   const activeCounts=eligible.map(id=>gp[id]);
   if(activeCounts.length)maxGap=Math.max(maxGap,Math.max(...activeCounts)-Math.min(...activeCounts));
  }
- return {gp,partners,opponents,fixtures,maxGap,repeatOpp,repeatPartner,repeatFixture,consecutiveRest,triplePlay};
+ return {gp,partners,opponents,fixtures,quartets,coCourt,maxGap,repeatOpp,repeatPartner,repeatFixture,repeatQuartet,peakQuartet,repeatCoCourt,peakCoCourt,recentCoCourt,consecutiveRest,triplePlay};
 }
 function score(round,seed){
  for(const m of round.matches.filter(Boolean)){
@@ -132,7 +150,7 @@ for(const [n,c] of [[6,1],[18,3],[24,4],[30,5]]){
 }
 // Flexible Americano: dynamic hard-constraint changes are already exercised
 // with score confirmation and historic invariance in qa-structured-pairing-lab.
-let mexicanModes=0,mexicanRounds=0,maxDynamicGap=0;
+let mexicanModes=0,mexicanRounds=0,maxDynamicGap=0;const encounterTelemetry={};
 for(const [mode,rosters] of [
  ['fp-mexicano',[[3,1],[6,2],[9,3],[12,4],[15,5]]],
  ['individual-mexicano',[[8,2],[12,2],[16,3],[20,4]]],
@@ -162,6 +180,14 @@ for(const [mode,rosters] of [
     mexicanRounds++;
    }
    maxDynamicGap=Math.max(maxDynamicGap,maxObserved);
+   const final=metrics(s);
+   const existing=encounterTelemetry[mode]||{tests:0,peakQuartet:0,peakCoCourt:0,worstRecent:0,totalQuartetRepeats:0};
+   existing.tests++;
+   existing.peakQuartet=Math.max(existing.peakQuartet,final.peakQuartet);
+   existing.peakCoCourt=Math.max(existing.peakCoCourt,final.peakCoCourt);
+   existing.worstRecent=Math.max(existing.worstRecent,final.recentCoCourt);
+   existing.totalQuartetRepeats+=final.repeatQuartet;
+   encounterTelemetry[mode]=existing;
    mexicanModes++;
   }
  }
@@ -286,7 +312,7 @@ console.log(JSON.stringify({
  fixedPartnerMidSessionRecoveryCases:fpRecoveryIncidents,
  distinctNormalTeammatePairsAudited:normalPartnerChecks,
  productionFairCycles:certifiedNormalCycles,productionFairCyclePlayers:certifiedNormalPlayers,
- dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,
+ dynamicMexicanoScenarios:mexicanModes,dynamicMexicanoRounds:mexicanRounds,encounterTelemetry,
  observedDynamicMaximumGamesGap:maxDynamicGap,
  protectedRoles:'Coach/Fixed Partner',structuredBalanceGuard:true,koSitoutGuards,coachDiversityCases,coachPairingImproved,worstCoachOpponentEncounter,minCoachUniqueOpponents,
  fixedMexFirstRoundUniqueDraws:firstRoundDraws.size,individualMexFirstRoundUniqueDraws:individualOpeningDraws.size

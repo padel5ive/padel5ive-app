@@ -24,7 +24,7 @@ function section(from,to){const a=html.indexOf(from),b=html.indexOf(to,a+from.le
 section('window.P5Fair532=(function','/* PADEL 5IVE Phase 5.0.4');
 section('window.P5Structured=(function','window.P5EngineStructured=');
 for(const name of assets)vm.runInContext(fs.readFileSync('public/assets/'+name,'utf8'),ctx,{timeout:30000,filename:name});
-assert.equal(ctx.P5Structured.structuredMatchmakingVersion,'2.0','Active v2 adapter absent');
+assert.equal(ctx.P5Structured.structuredMatchmakingVersion,'2.2','Active encounter-diversity adapter absent');
 const rand=(seed)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);
  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 function make(n,c,sit=[]){return {mode:'structured-americano',courts:c,sitout:sit.slice(),
@@ -127,6 +127,37 @@ for(const [name,initialAbsent,currentAbsent] of [
  assert.equal(JSON.stringify(s.rounds),before);
  protectedHistory++;
 }
+
+// Reproduce the reported issue: the exact same four people share a court,
+// swapping between teammates and opponents. A late-return rebuild must not
+// consider those pairings sufficiently "random".
+{
+ const s=make(4,2),prefix=[{index:0,eligibleIds:s.roster.map(p=>p.id),matches:[
+  {id:'R0C0',court:1,teams:[[1,5],[2,6]],confirmed:true,score:[3,2]},
+  {id:'R0C1',court:2,teams:[[3,7],[4,8]],confirmed:true,score:[3,2]}
+ ]}];
+ const future=[{index:1,eligibleIds:s.roster.map(p=>p.id),matches:[
+  {id:'R1C0',court:1,teams:[[1,6],[2,5]],confirmed:false,score:null},
+  {id:'R1C1',court:2,teams:[[3,8],[4,7]],confirmed:false,score:null}
+ ]}];
+ const frozen=JSON.stringify(prefix),original=JSON.stringify(future);
+ const paired=(rows)=>rows.flatMap(rd=>rd.matches.flatMap(m=>m.teams.map(t=>t.slice().sort((a,b)=>a-b).join(':')))).sort();
+ const encounters=(rows)=>rows.flatMap(rd=>rd.matches.map(m=>m.teams.flat().slice().sort((a,b)=>a-b).join(':')));
+ const baseline=new Set(encounters(prefix));
+ assert(encounters(future).every(q=>baseline.has(q)),
+  'The regression fixture must repeat the same four people');
+ const optimized=ctx.P5StructuredMatchmakingV2.rebalanceFuture(s,prefix,future,rand(42));
+ assert.equal(JSON.stringify(prefix),frozen,'Prior confirmed history changed');
+ assert.equal(JSON.stringify(future),original,'Source future schedule mutated');
+ assert.equal(JSON.stringify(paired(optimized)),JSON.stringify(paired(future)),
+  'Players were assigned new partners rather than only changed court opponents');
+ assert(optimized[0].matches.every(m=>!baseline.has(m.teams.flat().slice().sort((a,b)=>a-b).join(':'))),
+  'Repeated four-person court encounters remain despite an available alternative');
+ assert(optimized[0].matches.every((m,i)=>m.id===future[0].matches[i].id&&m.court===future[0].matches[i].court&&!m.confirmed&&m.score==null),
+  'Match identity, court allocation and pending score status must remain stable');
+ console.log('PASS Structured late-return encounter case: same quartet avoided, all teammates/history protected');
+}
+
 console.log(JSON.stringify({status:'PASS',mode:'Structured Americano',normal,extended,
  lateReturn,sitout,asymmetric,protectedHistory,courtUtilization:'FULL WHEN FEASIBLE',
  teammateRepeat:'ALLOWED',exactFixtureRepeatsAt24:0,scoreHistory:'IMMUTABLE'}));

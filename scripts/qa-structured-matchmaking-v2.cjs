@@ -25,7 +25,7 @@ function section(from,to){const a=html.indexOf(from),b=html.indexOf(to,a+from.le
 section('window.P5Fair532=(function','/* PADEL 5IVE Phase 5.0.4');
 section('window.P5Structured=(function','window.P5EngineStructured=');
 for(const name of assets)vm.runInContext(fs.readFileSync('public/assets/'+name,'utf8'),ctx,{timeout:30000,filename:name});
-assert.equal(ctx.P5Structured.structuredMatchmakingVersion,'2.2','Active encounter-diversity adapter absent');
+assert.equal(ctx.P5Structured.structuredMatchmakingVersion,'2.3','Active encounter+partner-diversity adapter absent');
 const rand=(seed)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);
  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 function make(n,c,sit=[]){return {mode:'structured-americano',courts:c,sitout:sit.slice(),
@@ -159,6 +159,61 @@ for(const [name,initialAbsent,currentAbsent] of [
  assert(complete.slice(0,4).every(rd=>rd.matches.every(m=>m.confirmed&&m.score?.length===2)),
   'Prior confirmed scores were changed during staged return');
  console.log('PASS Structured 18-player staggered single arrivals: unequal groups between R2/R4, all players reached, confirmed history untouched');
+}
+
+// Incident-inspired regression from nine visible match rounds (18 players,
+// three courts): two Group A+Group B participants were partners in both R7/R8.
+// Group membership is inferred from the recorded cross-group pairings, but
+// availability before R2 is a deliberate TEST hypothesis, not a fact proven
+// by the screenshot. Real names are anonymized to stable numeric IDs.
+{
+ const namesA=['abi','davita','iko','indri','jess','kosy','lena','ricky','tom'];
+ const namesB=['andry','felix','gege','hans','junito','kylie','raffy','rein','weiny'];
+ const id=Object.fromEntries(namesA.concat(namesB).map((n,i)=>[n,i+1]));
+ const fixtureRows=[
+  [[['lena','gege'],['indri','felix']],[['iko','junito'],['kosy','kylie']],[['davita','raffy'],['ricky','rein']]],
+  [[['tom','kylie'],['ricky','gege']],[['iko','felix'],['indri','junito']],[['kosy','weiny'],['jess','raffy']]],
+  [[['iko','raffy'],['lena','hans']],[['kosy','felix'],['davita','kylie']],[['jess','weiny'],['indri','rein']]],
+  [[['abi','felix'],['tom','weiny']],[['kosy','rein'],['indri','hans']],[['jess','gege'],['iko','andry']]],
+  [[['abi','hans'],['indri','raffy']],[['kosy','andry'],['davita','weiny']],[['tom','gege'],['jess','rein']]],
+  [[['ricky','weiny'],['lena','junito']],[['jess','andry'],['abi','kylie']],[['indri','gege'],['kosy','hans']]],
+  [[['indri','weiny'],['iko','kylie']],[['jess','felix'],['kosy','raffy']],[['abi','gege'],['davita','junito']]],
+  [[['jess','hans'],['abi','junito']],[['tom','andry'],['kosy','raffy']],[['davita','gege'],['lena','kylie']]]
+ ];
+ const rows=fixtureRows.map((matches,ri)=>({
+  index:ri,
+  eligibleIds:ri===0?Array.from(new Set(matches.flat(2))).map(n=>id[n]):Object.values(id),
+  matches:matches.map((teams,ci)=>({id:'INC-R'+ri+'C'+ci,court:ci+1,teams:teams.map(t=>t.map(n=>id[n])),
+   confirmed:ri<7,score:ri<7?[2,2]:null}))
+ }));
+ const s=make(9,3);s.roster=namesA.concat(namesB).map((n,i)=>({
+  id:i+1,group:i<9?'A':'B',names:['Participant '+(i+1)]}));
+ const prefix=rows.slice(0,7),future=rows.slice(7);
+ const before=JSON.stringify(rows),p1=id.kosy,p2=id.raffy;
+ const risk=ctx.P5StructuredMatchmakingV2.partnerRisk(rows);
+ assert.equal(risk.adjacent,1,'Round 7/Round 8 repeated teammates must be reproducible');
+ const revised=ctx.P5StructuredMatchmakingV2.rebalanceFuture(s,prefix,future,rand(207));
+ const revisedRisk=ctx.P5StructuredMatchmakingV2.partnerRisk(prefix.concat(revised));
+ assert(revisedRisk.adjacent<risk.adjacent,'Incident adjacent teammate repeat was not repaired');
+ assert(revisedRisk.repeated<=risk.repeated,'Fix introduced extra teammates repeats elsewhere');
+ assert.equal(JSON.stringify(rows),before,'Incident input fixture changed');
+ assert.equal(JSON.stringify(prefix),JSON.stringify(rows.slice(0,7)),'Confirmed incident rounds changed');
+ const beforePlayers=future[0].matches.flatMap(m=>m.teams.flat()).sort((a,b)=>a-b);
+ const afterPlayers=revised[0].matches.flatMap(m=>m.teams.flat()).sort((a,b)=>a-b);
+ assert.deepEqual(beforePlayers,afterPlayers,'Late repair altered players/rest allocation');
+ for(let ci=0;ci<3;ci++){
+  assert.equal(revised[0].matches[ci].id,future[0].matches[ci].id);
+  assert.equal(revised[0].matches[ci].court,future[0].matches[ci].court);
+  assert.equal(revised[0].matches[ci].score,null);
+  assert.equal(revised[0].matches[ci].confirmed,false);
+ }
+ for(const m of revised[0].matches)for(const t of m.teams){
+  assert(s.roster.find(p=>p.id===t[0]).group==='A'&&s.roster.find(p=>p.id===t[1]).group==='B',
+    'Incident-inspired repair breaks structured pair constraints');
+ }
+ assert(!revised[0].matches.some(m=>m.teams.some(t=>t.includes(p1)&&t.includes(p2))),
+  'Kosy/Raffy remain partners in successive rounds despite available changes');
+ console.log('PASS screenshot-based Structured 18/3: R7-R8 partner repeat repaired with no changes to scored rounds, selected players or court slots');
 }
 
 // A future scored fixture cannot silently be rebuilt.

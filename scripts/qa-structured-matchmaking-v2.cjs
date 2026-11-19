@@ -119,18 +119,18 @@ for(const [name,initialAbsent,currentAbsent] of [
  else asymmetric++;
  protectedHistory++;
 }
-// Staggered late-arrival regression: two people return after Round 2,
-// another two after Round 4. Each rebuild must treat the confirmed prefix as
+// Staggered late-arrival regression: one player returns after Round 2,
+// their opposite-group counterpart only after Round 4. Each rebuild must treat the confirmed prefix as
 // immutable and recompute only unscored future opponent assignments.
 {
- const s=make(9,3,[8,9,17,18]);
+ const s=make(9,3,[9,18]);
  const initial=ctx.P5Structured.build(s,rand(707));
  const play=(rows)=>{for(const rd of rows)for(const m of rd.matches){
   m.score=[3,2];m.confirmed=true;
  }};
  s.rounds=initial.slice(0,2);play(s.rounds);s.currentRound=1;
  const firstHistory=JSON.stringify(s.rounds);
- s.sitout=[9,18];
+ s.sitout=[18];
  const future1=ctx.P5Structured.rebuild(s,rand(708));
  assert.equal(JSON.stringify(s.rounds),firstHistory,'First staged return changed prior scores');
  assert(future1.length>=2,'First return must permit later rounds');
@@ -158,7 +158,7 @@ for(const [name,initialAbsent,currentAbsent] of [
  assert.equal(counted.size,18,'Returned participants were never scheduled');
  assert(complete.slice(0,4).every(rd=>rd.matches.every(m=>m.confirmed&&m.score?.length===2)),
   'Prior confirmed scores were changed during staged return');
- console.log('PASS Structured 18-player staggered arrival: two returns, certified court capacity, all players reached, confirmed history untouched');
+ console.log('PASS Structured 18-player staggered single arrivals: unequal groups between R2/R4, all players reached, confirmed history untouched');
 }
 
 // A future scored fixture cannot silently be rebuilt.

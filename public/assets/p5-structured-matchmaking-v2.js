@@ -291,6 +291,137 @@
   return output;
  }
 
+
+ // Recovery-first scheduling after late check-in. A player's consecutive-play
+ // streak is distinct from partner/opponent history. Swapping opponents alone
+ // cannot give Jess (R2-R8) or Kosy (R1-R8) a turn to sit out.
+ // Only touch UNCONFIRMED future matches, never historical scores or normal
+ // certified opening schedules. Respect A+B structured pairing in every court.
+ function restMetrics(rows,s){
+  const roster=s.roster||[],group=new Map(roster.map(p=>[p.id,p.group]));
+  const ids=roster.map(p=>p.id),games=Object.fromEntries(ids.map(id=>[id,0]));
+  const expected=Object.fromEntries(ids.map(id=>[id,0]));
+  const playRun=Object.fromEntries(ids.map(id=>[id,0]));
+  const restRun=Object.fromEntries(ids.map(id=>[id,0]));
+  let playCost=0,restCost=0,longest=0,triples=0;
+  for(const rd of rows){
+   const matches=(rd.matches||[]).filter(Boolean),on=played(rd);
+   const available=Array.isArray(rd.eligibleIds)?rd.eligibleIds:ids;
+   const eligible=new Set(available),a=available.filter(id=>group.get(id)==='A').length;
+   const b=available.filter(id=>group.get(id)==='B').length;
+   const cap=matches.length;
+   for(const id of ids){
+    if(!eligible.has(id)){playRun[id]=0;restRun[id]=0;continue;}
+    const g=group.get(id),n=g==='A'?a:b;
+    if(n>0)expected[id]+=2*cap/n;
+    if(on.has(id)){
+     games[id]++;
+     playRun[id]++;restRun[id]=0;
+     longest=Math.max(longest,playRun[id]);
+     if(playRun[id]>2){
+      triples++;
+      playCost+=(playRun[id]-2)**2;
+     }
+    }else{
+     playRun[id]=0;restRun[id]++;
+     if(restRun[id]>1)restCost+=(restRun[id]-1)**2;
+    }
+   }
+  }
+  const deficit=ids.reduce((sum,id)=>{
+   const delta=games[id]-expected[id];return sum+delta*delta;
+  },0);
+  return {playCost,restCost,deficit,longest,triples,
+   score:playCost*250000+restCost*24000+deficit*3500};
+ }
+ function repeatedMeetings(rows){
+  const partners=new Map(),fixtures=new Map(),quartets=new Map(),opponents=new Map();
+  let repeatPartner=0,repeatFixture=0,repeatQuartet=0,repeatOpponent=0;
+  for(const rd of rows)for(const m of (rd.matches||[]).filter(Boolean)){
+   if(m.teams?.length!==2||m.teams.some(t=>t.length!==2))continue;
+   const [a,b]=m.teams;
+   for(const t of [a,b]){
+    const k=key(...t),n=partners.get(k)||0;if(n)repeatPartner++;partners.set(k,n+1);
+   }
+   const f=fixture(a,b),q=quartet(a,b);
+   if(fixtures.get(f))repeatFixture++;fixtures.set(f,(fixtures.get(f)||0)+1);
+   if(quartets.get(q))repeatQuartet++;quartets.set(q,(quartets.get(q)||0)+1);
+   for(const x of a)for(const y of b){
+    const k=key(x,y),n=opponents.get(k)||0;
+    if(n)repeatOpponent++;
+    opponents.set(k,n+1);
+   }
+  }
+  return {repeatPartner,repeatFixture,repeatQuartet,repeatOpponent};
+ }
+ function repairLateRestStreaks(s,prefix,future){
+  if(s?.mode!=='structured-americano'||!Array.isArray(future)||!future.length)return future;
+  const roster=s.roster||[],members=new Map(roster.map(p=>[p.id,p.group]));
+  const current=active(s).all;
+  // Actual historical attendance difference is required. Do not replace
+  // routine certified round-robin pairings or users who deliberately sit out.
+  const hasLate=prefix.some(rd=>Array.isArray(rd.eligibleIds)&&
+   (rd.matches||[]).some(m=>m?.confirmed)&&
+   current.some(id=>!rd.eligibleIds.includes(id)));
+  if(!hasLate)return future;
+  const protect=JSON.stringify(prefix),source=JSON.stringify(future),result=future.slice();
+  let risk=restMetrics(prefix.concat(result),s);
+  let repetition=repeatedMeetings(prefix.concat(result));
+  // Deterministic bounded local search: a resting, eligible same-side player
+  // replaces an overplayed participant in one future unscored court.
+  // Unlike a full reshuffle, it preserves court slot, score, round ID,
+  // selected court count and completed history.
+  const trials=Math.min(18,result.length*2);
+  for(let turn=0;turn<trials;turn++){
+   let winner=null;
+   for(let ri=0;ri<result.length;ri++){
+    const rd=result[ri];
+    if(!rd||!Array.isArray(rd.matches)||rd.matches.some(m=>m&&
+       (m.confirmed||m.score!=null||m.skipped)))continue;
+    const scheduled=played(rd),eligible=Array.isArray(rd.eligibleIds)?rd.eligibleIds:current;
+    const resting=eligible.filter(id=>current.includes(id)&&!scheduled.has(id));
+    if(!resting.length)continue;
+    for(let mi=0;mi<rd.matches.length;mi++){
+     const m=rd.matches[mi];
+     if(!m?.teams||m.teams.length!==2||m.teams.some(t=>t.length!==2))continue;
+     for(let ti=0;ti<2;ti++)for(let pi=0;pi<2;pi++){
+      const oldId=m.teams[ti][pi],side=members.get(oldId);
+      if(side!=='A'&&side!=='B')continue;
+      for(const incoming of resting){
+       if(members.get(incoming)!==side)continue;
+       const swapped={...m,teams:m.teams.map(t=>t.slice())};
+       swapped.teams[ti][pi]=incoming;
+       if(swapped.teams[ti].some(id=>!eligible.includes(id)))continue;
+       const updated={...rd,matches:rd.matches.map((x,i)=>i===mi?swapped:x)};
+       const proposal=result.slice();proposal[ri]=updated;
+       const combined=prefix.concat(proposal),newRisk=restMetrics(combined,s);
+       if(newRisk.score>=risk.score-1e-6)continue;
+       const rep=repeatedMeetings(combined);
+       // Preserve diversity whenever possible; never improve one streak by
+       // creating a repeated teammate, identical fixture or same quartet.
+       if(rep.repeatPartner>repetition.repeatPartner||
+          rep.repeatFixture>repetition.repeatFixture||
+          rep.repeatQuartet>repetition.repeatQuartet||
+          rep.repeatOpponent>repetition.repeatOpponent+1)continue;
+       const gain=risk.score-newRisk.score;
+       const tie=rep.repeatOpponent-repetition.repeatOpponent;
+       if(!winner||gain>winner.gain+1e-6||
+          Math.abs(gain-winner.gain)<1e-6&&tie<winner.tie){
+        winner={ri,updated,newRisk,rep,gain,tie};
+       }
+      }
+     }
+    }
+   }
+   if(!winner)break;
+   result[winner.ri]={...winner.updated,structuredRestRecovered:true};
+   risk=winner.newRisk;repetition=winner.rep;
+  }
+  if(JSON.stringify(prefix)!==protect||JSON.stringify(future)!==source)
+   throw Error('Rest recovery attempted to modify protected matches or source schedule.');
+  return result;
+ }
+
  function rebalanceFuture(s,prefix,future,random){
   if(s?.mode!=='structured-americano'||!Array.isArray(future))return future;
   const r=rng(random),preserved=JSON.stringify(prefix),past=prefix.slice();
@@ -337,7 +468,7 @@
    output.push(updated);past.push(updated);
   }
   if(JSON.stringify(prefix)!==preserved)throw Error('Late arrival changed protected match history.');
-  return repairLatePartnerRepeats(s,prefix,output);
+  return repairLateRestStreaks(s,prefix,repairLatePartnerRepeats(s,prefix,output));
  }
 
  function rebuild(s,random){
@@ -363,6 +494,6 @@
   return rebalanceFuture(s,prefix,future,r);
  }
  root.P5Structured=Object.freeze({...previous,validate,build,extend,rebuild,
-  structuredMatchmakingVersion:'2.3'});
- root.P5StructuredMatchmakingV2=Object.freeze({version:'2.3',active,history,schedule,addMissing,rebalanceFuture,quality,partnerRisk,repairLatePartnerRepeats});
+  structuredMatchmakingVersion:'2.4'});
+ root.P5StructuredMatchmakingV2=Object.freeze({version:'2.4',active,history,schedule,addMissing,rebalanceFuture,quality,partnerRisk,repairLatePartnerRepeats,restMetrics,repeatedMeetings,repairLateRestStreaks});
 })(window);

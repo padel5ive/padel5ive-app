@@ -194,6 +194,71 @@
   if(s?.mode!=='structured-americano')return previous.extend(s,random);
   validate(s);return schedule(s,s.rounds||[],rng(random));
  }
+
+ // Rescue rescheduled rounds after late arrival. Re-pair WHOLE intact A+B
+ // teams across courts; never change teammates, selection, rests or court slots.
+ // A different partner and a different opponent are not sufficient if the
+ // same quartet keeps meeting. Optimize all-role court encounters too.
+ function quality(matches,h){
+  let score=0,exact=0,quartets=0,opponent=0;
+  for(const m of matches){
+   const [a,b]=m.teams;
+   score+=encounterCost(a,b,h);
+   if(h.exact.get(fixture(a,b)))exact++;
+   if(h.quartets.get(quartet(a,b)))quartets++;
+   for(const x of a)for(const y of b)if(h.opp.get(key(x,y)))opponent++;
+  }
+  return {score,exact,quartets,opponent};
+ }
+ function rebalanceFuture(s,prefix,future,random){
+  if(s?.mode!=='structured-americano'||!Array.isArray(future))return future;
+  const r=rng(random),preserved=JSON.stringify(prefix),past=prefix.slice();
+  const ids=active(s).all,output=[];
+  for(const rd of future){
+   const slots=(rd.matches||[]).filter(Boolean);
+   if(slots.length<2||slots.length>5||
+      slots.some(m=>m.confirmed||m.score!=null||m.skipped||
+        m.teams?.length!==2||m.teams.some(t=>t.length!==2))){
+    output.push(rd);past.push(rd);continue;
+   }
+   const h=history(past,ids),original=quality(slots,h);
+   const teams=slots.flatMap(m=>m.teams.map(t=>t.slice()));
+   const n=teams.length;
+   // Safety: never hand the optimizer an already invalid/double-booked round.
+   if(new Set(teams.flat()).size!==n*2){output.push(rd);past.push(rd);continue;}
+   let best=original,chosen=null;
+   function search(remaining,matches){
+    if(!remaining.length){
+     const metric=quality(matches,h);
+     // Never trade a new repeated opponent, exact fixture, or repeated
+     // quartet just to improve another soft metric.
+     if(metric.exact>original.exact||metric.quartets>original.quartets||
+        metric.opponent>original.opponent)return;
+     if(metric.score+1e-6<best.score){
+      best=metric;chosen=matches.map(m=>m.teams.map(t=>t.slice()));
+     }
+     return;
+    }
+    const first=remaining[0];
+    for(let j=1;j<remaining.length;j++){
+     const second=remaining[j];
+     search(remaining.filter((_,k)=>k!==0&&k!==j),
+       matches.concat([{teams:[teams[first],teams[second]]}]));
+    }
+   }
+   search(Array.from({length:n},(_,i)=>i),[]);
+   const updated=chosen?{...rd,matches:(rd.matches||[]).map((m,i)=>{
+    if(!m)return m;
+    // Sparse court arrays remain sparse: assign only actual fixture slots.
+    const slot=slots.indexOf(m);
+    return {...m,teams:chosen[slot].map(t=>t.slice())};
+   }),structuredEncounterBalanced:true}:rd;
+   output.push(updated);past.push(updated);
+  }
+  if(JSON.stringify(prefix)!==preserved)throw Error('Late arrival changed protected match history.');
+  return output;
+ }
+
  function rebuild(s,random){
   if(s?.mode!=='structured-americano')return previous.rebuild(s,random);
   validate(s);const r=rng(random),m=active(s);
@@ -214,9 +279,9 @@
    future=future.map(rd=>{const full=addMissing(s,rd,all,r);all.push(full);return full;});
   }
   if(JSON.stringify(prefix)!==frozen)throw Error('Confirmed Structured match history was modified.');
-  return future;
+  return rebalanceFuture(s,prefix,future,r);
  }
  root.P5Structured=Object.freeze({...previous,validate,build,extend,rebuild,
-  structuredMatchmakingVersion:'2.1'});
- root.P5StructuredMatchmakingV2=Object.freeze({version:'2.1',active,history,schedule,addMissing});
+  structuredMatchmakingVersion:'2.2'});
+ root.P5StructuredMatchmakingV2=Object.freeze({version:'2.2',active,history,schedule,addMissing,rebalanceFuture,quality});
 })(window);

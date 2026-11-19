@@ -499,6 +499,83 @@ async function main(){
 
 
 
+
+ // PR52 shared-foundation visual parity: measure real computed geometry at phone/tablet
+ // sizes for every registered Americano/Mexicano pairing mode and match flow.
+ const paritySamples=[];
+ for(const [device,w,h] of [['iPhone',390,844],['iPad',1194,834]]){
+  await size(w,h);
+  for(const mode of ['fp-americano','individual-americano','structured-americano','fp-mexicano','individual-mexicano','structured-mexicano']){
+   for(const flow of (mode.endsWith('-americano')?['rounds','continuous']:['rounds'])){
+    const setup='(()=>{'+
+     'const s=P5App.getState(),mode='+JSON.stringify(mode)+',flow='+JSON.stringify(flow)+';'+
+     'const fixed=mode.startsWith("fp-"),structured=mode.startsWith("structured-");'+
+     'const roster=Array.from({length:8},(_,i)=>({id:i+1,names:fixed?["P"+(i+1)+" A","P"+(i+1)+" B"]:["P"+(i+1)],...(structured?{group:i<4?"A":"B"}:{})}));'+
+     'const pairs=fixed?[[[1],[2]],[[3],[4]]]:structured?[[[1,5],[2,6]],[[3,7],[4,8]]]:[[[1,2],[3,4]],[[5,6],[7,8]]];'+
+     'const matches=pairs.map((teams,i)=>({id:"ui-parity-"+i,court:i+1,teams,score:null,confirmed:false}));'+
+     'const schedule=[{index:0,matches,eligibleIds:roster.map(p=>p.id)}];'+
+     'Object.assign(s,{stage:"stage1",mode,matchFlow:flow,continuous:null,session:"UI Parity Lab",'+
+     'roster,nextId:9,courts:2,currentRound:0,viewRound:0,matchFormat:"total5",'+
+     'rounds:flow==="continuous"?[]:schedule,initialSchedule:JSON.parse(JSON.stringify(schedule)),initialCourts:2,'+
+     'sitout:[],sitoutPending:{},pendingParticipants:[],groupConfig:{labels:["Left","Right"]},'+
+     'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),'+
+     'availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),'+
+     'ui:{...s.ui,modal:null,contHistoryOpen:false,contHistoryCycle:1,contHistoryRound:1}});'+
+     'if(flow==="continuous")P5Continuous.create(s,schedule);'+
+     'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()';
+    await val(setup);
+    await until(()=>val('P5App?.getState()?.stage==="stage1"&&!!document.querySelector("#americano .p5-stage1-score-grid .court.p5sm-card")'),
+     'dashboard '+device+' '+mode+' '+flow);
+    const measured=await val('(()=>{'+
+     'const root=document.querySelector("#americano"),board=root.querySelector(".p5-v26-round-card");'+
+     'const courts=[...board.querySelectorAll(".p5-stage1-score-grid>.court.p5sm-card")];'+
+     'const card=courts[0],score=card?.querySelector(".p5-score-tap"),leader=root.querySelector(".p5-b41-leaderboard");'+
+     'const r=e=>e?.getBoundingClientRect(),b=r(board),c=r(card),z=r(score);'+
+     'return {boardWidth:b?.width,courtWidth:c?.width,courtHeight:c?.height,scoreHeight:z?.height,'+
+     'scoreWidth:z?.width,courtCount:courts.length,scoreCount:card?.querySelectorAll(".p5-score-tap").length,'+
+     'overflow:Math.max(0,...courts.map(el=>el.scrollWidth-el.clientWidth)),'+
+     'font:getComputedStyle(card).fontFamily,leaderWidth:r(leader)?.width,'+
+     'roundTitleSize:getComputedStyle(board.querySelector(".p5-v26-round-title h2")).fontSize};'+
+     '})()');
+    assert(measured.boardWidth>250&&measured.courtWidth>100&&measured.scoreHeight>=38&&measured.scoreCount===2,
+     'Scorecard measured geometry invalid '+JSON.stringify({device,mode,flow,measured}));
+    assert(measured.overflow<=3,'Court cards must never horizontally overflow '+JSON.stringify({device,mode,flow,measured}));
+    await tap('#americano .p5-stage1-score-grid>.court.p5sm-card .p5-score-tap');
+    await until(isModal,'shared score modal '+device+' '+mode+' '+flow);
+    const modal=await val('(()=>{'+
+     'const box=document.querySelector("#p5-modal-root .p5-cont-score-clean"),r=box?.getBoundingClientRect();'+
+     'const fmt=box?.querySelector(".p5-polish-entry-overline span")?.textContent.trim();'+
+     'const hint=box?.querySelector("#p5-score-dual-hint")?.textContent.trim();'+
+     'const sideLabels=[...(box?.querySelectorAll(".p5-polish-team-label")||[])];'+
+     'const duplicate=box?.querySelector("#modal-error");'+
+     'return {exists:!!box,width:r?.width,format:fmt,hint,labelsHidden:sideLabels.every(x=>getComputedStyle(x).display==="none"),'+
+     'duplicateHidden:!!duplicate&&getComputedStyle(duplicate).display==="none",scoreInputs:box?.querySelectorAll(".p5-score-dual-select").length};'+
+     '})()');
+    assert(modal.exists&&modal.format==='TOTAL OF 5'&&modal.hint==='Enter one score; the other updates.'&&
+     modal.labelsHidden&&modal.duplicateHidden&&modal.scoreInputs===2,
+     'Score modal drift across mode/flow '+JSON.stringify({device,mode,flow,modal}));
+    await tap('#p5-modal-root [data-act="modal-cancel"]');
+    await until(async()=>!(await isModal()),'score cancel '+device+' '+mode+' '+flow);
+    paritySamples.push({device,mode,flow,...measured,modalWidth:modal.width});
+   }
+  }
+ }
+ for(const device of ['iPhone','iPad']){
+  for(const kind of ['fp','individual','structured']){
+   const variants=paritySamples.filter(x=>x.device===device&&x.mode.startsWith(kind+'-'));
+   const baseline=variants.find(x=>x.mode.endsWith('-americano')&&x.flow==='rounds');
+   assert(baseline,'Missing baseline for '+device+' '+kind);
+   for(const x of variants){
+    assert(Math.abs(x.courtWidth-baseline.courtWidth)<=4,'Court width diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.courtWidth,actual:x.courtWidth}));
+    assert(Math.abs(x.courtHeight-baseline.courtHeight)<=35,'Court height diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.courtHeight,actual:x.courtHeight}));
+    assert(Math.abs(x.scoreHeight-baseline.scoreHeight)<=6,'Score entry height diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.scoreHeight,actual:x.scoreHeight}));
+    assert(Math.abs(x.modalWidth-baseline.modalWidth)<=4,'Score modal width diverges from master '+JSON.stringify({device,mode:x.mode,flow:x.flow,baseline:baseline.modalWidth,actual:x.modalWidth}));
+   }
+  }
+ }
+ console.log('SHARED DASHBOARD PARITY MATRIX '+JSON.stringify(paritySamples.map(({device,mode,flow,courtWidth,courtHeight,scoreHeight,modalWidth,overflow})=>({device,mode,flow,courtWidth,courtHeight,scoreHeight,modalWidth,overflow}))));
+ console.log('PASS shared Americano/Mexicano UI parity (6 pairing modes + 3 continuous variants) on iPhone and iPad');
+
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

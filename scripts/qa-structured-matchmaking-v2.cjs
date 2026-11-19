@@ -14,6 +14,7 @@ const assets=[
 ];
 for(const name of assets)assert.equal(html.split('/assets/'+name).length-1,1,'Missing / duplicate built asset '+name);
 assert.equal(html.split('<!-- P5 STRUCTURED MATCHMAKING V2 -->').length-1,1);
+assert(html.includes('/* PR52 STRUCTURED FINAL ENCOUNTER GUARD */'),'Late arrival final fairness pass must preserve encounter optimizer');
 assert(html.indexOf('p5-structured-late-return-density.js')<html.indexOf('p5-structured-matchmaking-v2.js'),
  'v2 must run after late-return recovery');
 const ctx={};ctx.window=ctx;vm.createContext(ctx);

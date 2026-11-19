@@ -11,6 +11,10 @@
   throw Error('Structured Americano engine missing');
  const key=(a,b)=>String(a)<String(b)?String(a)+':'+String(b):String(b)+':'+String(a);
  const fixture=(a,b)=>[a.map(String).sort().join(':'),b.map(String).sort().join(':')].sort().join('|');
+ // A court encounter includes all six relationships in the quartet, whether
+ // they were partners or opponents. Do not confuse partner diversity with
+ // diversity of the actual people sharing the court.
+ const quartet=(a,b)=>a.concat(b).map(String).sort().join(':');
  const rng=r=>typeof r==='function'?r:Math.random;
  const shuffled=(items,r)=>{const a=items.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
  const played=rd=>new Set((rd.matches||[]).filter(Boolean).flatMap(m=>m.teams.flat()));
@@ -29,7 +33,7 @@
  }
  function history(rows,ids){
   const G=Object.fromEntries(ids.map(id=>[id,0])),states=Object.fromEntries(ids.map(id=>[id,[]]));
-  const team=new Map(),opp=new Map(),exact=new Map();
+  const team=new Map(),opp=new Map(),exact=new Map(),together=new Map(),quartets=new Map(),lastTogether=new Map();
   for(const [ri,rd] of (rows||[]).entries()){
    const on=played(rd),eligible=rd.eligibleIds||ids;
    // Availability gaps must break play/rest streaks. A late arrival or Sit Out
@@ -40,10 +44,17 @@
     const [a,b]=m.teams;if(a.length!==2||b.length!==2)continue;
     for(const t of [a,b])team.set(key(...t),(team.get(key(...t))||0)+1);
     exact.set(fixture(a,b),(exact.get(fixture(a,b))||0)+1);
+    quartets.set(quartet(a,b),(quartets.get(quartet(a,b))||0)+1);
+    const four=a.concat(b);
+    for(let i=0;i<four.length;i++)for(let j=i+1;j<four.length;j++){
+     const k=key(four[i],four[j]);
+     together.set(k,(together.get(k)||0)+1);
+     lastTogether.set(k,ri);
+    }
     for(const x of a)for(const y of b)opp.set(key(x,y),(opp.get(key(x,y))||0)+1);
    }
   }
-  return {G,states,team,opp,exact,rounds:(rows||[]).length};
+  return {G,states,team,opp,exact,together,quartets,lastTogether,rounds:(rows||[]).length};
  }
  const last=(h,id)=>{const z=h.states[id]?.at(-1);return z?.round===h.rounds-1?z.played:undefined;};
  const twice=(h,id)=>{const seq=h.states[id]||[],a=seq.at(-2),b=seq.at(-1);
@@ -72,9 +83,17 @@
  }
  function encounterCost(a,b,h){
   const repeats=h.exact.get(fixture(a,b))||0;
-  let opponent=0;
+  const sameQuartet=h.quartets.get(quartet(a,b))||0;
+  let opponent=0,coCourt=0,recent=0;
   for(const x of a)for(const y of b){const n=h.opp.get(key(x,y))||0;opponent+=n*n*170;}
-  return repeats*120000+opponent;
+  const four=a.concat(b);
+  for(let i=0;i<four.length;i++)for(let j=i+1;j<four.length;j++){
+   const k=key(four[i],four[j]),n=h.together.get(k)||0;
+   coCourt+=n*n*1700;
+   const since=h.rounds-(h.lastTogether.get(k)??-1);
+   if(n&&since<=2)recent+=(since===1?9000:3000);
+  }
+  return repeats*120000+sameQuartet*42000+opponent+coCourt+recent;
  }
  function pairOpponents(teams,h,r){
   const n=teams.length,memo=new Map();
@@ -118,6 +137,8 @@
   const duplicates=matches.filter(m=>(h.exact.get(fixture(...m.teams))||0)>0).length;
   const warnings=[];
   if(duplicates)warnings.push(duplicates+' previously played exact match-up(s) could not be avoided by the bounded search.');
+  const sameFour=matches.filter(m=>(h.quartets.get(quartet(...m.teams))||0)>0).length;
+  if(sameFour)warnings.push(sameFour+' repeated four-player court encounter(s) remain under current availability and rest constraints.');
   return {index,matches,eligibleIds:m.all.slice(),groupSnapshot:{A:m.A.length,B:m.B.length},
    structuredHistoryAware:true,...(warnings.length?{fairnessWarnings:warnings}:{})};
  }
@@ -196,6 +217,6 @@
   return future;
  }
  root.P5Structured=Object.freeze({...previous,validate,build,extend,rebuild,
-  structuredMatchmakingVersion:'2.0'});
- root.P5StructuredMatchmakingV2=Object.freeze({version:'2.0',active,history,schedule,addMissing});
+  structuredMatchmakingVersion:'2.1'});
+ root.P5StructuredMatchmakingV2=Object.freeze({version:'2.1',active,history,schedule,addMissing});
 })(window);

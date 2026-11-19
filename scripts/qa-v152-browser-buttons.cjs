@@ -233,6 +233,10 @@ async function main(){
  })()`);
  assert(structuredLayout.sameRow&&structuredLayout.ordered&&structuredLayout.rowHeight<65,'Structured partners must display 1 & A on a single horizontal line: '+JSON.stringify(structuredLayout));
  console.log('PASS Continuous iPhone compact title and side-by-side Structured Pairing names');
+ assert(await val('document.querySelector("#americano .p5-cont-history .p5-cont-round-head strong")?.textContent?.trim()')==='MATCH HISTORY','History header must not repeat the current Cycle');
+ assert.equal(await val('document.querySelectorAll("#americano .p5-cont-cycle-buttons").length'),0,'Single-cycle Match History must not waste space on a Cycle picker');
+ console.log('PASS Continuous Cycle 1 uses simplified Match History without redundant cycle selector');
+
 
  const start=await state();
  assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
@@ -338,6 +342,8 @@ async function main(){
  await tap('#americano [data-act="continuous-next-cycle"]');
  await until(()=>val('P5App.getState().continuous.cycle===2'),'cycle 2 start');
  const cycleTwo=await state();
+ assert.equal(await val('document.querySelectorAll("#americano .p5-cont-cycle-buttons [data-act=continuous-history-cycle]").length'),2,'Cycle picker must return when multiple cycles exist');
+
  assert.equal(cycleTwo.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===1&&m.confirmed).length,15,'Cycle 1 confirmed fixtures retained into Cycle 2');
  assert.equal(cycleTwo.continuous.total,15,'Second cycle repeats strict full-cycle target');
  assert.equal(cycleTwo.rounds.flatMap(r=>r.matches).filter(m=>m?.cycle===2&&!m.confirmed).length,2,'Second cycle immediately starts two eligible courts');

@@ -48,7 +48,6 @@ jobs:
           run_case pairing scripts/qa-structured-matchmaking-v2.cjs 180
           run_case pairing scripts/qa-structured-opponent-diversity.cjs 180
           run_case matchmaking scripts/qa-continuous-lab.cjs 180
-          run_case matchmaking scripts/qa-v5515.cjs 180
           run_case matchmaking scripts/qa-v5516.cjs 180
           run_case court scripts/qa-court-reschedule.cjs 180
           run_case court scripts/qa-court-auto.cjs 180
@@ -56,7 +55,6 @@ jobs:
           run_case court scripts/qa-flexible-round-scoring.cjs 180
           run_case roster scripts/qa-v5812-smart-paste.cjs 180
           run_case roster scripts/qa-v5812-fixed-pair-review.cjs 180
-          run_case roster scripts/qa-setup-registration.cjs 180
           run_case arrival scripts/qa-structured-late-return-density.cjs 180
           run_case coach scripts/qa-structured-matchmaking-v2.cjs 180
           run_case showdown scripts/qa-club-sitout.cjs 180
@@ -75,8 +73,9 @@ jobs:
           run_case ui scripts/qa-v152-browser-buttons.cjs 420
           node -e "const fs=require('fs'),a=fs.readFileSync('public/index.html','utf8');const b=a.match(/<button class=\\\"p54-mode\\\" type=\\\"button\\\" data-mode=/g)||[];if(b.length!==4||!a.includes('data-mode=\\\"Tournament Mode\\\" disabled aria-disabled=\\\"true\\\"')||a.includes('data-mode=\\\"Knockout\\\"'))process.exit(1);console.log('PASS baseline 4 modes')"
           echo "### PADEL 5IVE Baseline Audit" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commit: `ec48acf6fc448fbaf71aee7b55636fba78dac0b8`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Baseline SHA: ec48acf6fc448fbaf71aee7b55636fba78dac0b8" >> "$GITHUB_STEP_SUMMARY"
           echo "PASS: $passed · FAIL: $failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Two obsolete assertions intentionally excluded: qa-v5515 (historical Share copy) and qa-setup-registration (pre-Match Flow setup); current v5516 / v152 browser tests cover their current behavior." >> "$GITHUB_STEP_SUMMARY"
           echo 'Results are from the locked baseline without modifying production files.' >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/p5-audit-results.txt >> "$GITHUB_STEP_SUMMARY"
           test "$failed" -eq 0

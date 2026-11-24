@@ -650,7 +650,7 @@ async function main(){
    'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),pendingParticipants:[],ui:{...s.ui,modal:null}});'+
    'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()';
   await val(fixture);
-  await until(()=>val('!!document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list")'),'By Rounds Resting UI '+device);
+  await until(()=>val('P5App.getState().session==="RESTING QA"&&P5App.getState().roster.length===18&&document.querySelectorAll("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip").length===6'),'By Rounds Resting UI '+device);
   const restingLayout=await val('(()=>{'+
    'const card=document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card"),list=card?.querySelector(".resting-pair-list");'+
    'const chips=[...(list?.querySelectorAll(".resting-pair-chip")||[])];'+
@@ -673,6 +673,24 @@ async function main(){
   console.log('PASS By Rounds Resting Players '+device+': six balanced chips, 3x2, no overflow');
  }
 
+
+ // Standalone Tournament Mode: native setup -> registration -> bracket -> champion.
+ for(const format of ['single','double']){
+  const fresh='('+function(){const s=P5App.getState();Object.assign(s,{stage:'setup',mode:'',session:'',matchFlow:'',continuous:null,rounds:[],roster:[],ko:null,qualification:null,koFormat:'',koMatchFormat:'',koFinalFormat:'',matchFormat:'',courts:null,ui:{modal:null,menuOpen:false,submenus:[]}});localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();}.toString()+')()';
+  await val(fresh);
+  await until(()=>val('P5App.getState().stage==="setup"&&!!document.getElementById("setup-ko-type")'),'standalone setup');
+  const ready=await val('('+function(format){function put(id,v){const e=document.getElementById(id);if(!e)throw Error('Missing '+id);e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}));}put('setup-game','Knockout');put('setup-session','Standalone KO QA');document.getElementById('setup-session').dispatchEvent(new Event('input',{bubbles:true}));put('setup-date','2026-11-25');const time=document.getElementById('setup-time');put('setup-time',Array.from(time.options).find(x=>x.value).value);put('setup-courts','3');put('setup-format','first4');put('setup-ko-type',format);put('setup-ko-final','first6');const b=document.querySelector('[data-act=setup-next]');if(b.disabled)return false;b.click();return true;}.toString()+')('+JSON.stringify(format)+')');
+  assert(ready,'Standalone setup must enable Continue');
+  await until(()=>val('P5App.getState().stage==="registration"&&P5App.getState().mode==="fp-knockout"'),'standalone registration');
+  await val('(()=>{for(const e of document.querySelectorAll("[data-person]"))e.value="P"+e.dataset.person+" "+e.dataset.slot;document.querySelector("[data-act=registration-start]").click();return true})()');
+  await until(()=>val('P5App.getState().stage==="ko"&&!!document.querySelector("#p5-ko-bracket")'),'standalone KO starts without Stage 1');
+  const ko=await state();assert.equal(ko.rounds.length,0);assert.equal(ko.ko.format,format);assert.deepEqual(ko.ko.teams.map(x=>x.ids[0]),ko.roster.map(x=>x.id));
+  assert(!(await val('!!document.querySelector("[data-act=tab-stage1]")')),'Standalone hides Stage 1 tab');
+  const scored=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<40){const m=s.ko.active[0];if(!m)throw Error('KO stalled');const fmt=P5KO.matchFormat(s.ko,m.final),limit=Number(fmt.slice(-1));P5KO.confirm(s,m.id,fmt==='total5'?[3,2]:[limit,1]);}if(s.stage!=='champion')throw Error('Missing champion');const snap=P5PublicResults.snapshot(s);const pdf=P5DirectPDF.render(snap);localStorage.setItem(P5App.key,JSON.stringify(s));return {stage:s.stage,champion:s.ko.champion,runner:s.ko.runnerUp,records:snap.publicKO.length,rounds:snap.rounds.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
+  assert.equal(scored.stage,'champion');assert(scored.champion?.length&&scored.runner?.length&&scored.records>0&&scored.pdf>1000);assert.equal(scored.rounds,0);
+  await val('location.reload();true');await until(()=>val('P5App.getState().stage==="champion"&&!!document.querySelector(".champion-presentation")'),'standalone champion restored');
+  console.log('PASS standalone '+format+' native setup, seeds, bracket dispatch, champion, snapshot, PDF and reload');
+ }
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

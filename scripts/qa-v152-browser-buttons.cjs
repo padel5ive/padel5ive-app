@@ -501,6 +501,63 @@ async function main(){
 
 
 
+
+ // Shared Stage 2 regression: all four pairing variants in both games,
+ // plus partial Continuous in all Americano pairing variants.
+ const stage2Original=await state();
+ for(const game of ['americano','mexicano']){
+  for(const pairing of ['normal','flexible','fp','structured']){
+   const mode=(['normal','flexible'].includes(pairing)?'individual':pairing)+'-'+game;
+   for(const flow of (game==='americano'?['rounds','continuous']:['rounds'])){
+    for(const format of ['single','double']){
+     const setup='('+function(mode,pairing,flow){
+      const s=P5App.getState(),fixed=pairing==='fp',structured=pairing==='structured';
+      const roster=Array.from({length:8},(_,i)=>({id:i+1,names:fixed?['P'+(i+1)+' A','P'+(i+1)+' B']:['P'+(i+1)],...(structured?{group:i<4?'A':'B'}:{})}));
+      const teams=fixed?[[[1],[2]],[[3],[4]],[[5],[6]],[[7],[8]]]:structured?[[[1,5],[2,6]],[[3,7],[4,8]]]:[[[1,2],[3,4]],[[5,6],[7,8]]];
+      const schedule=[];
+      for(let i=0;i<teams.length;i+=2)schedule.push({index:schedule.length,eligibleIds:roster.map(p=>p.id),matches:teams.slice(i,i+2).map((t,j)=>({id:'stage2-'+i+'-'+j,court:j+1,teams:t,confirmed:true,score:[3,2]}))});
+      Object.assign(s,{stage:'stage1',mode,matchFlow:flow,continuous:null,session:'Stage 2 QA',roster,nextId:9,courts:2,initialCourts:2,currentRound:schedule.length-1,viewRound:schedule.length-1,rounds:schedule,initialSchedule:schedule,matchFormat:'total5',ko:null,qualification:null,koFormat:'',koMatchFormat:'',koFinalFormat:'',sitout:[],sitoutPending:{},pendingParticipants:[],pendingCourts:null,groupConfig:{labels:['Left','Right']},rules:{...P5AdvancedRules.blank(),fixedEnabled:pairing==='flexible',pairs:pairing==='flexible'?[[1,2]]:[]},arrival:Object.fromEntries(roster.map(p=>[p.id,true])),availabilityById:Object.fromEntries(roster.map(p=>[p.id,'ACTIVE'])),ui:{...s.ui,modal:null,menuOpen:false,submenus:[],stageTab:'stage1'}});
+      if(flow==='continuous'){
+       const partialPlan=schedule.map(r=>({...r,matches:r.matches.map(m=>({...m,confirmed:false,score:null}))}));
+       if(!fixed)partialPlan.push({index:partialPlan.length,matches:[{id:'future',court:1,teams:structured?[[1,6],[2,5]]:pairing==='flexible'?[[1,2],[5,6]]:[[1,3],[5,7]]}]});
+       P5Continuous.create(s,partialPlan);
+       s.continuous.paused=true;
+       for(const m of P5Continuous.active(s)){m.score=[3,2];m.confirmed=true;}
+       if(P5Continuous.complete(s))throw Error('Expected partial cycle');
+      }
+      localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true;
+     }.toString()+')('+[mode,pairing,flow].map(JSON.stringify).join(',')+')';
+     await val(setup);
+     await until(()=>val('P5App.getState().stage==="stage1"&&P5App.getState().mode==='+JSON.stringify(mode)),'Stage 2 QA fixture');
+     const scores=await val('JSON.stringify(P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).map(m=>[m.id,m.score]))');
+     const clicked=await val('(()=>{const b=document.querySelector("#americano .p5-cont-run-actions [data-act=continuous-finish]")||document.querySelector("#americano .p5-v26-session-control [data-act=finish-stage1]")||document.querySelector("#americano [data-act=finish-stage1]");if(!b)return false;b.click();return true})()');
+     assert(clicked,'Finish Stage 1 action missing '+pairing+' '+game+' '+flow);
+     await until(isModal,'Stage 1 finish dialog');
+     if(await val('!!document.querySelector("#p5-modal-root [data-act=balance-finish]")')){
+      await val('document.querySelector("#p5-modal-root [data-act=balance-finish]").click();true');
+      await until(()=>val('!!document.querySelector("#p5-modal-root [data-act=modal-save]")'),'fairness warning confirmed');
+     }
+     await val('document.querySelector("#p5-modal-root [data-act=modal-save]").click();true');
+     await until(()=>val('P5App.getState().stage==="stage1finished"'),'all modes reach Stage 2 configuration '+pairing+' '+game+' '+flow);
+     await val('(()=>{for(const [id,v] of '+JSON.stringify([['ko-format',format],['ko-match-format','first4'],['ko-final-format','first6']])+'){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}));}return true})()');
+     await val('document.querySelector("#americano [data-act=start-ko]").click();true');
+     await until(()=>val('!!document.querySelector("#p5-modal-root [data-act=qualification-confirm]")'),'qualifiers '+pairing+' '+game+' '+flow);
+     await val('document.querySelector("#p5-modal-root [data-act=qualification-confirm]").click();true');
+     await until(()=>val('P5App.getState().stage==="ko"'),'KO dispatch '+pairing+' '+game+' '+flow+' '+format);
+     const result=await state();
+     assert.equal(result.ko.format,format);
+     assert(result.ko.active.length>0,'KO court must dispatch');
+     assert.equal(await val('JSON.stringify(P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).map(m=>[m.id,m.score]))'),scores,'Stage 1 scores changed');
+     if(pairing==='structured')assert(result.ko.teams.every(t=>t.ids.length===2&&t.ids.filter(id=>id<=4).length===1),'Structured KO must retain Group A + B');
+     if(pairing==='flexible')assert(result.ko.teams.some(t=>t.ids.includes(1)&&t.ids.includes(2)),'Locked pair must remain together');
+     console.log('PASS Stage 2',game,pairing,flow,format);
+    }
+   }
+  }
+ }
+ await val('localStorage.setItem(P5App.key,'+JSON.stringify(JSON.stringify(stage2Original))+');location.reload();true');
+ await until(()=>val('P5App.getState().stage==="champion"'),'restore original QA state');
+
  // PR52 shared-foundation visual parity: measure real computed geometry at phone/tablet
  // sizes for every registered Americano/Mexicano pairing mode and match flow.
  const paritySamples=[];

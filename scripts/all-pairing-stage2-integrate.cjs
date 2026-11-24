@@ -54,6 +54,41 @@
  // Recover already finalized Stage 1-only sessions without replaying or deleting scores.
  swap("actionLine('Reset Stage 2','reset-stage2',canKO,true)","actionLine('Continue to Stage 2','prepare-stage2',s.stage==='champion'&&!canKO&&done(s)>0),\n    actionLine('Reset Stage 2','reset-stage2',canKO,true)",'recover stage1-only champion');
  swap("case 'end-without-ko':if(P5UI.done(s)===0)","case 'prepare-stage2':if(s.stage!=='champion'||s.ko?.format!=='none'||!P5UI.done(s))break;modal('confirm','Continue to Stage 2?','Preserve all confirmed Stage 1 scores and configure Knockout.',()=>{snapshot();s.stage='stage1finished';s.ko=null;s.qualification=null;s.koFormat='';s.koMatchFormat='';s.koFinalFormat='';if(s.continuous)s.continuous.paused=true;closeMenu();s.ui.stageTab='stage1';save();render();});break;\n   case 'end-without-ko':if(P5UI.done(s)===0)",'recover action');
+
+ // Structured KO: one pure pair builder used by preview and actual seed allocation.
+ function structuredSeeds(ranking,roster,selected,method='balanced',manual={}){
+ if(!['balanced','performance','manual'].includes(method))throw Error('Select a Knockout pairing method');
+ const allowed=new Set(selected),groups=new Map(roster.map(p=>[p.id,p.group]));
+ const A=ranking.filter(id=>allowed.has(id)&&groups.get(id)==='A'),B=ranking.filter(id=>allowed.has(id)&&groups.get(id)==='B');
+ if(A.length!==B.length||A.length<2||A.length+B.length!==allowed.size)throw Error('Select equal numbers from Group A and B (at least two each).');
+ const pairs=A.map((id,i)=>[id,method==='manual'?Number(manual[id]):B[method==='balanced'?B.length-1-i:i]]);
+ if(pairs.some(t=>!B.includes(t[1]))||new Set(pairs.map(t=>t[1])).size!==B.length)throw Error('Manual pairing requires every selected Group B player exactly once.');
+ const pos=new Map(ranking.map((id,i)=>[id,i]));
+ return pairs.sort((u,v)=>(pos.get(u[0])+pos.get(u[1]))-(pos.get(v[0])+pos.get(v[1]))||pos.get(u[0])-pos.get(v[0]));
+}
+ function panel(s,m,rows,esc){
+ const ranking=rows.map(x=>x.id),selected=m.selectedIds||[],method=m.pairingMethod||'balanced',manual=m.manualPairs||{};
+ const A=ranking.filter(id=>selected.includes(id)&&s.roster.find(p=>p.id===id)?.group==='A');
+ const B=ranking.filter(id=>selected.includes(id)&&s.roster.find(p=>p.id===id)?.group==='B');
+ const name=id=>esc(s.roster.find(p=>p.id===id)?.names.join(' & ')||'—');
+ const labels=[['balanced','Balanced Pairing'],['performance','Performance Pairing'],['manual','Manual Pairing']];
+ let preview='';try{const pairs=window.p5StructuredKOSeeds(ranking,s.roster,selected,method,manual);preview=pairs.map((t,i)=>'<div class="p5-50-qual-summary"><strong>#'+(i+1)+' · '+name(t[0])+' + '+name(t[1])+'</strong></div>').join('');}catch(e){preview='<p class="muted">'+esc(e.message)+'</p>';}
+ const controls=method==='manual'?A.map(id=>'<label>'+name(id)+'<select data-ko-manual-a="'+id+'"><option value="">Select partner</option>'+B.map(b=>'<option value="'+b+'" '+(Number(manual[id])===b?'selected':'')+'>'+name(b)+'</option>').join('')+'</select></label>').join(''):'';
+ return '<section class="card" aria-label="Structured Knockout Pairing"><label>KNOCKOUT PAIRING METHOD<select id="p5-ko-pairing-method">'+labels.map(([v,l])=>'<option value="'+v+'" '+(method===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label><p class="muted">'+(method==='balanced'?'Highest ranked × lowest ranked across groups.':method==='performance'?'Highest ranked × highest ranked across groups.':'Select one opposite-group partner for every player.')+'</p>'+controls+'<p class="muted">PAIRING & SEED PREVIEW · Fixed for all KO rounds</p>'+preview+'</section>';
+}
+ const fixtureRanking=[1,5,2,6,3,7,4,8],fixtureRoster=fixtureRanking.map(id=>({id,group:id<=4?'A':'B'}));
+ assert.deepEqual(structuredSeeds(fixtureRanking,fixtureRoster,fixtureRanking,'performance'),[[1,5],[2,6],[3,7],[4,8]]);
+ assert.deepEqual(structuredSeeds(fixtureRanking,fixtureRoster,fixtureRanking,'balanced'),[[1,8],[2,7],[3,6],[4,5]]);
+ assert.deepEqual(structuredSeeds(fixtureRanking,fixtureRoster,fixtureRanking,'manual',{1:6,2:5,3:8,4:7}),[[1,6],[2,5],[3,8],[4,7]]);
+ assert.throws(()=>structuredSeeds(fixtureRanking,fixtureRoster,fixtureRanking,'manual',{1:5,2:5,3:7,4:8}));
+ assert.throws(()=>structuredSeeds(fixtureRanking,fixtureRoster,fixtureRanking.slice(1),'performance'));
+ swap("window.P5UI=(function(){'use strict';","window.p5StructuredKOSeeds="+structuredSeeds.toString()+";\nwindow.p5StructuredKOPanel="+panel.toString()+";\nwindow.P5UI=(function(){'use strict';",'Structured KO shared pairing functions');
+ swap("seeds=A.map((a,i)=>[a,B[B.length-1-i]]).sort((u,v)=>u.reduce((x,id)=>x+placement[id],0)-v.reduce((x,id)=>x+placement[id],0));","seeds=window.p5StructuredKOSeeds(ranking,s.roster,ranked,s.koPairingMethod||'balanced',s.koManualPairs||{});",'Structured KO canonical seed allocation');
+ swap("Knockout teams will be made exclusively from opposite groups using Stage 1 ranking. Groups A and B must have equal qualifiers.","Knockout teams require one player from each group. Select equal qualifiers, then review the pairing method.",'Structured qualification description');
+ swap("Locked Fixed Partners are selected together. For other players, KO pairs are formed by best-vs-lowest remaining Stage 1 rank.'}</p></div>","Locked Fixed Partners are selected together. For other players, KO pairs are formed by best-vs-lowest remaining Stage 1 rank.'}</p>${P5Structured.is(s)?window.p5StructuredKOPanel(s,m,rows,esc):''}</div>",'Structured pairing preview');
+ swap("   if(e.target.id==='restore-input')","   if(s.ui.modal?.type==='qualification'&&e.target.id==='p5-ko-pairing-method'){s.ui.modal.pairingMethod=e.target.value;render();return;}\n   if(s.ui.modal?.type==='qualification'&&e.target.matches('[data-ko-manual-a]')){const m=s.ui.modal;m.manualPairs={...(m.manualPairs||{}),[e.target.dataset.koManualA]:Number(e.target.value)||null};render();return;}\n   if(e.target.id==='restore-input')",'Structured pairing input actions');
+ swap("   P5KO.start(s,s.koFormat,ids);","   if(P5Structured.is(s)){s.koPairingMethod=m.pairingMethod||'balanced';s.koManualPairs={...(m.manualPairs||{})};window.p5StructuredKOSeeds(P5UI.statistics(s).map(x=>x.id),s.roster,ids,s.koPairingMethod,s.koManualPairs);}\n   P5KO.start(s,s.koFormat,ids);\n   if(P5Structured.is(s)){s.ko.pairingMethod=s.koPairingMethod;}",'persist approved Structured pairing method');
+ swap("confirmedAt:new Date().toISOString(),koFormat:s.koFormat};","confirmedAt:new Date().toISOString(),koFormat:s.koFormat,...(P5Structured.is(s)?{pairingMethod:s.koPairingMethod,manualPairs:s.koManualPairs}:{})};",'qualification metadata');
  // Parse generated inline scripts before writing, matching existing QA style.
  for(const [i,m] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].entries())if(m[1].trim())new vm.Script(m[1],{filename:'stage2-inline-'+i+'.js'});
  fs.writeFileSync(file,html);

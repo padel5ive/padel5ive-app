@@ -40,7 +40,7 @@
  swap("function promptKo(){if(P5Structured.is(s))return alertModal('No Stage 2','Structured Pairing finishes with the official session leaderboard. Knockout is not available for this pairing style.');","function promptKo(){",'qualification gate');
  swap("s.stage=structured?'champion':'stage1finished';s.qualification=null;s.ko=structured?{champion:[P5UI.statistics(s)[0]?.id].filter(Boolean),format:'none',rounds:[],roundIndex:0,teams:[]}:s.ko;","s.stage='stage1finished';s.qualification=null;s.ko=null;",'structured finish route');
  swap("Finish this Structured Pairing session using confirmed scores only. Final standings and winner will be available immediately. There is no Knockout or Stage 2.","Finish Stage 1 using confirmed scores only. Continue to Knockout or finish without Knockout.",'structured finish copy');
- swap("End the session at any time after confirming at least one score. Unplayed fixtures stay excluded from final standings; no Stage 2.","Finish Stage 1 using confirmed scores only. Unplayed fixtures are excluded from standings and KO seeds.",'structured session copy');
+ // The PR36 compact Session Control already removes the old explanatory copy.
  swap("])+(P5Structured.is(s)?'':block('STAGE 2 · KNOCKOUT',[","])+block('STAGE 2 · KNOCKOUT',[",'structured management menu');
  swap("actionLine('Reset Stage 2','reset-stage2',canKO,true)\n   ])));","actionLine('Reset Stage 2','reset-stage2',canKO,true)\n   ]));",'management menu close');
  // Continuous: partial Finish Stage 1 goes to native qualification; completed

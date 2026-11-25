@@ -701,7 +701,7 @@ async function main(){
    'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),pendingParticipants:[],ui:{...s.ui,modal:null}});'+
    'localStorage.setItem(P5App.key,JSON.stringify(s));window.p5BeforeParityReload=true;location.reload();return true})()';
   await val(fixture);
-  await until(()=>val('P5App.getState().session==="RESTING QA"&&P5App.getState().roster.length===18&&document.querySelectorAll("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip").length===6'),'By Rounds Resting UI '+device);
+  await until(()=>val('document.readyState==="complete"&&!window.p5BeforeParityReload&&window.P5App?.getState().session==="RESTING QA"&&P5App.getState().roster.length===18&&document.querySelectorAll("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip").length===6'),'By Rounds Resting UI '+device);
   const restingLayout=await val('(()=>{'+
    'const card=document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card"),list=card?.querySelector(".resting-pair-list");'+
    'const chips=[...(list?.querySelectorAll(".resting-pair-chip")||[])];'+
@@ -741,9 +741,13 @@ async function main(){
     confirmed:scored,score:scored?[3,2]:null,cycle:1,fixtureKey:id});
    const history=match('SW-HISTORY',1,5,13,true);
    const matches=[match('SW-ONE',1,1,3),match('SW-TWO',2,5,7),match('SW-SCORED',3,9,11,true)];
-   const rounds=[{index:0,matches:[history]},{index:1,matches}];
-   Object.assign(s,{stage:'stage1',mode,matchFlow:flow,roster,ko:null,courts:3,nextId:17,currentRound:1,
-    viewRound:1,rounds,initialSchedule:rounds,initialCourts:3,pendingCourts:null,needsAvailabilityRebuild:false,
+   const browsable=mode.endsWith('-americano')&&flow==='rounds';
+   const prior=[{index:0,matches:[history]}];
+   if(browsable)prior.push({index:1,matches:[match('SW-HISTORY-2',1,1,13,true)]});
+   const roundIndex=prior.length;
+   const rounds=[...prior,{index:roundIndex,matches}];
+   Object.assign(s,{stage:'stage1',mode,matchFlow:flow,roster,ko:null,courts:3,nextId:17,currentRound:browsable?0:roundIndex,
+    viewRound:browsable?0:roundIndex,rounds,initialSchedule:rounds,initialCourts:3,pendingCourts:null,needsAvailabilityRebuild:false,
     pendingParticipants:[],rules:P5AdvancedRules.blank(),groupConfig:{labels:['Left','Right']},
     session:'Court Swap · QA',matchFormat:'total5',sitout:[],sitoutPending:{},
     continuous:flow==='continuous'?{cycle:1,queue:[],total:4,scheduled:4,paused:false,fixed,serial:4}:null,
@@ -753,10 +757,19 @@ async function main(){
    localStorage.setItem(P5App.key,JSON.stringify(s));
    window.p5BeforeSwapReload=true;
    location.reload();
-   return {history,matches};
+   return {history,prior,matches,browsable,roundIndex};
   }.toString()+')('+[mode,flow].map(JSON.stringify).join(',')+')');
   await size(390,844);
   const source='[data-act="replace-player"][data-match="SW-ONE"][data-side="0"][data-slot="0"]';
+  if(checkpoint.browsable){
+   const roundSelector='.round-picker .roundbuttons [data-act="round"][data-round="2"]';
+   await until(()=>val('document.readyState==="complete"&&!window.p5BeforeSwapReload&&!!document.querySelector('+JSON.stringify(roundSelector)+')'),'restored scored rounds before navigating to Round 3');
+   await tap(roundSelector);
+   assert.equal((await state()).currentRound,0,'Match navigation must keep the scheduling cursor');
+   assert.equal((await state()).viewRound,2);
+   assert.match(await val('document.querySelector(".p5-stage-head").textContent'),/Progress\s*Round 3\/3/);
+  }
+
   await until(()=>val('document.readyState==="complete"&&!window.p5BeforeSwapReload&&!!document.querySelector('+JSON.stringify(source)+')'),mode+'/'+flow+' swap fixture ready');
   await tap(source);
   await until(()=>val('!!document.getElementById("p5-replacement-select")'),'replacement selector');
@@ -773,15 +786,15 @@ async function main(){
   assert.equal(await val('document.querySelector("[data-act=replace-save]").textContent'),'Confirm Swap');
   assert.match(await val('document.getElementById("p5-replacement-preview").textContent'),/Court 1.*Player 1.*out.*Player 5.*in[\s\S]+Court 2.*Player 5.*out.*Player 1.*in/);
   await tap('[data-act="replace-cancel"]');
-  assert.deepEqual((await state()).rounds[1].matches,checkpoint.matches,'Cancel leaves both courts unchanged');
+  assert.deepEqual((await state()).rounds[checkpoint.roundIndex].matches,checkpoint.matches,'Cancel leaves both courts unchanged');
   await tap(source);
   await val(selectSwap);
   await tap('[data-act="replace-save"]');
-  const result=await state(),lineups=result.rounds[1].matches;
+  const result=await state(),lineups=result.rounds[checkpoint.roundIndex].matches;
   assert.deepEqual(lineups[0].teams,[[5,...checkpoint.matches[0].teams[0].slice(1)],checkpoint.matches[0].teams[1]]);
   assert.deepEqual(lineups[1].teams,[[1,...checkpoint.matches[1].teams[0].slice(1)],checkpoint.matches[1].teams[1]]);
   assert.deepEqual(lineups[2],checkpoint.matches[2],'Confirmed court scores and assignments stay intact');
-  assert.deepEqual(result.rounds[0].matches[0],checkpoint.history,'Prior scores stay intact');
+  assert.deepEqual(result.rounds.slice(0,checkpoint.roundIndex),checkpoint.prior,'Prior scores stay intact');
   const scoredCard='[data-act="score"][data-match="SW-ONE"] .p5-score-tap';
   await tap(scoredCard);
   await val('(()=>{const score=document.getElementById("p5-score-a");score.value="3";score.dispatchEvent(new Event("change",{bubbles:true}));})()');
@@ -803,9 +816,9 @@ async function main(){
    assert.match(await val('document.getElementById("p5-replacement-preview").textContent'),/Court 1 · Player 3 & Player 2 vs Player 5 & Player 4/);
    await tap('[data-act="replace-save"]');
    const partnerSwap=await state();
-   assert.deepEqual(partnerSwap.rounds[1].matches[0].teams,[[3,2],[5,4]],'Partners swap in one match');
-   assert.deepEqual(partnerSwap.rounds[1].matches.slice(1),lineups.slice(1),'Other live and scored courts remain unchanged');
-   assert.deepEqual(partnerSwap.rounds[0].matches[0],checkpoint.history);
+   assert.deepEqual(partnerSwap.rounds[checkpoint.roundIndex].matches[0].teams,[[3,2],[5,4]],'Partners swap in one match');
+   assert.deepEqual(partnerSwap.rounds[checkpoint.roundIndex].matches.slice(1),lineups.slice(1),'Other live and scored courts remain unchanged');
+   assert.deepEqual(partnerSwap.rounds.slice(0,checkpoint.roundIndex),checkpoint.prior);
   }
 
   if(mode.endsWith('-mexicano')){
@@ -816,13 +829,13 @@ async function main(){
     await until(async()=>!(await isModal()),'count score on the swapped lineup');
    }
    const played=await state();
-   const scores=played.rounds[1].matches;
+   const scores=played.rounds[checkpoint.roundIndex].matches;
    assert(scores.every(m=>m.confirmed),'All modified matches use native scoring');
    const expected=await val('(()=>{const s=P5App.getState();let seed=s.seed;const random=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};return P5EngineRegistry.engine(s.mode).next(s,P5App.statistics(),random).matches.map(m=>m.teams);})()');
    await tap('[data-act="next-round"]');
    await until(()=>val('P5App.getState().currentRound===2'),'Mexicano rebuilt the next round');
    const next=await state();
-   assert.deepEqual(next.rounds[1].matches,scores,'Next-round matchmaking preserves confirmed swaps');
+   assert.deepEqual(next.rounds[checkpoint.roundIndex].matches,scores,'Next-round matchmaking preserves confirmed swaps');
    assert.deepEqual(next.rounds[2].matches.map(m=>m.teams),expected,'Next round uses canonical rankings after scoring the swapped lineups');
   }
   console.log('PASS '+mode+'/'+flow+' swap: same court, cross-court, eligibility and score protection');

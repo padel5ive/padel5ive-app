@@ -119,7 +119,9 @@ function replacementCandidates(s, draft) {
   const from=match?.teams[side]?.[slot];
   if(from==null)return [];
 
-  const active=s.matchFlow==='continuous'?P5Continuous.active(s):s.rounds[s.currentRound]?.matches;
+  // Americano scores the viewed round independently of the scheduling cursor.
+  const scoringRound=P5UI.flexibleRoundScoring(s)?(s.viewRound??s.currentRound):s.currentRound;
+  const active=s.matchFlow==='continuous'?P5Continuous.active(s):s.rounds[scoringRound]?.matches;
   const assigned=s.matchFlow==='continuous'?(active||[]):round.matches;
   const onCourt=new Map();
   for(const fixture of assigned){
@@ -292,6 +294,8 @@ function integrate() {
     if(from<0||to<0)throw Error('Smart replacement section: '+start);
     html=html.slice(0,from)+content+html.slice(to);
   }
+  edit('Math.min(s.currentRound+1,s.rounds.length)',
+    'Math.min((flexibleRoundScoring(s)?(s.viewRound??s.currentRound):s.currentRound)+1,s.rounds.length)');
   const shared=[replacementCandidates,replacementMarkup].map(fn=>fn.toString()).join('\n');
   edit('window.P5AdvancedRules=',shared+'\nwindow.P5AdvancedRules=');
   for(const badge of ['SUB','SUB PAIR']) edit("+(sub?' <small class=\"p5-sub-badge\">"+badge+"</small>':'')",'');

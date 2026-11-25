@@ -598,9 +598,9 @@ async function main(){
      'availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),'+
      'ui:{...s.ui,modal:null,contHistoryOpen:false,contHistoryCycle:1,contHistoryRound:1}});'+
      'if(flow==="continuous")P5Continuous.create(s,schedule);'+
-     'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()';
+     'localStorage.setItem(P5App.key,JSON.stringify(s));window.p5BeforeParityReload=true;location.reload();return true})()';
     await val(setup);
-    await until(()=>val('P5App?.getState()?.stage==="stage1"&&!!document.querySelector("#americano .p5-stage1-score-grid .court.p5sm-card")'),
+    await until(()=>val('document.readyState==="complete"&&!window.p5BeforeParityReload&&window.P5App?.getState()?.stage==="stage1"&&!!document.querySelector("#americano .p5-stage1-score-grid .court.p5sm-card .p5-score-tap")'),
      'dashboard '+device+' '+mode+' '+flow);
     const measured=await val('(()=>{'+
      'const root=document.querySelector("#americano"),board=root.querySelector(".p5-v26-round-card");'+
@@ -666,7 +666,7 @@ async function main(){
    'initialSchedule:JSON.parse(JSON.stringify(rounds)),initialCourts:3,'+
    'sitout:[],sitoutPending:{},availabilityById:Object.fromEntries(roster.map(p=>[p.id,"ACTIVE"])),'+
    'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),pendingParticipants:[],ui:{...s.ui,modal:null}});'+
-   'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()';
+   'localStorage.setItem(P5App.key,JSON.stringify(s));window.p5BeforeParityReload=true;location.reload();return true})()';
   await val(fixture);
   await until(()=>val('P5App.getState().session==="RESTING QA"&&P5App.getState().roster.length===18&&document.querySelectorAll("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip").length===6'),'By Rounds Resting UI '+device);
   const restingLayout=await val('(()=>{'+

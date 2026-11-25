@@ -98,7 +98,7 @@ jobs:
           // dispatch, score validation, graph dependencies and history remain frozen.
           let approved=sliceBetween(baseline,'window.P5KO=','</script>');
           for(const [from,to] of [
-            ["const ranking=P5UI.statistics(s).map(x=>x.id);","const ranking=s.mode==='fp-knockout'?s.roster.map(p=>p.id):P5UI.statistics(s).map(x=>x.id);"],
+            ["const ranking=P5UI.statistics(s).map(x=>x.id);","const ranking=P5Group.is(s)?P5Group.seeds(P5Group.standings(s,P5UI.statistics),selectedIds??P5Group.qualification(s,P5Group.standings(s,P5UI.statistics))):s.mode==='fp-knockout'?s.roster.map(p=>p.id):P5UI.statistics(s).map(x=>x.id);"],
             ["seeds=A.map((a,i)=>[a,B[B.length-1-i]]).sort((u,v)=>u.reduce((x,id)=>x+placement[id],0)-v.reduce((x,id)=>x+placement[id],0));","seeds=window.p5StructuredKOSeeds(ranking,s.roster,ranked,s.koPairingMethod||'balanced',s.koManualPairs||{});"]
           ]){assert.equal(approved.split(from).length,2,'Authorized seed hook drift');approved=approved.replace(from,to);}
           assert.equal(sliceBetween(current,'window.P5KO=','</script>'),approved,

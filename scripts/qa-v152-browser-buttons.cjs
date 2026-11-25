@@ -757,7 +757,24 @@ async function main(){
   await tap('[data-act="replace-cancel"]');
   assert.equal(await val('document.getElementById("p5-score-a").value'),'3','Cancel preserves draft');
   await tap('#p5-modal-root [data-act="modal-cancel"]');
-  console.log('PASS '+mode+'/'+flow+' swap: match count, two courts, eligibility, cancel and score protection');
+
+  await tap(source);
+  const sameCourt=await val('Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="3:0").disabled');
+  const fixed=mode.startsWith('fp-');
+  assert.equal(sameCourt,fixed,'An opponent is eligible for same-court swap only when pairs are flexible');
+  if(fixed){
+   await tap('[data-act="replace-cancel"]');
+  }else{
+   assert.equal(await val('Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="2:0").disabled'),true,'Current partner cannot be chosen');
+   await val('(()=>{const e=document.getElementById("p5-replacement-select");e.value="3:0";e.dispatchEvent(new Event("change",{bubbles:true}));})()');
+   assert.match(await val('document.getElementById("p5-replacement-preview").textContent'),/Court 1 · Player 3 & Player 2 vs Player 5 & Player 4/);
+   await tap('[data-act="replace-save"]');
+   const partnerSwap=await state();
+   assert.deepEqual(partnerSwap.rounds[1].matches[0].teams,[[3,2],[5,4]],'Partners swap in one match');
+   assert.deepEqual(partnerSwap.rounds[1].matches.slice(1),lineups.slice(1),'Other live and scored courts remain unchanged');
+   assert.deepEqual(partnerSwap.rounds[0].matches[0],checkpoint.history);
+  }
+  console.log('PASS '+mode+'/'+flow+' swap: same court, cross-court, eligibility and score protection');
  }
 
  // Resume a pre-upgrade completed Continuous session with no saved Next Cycle state.

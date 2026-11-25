@@ -32,6 +32,13 @@ assert(!swapPlan.changes.has(courtOne)&&!swapPlan.changes.has(courtTwo));
 assert.deepEqual(swapPlan.changes.get(queuedOne),[[1],[2]]);
 assert.deepEqual(swapPlan.changes.get(queuedTwo),[[3],[4]]);
 
+const sameCourt={teams:[[1,2],[3,4]],confirmed:false,score:null};
+const sameCourtFuture={teams:[[3,2],[1,4]],confirmed:false,score:null};
+const sameCourtState=state([[earlier],[sameCourt],[sameCourtFuture]]);
+const partnerSwap=replacementPlan(sameCourtState,sameCourt,0,0,3,{fixture:sameCourt,side:1,slot:0});
+assert.deepEqual(partnerSwap.changes.get(sameCourtFuture),[[1,2],[3,4]],'Both switched slots are included in planning');
+assert.deepEqual(sameCourt.teams,[[1,2],[3,4]],'Preview does not alter the live match');
+
 // Every legal first-match substitution in a full fixed-partner continuous cycle.
 for(let n=4;n<=12;n++){
   for(let id=3;id<=n;id++){

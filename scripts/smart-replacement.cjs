@@ -10,7 +10,7 @@ function replacementPlan(s, target, side, slot, incoming, swap) {
   selected[side][slot] = incoming;
   proposed.set(target, selected);
   if(swap){
-    const teams=swap.fixture.teams.map(t=>t.slice());
+    const teams=(proposed.get(swap.fixture)||swap.fixture.teams).map(t=>t.slice());
     teams[swap.side][swap.slot]=outgoing;
     proposed.set(swap.fixture,teams);
   }
@@ -133,17 +133,19 @@ function replacementCandidates(s, draft) {
   const alreadyScoring=match.confirmed||match.skipped||match.score||Object.values(draftScore||{}).some(value=>value!=='');
   return s.roster.filter(p=>p.id!==from).map(p=>{
     const assignment=onCourt.get(p.id),court=assignment?.fixture.court;
+    const sameMatch=assignment?.fixture===match;
     const availability=P5Availability.status(s,p.id);
     let reason='';
     if(availability!==P5Availability.ACTIVE)reason=availability===P5Availability.SIT_OUT?'Sit out':'Not arrived';
     else if(structured&&group(from)!==p.group)reason='Different group';
     else if(P5AdvancedRules.pairFor(s,from)||P5AdvancedRules.pairFor(s,p.id))reason='Locked partner';
     else if(coaches.includes(from)!==coaches.includes(p.id))reason='Coach role';
-    else if(assignment?.fixture===match||court===match.court)reason='Same court';
+    else if(sameMatch&&fixed)reason='Fixed partners';
+    else if(sameMatch&&assignment.side===side)reason='Current partner';
     else if(alreadyScoring||assignment?.fixture.confirmed||assignment?.fixture.score)reason='Score entered';
     else if(assignment&&!active?.includes(match))reason='Outside current round';
     else if(assignment&&P5Availability.status(s,from)!==P5Availability.ACTIVE)reason='Source unavailable';
-    return {id:p.id,name:p.names.join(fixed?' & ':''),played:games.get(p.id)||0,court,assignment,reason};
+    return {id:p.id,name:p.names.join(fixed?' & ':''),played:games.get(p.id)||0,court,assignment,sameMatch,reason};
   });
 }
 
@@ -155,7 +157,7 @@ function replacementMarkup(s, draft, esc) {
   const onCourt=candidates.filter(p=>!p.reason&&p.assignment).sort((a,b)=>a.court-b.court||a.name.localeCompare(b.name));
   const unavailable=candidates.filter(p=>p.reason);
   const options=(title,rows)=>rows.length?`<optgroup label="${title}">${rows.map(p=>{
-    const description=[p.name,p.played+' played',p.court!=null?'Court '+p.court:'',p.reason].filter(Boolean).join(' · ');
+    const description=[p.name,p.played+' played',p.court!=null?'Court '+p.court:'',p.reason|| (p.sameMatch?'Swap partners':'')].filter(Boolean).join(' · ');
     return `<option value="${p.id}:0" ${p.reason?'disabled':''}>${esc(description)}</option>`;
   }).join('')}</optgroup>`:'';
   return `<p class="p5-replace-current">${esc(draft.current.name)} · Court ${draft.court}</p>
@@ -191,11 +193,20 @@ function renderReplacementPreview(value) {
 
   const match=matchForReplacement(draft.matchId);
   const plan=replacementSchedule(match,draft,candidate);
-  const lines=swap?
-    ['Court '+match.court+' · '+draft.current.name+' out, '+candidate.name+' in',
-     'Court '+candidate.court+' · '+candidate.name+' out, '+draft.current.name+' in',
-     'Swap only if both matches haven’t started.']:
-    ['Court '+match.court+' · '+candidate.name+' in, '+draft.current.name+' rests'];
+  let lines;
+  if(candidate.sameMatch){
+    const teams=match.teams.map(t=>t.slice());
+    teams[draft.side][draft.slot]=candidate.id;
+    teams[swap.side][swap.slot]=draft.current.id;
+    lines=['Court '+match.court+' · '+teams.map(t=>P5UI.team(s,t)).join(' vs '),
+      'Swap only if this match hasn’t started.'];
+  }else if(swap){
+    lines=['Court '+match.court+' · '+draft.current.name+' out, '+candidate.name+' in',
+      'Court '+candidate.court+' · '+candidate.name+' out, '+draft.current.name+' in',
+      'Swap only if both matches haven’t started.'];
+  }else{
+    lines=['Court '+match.court+' · '+candidate.name+' in, '+draft.current.name+' rests'];
+  }
   if(s.mode.endsWith('-americano')){
     lines.push(plan.changes.size?plan.changes.size+' upcoming fixture(s) adjusted.':'No upcoming fixture adjustments.');
     if(plan.repeats)lines.push(plan.repeats+' repeat matchup(s) in the resulting schedule.');
@@ -234,7 +245,8 @@ function saveReplacement(){
       if(s.matchFlow==='continuous')fixture.adaptiveBaseTeams??=fixture.teams;
       fixture.teams=teams;
     }
-    logAction(swap?'Court swap · '+draft.current.name+' ↔ '+candidate.name+' · C'+match.court+' / C'+candidate.court:
+    const courts=candidate.sameMatch?'C'+match.court:'C'+match.court+' / C'+candidate.court;
+    logAction(swap?(candidate.sameMatch?'Partner swap · ':'Court swap · ')+draft.current.name+' ↔ '+candidate.name+' · '+courts:
       'One-match substitution · '+draft.current.name+' → '+candidate.name+' · '+match.id);
     if(!save())throw Error('Storage save failed');
   }catch(error){

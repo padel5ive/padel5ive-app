@@ -691,6 +691,49 @@ async function main(){
   await val('location.reload();true');await until(()=>val('P5App.getState().stage==="champion"&&!!document.querySelector(".champion-presentation")'),'standalone champion restored');
   console.log('PASS standalone '+format+' native setup, seeds, bracket dispatch, champion, snapshot, PDF and reload');
  }
+
+ // Group Stage native end-to-end: 6 pairs, 2 pools of 3, top 1 + 2 wildcards.
+ for(const flow of ['rounds','continuous']){
+  await val('('+function(){const s=P5App.getState();Object.assign(s,{stage:'setup',mode:'',session:'',matchFlow:'',continuous:null,rounds:[],roster:[],ko:null,qualification:null,koFormat:'',koMatchFormat:'',koFinalFormat:'',matchFormat:'',courts:null,tournamentGroup:null,groupDraw:null,groupReview:false,groupFinalized:false,ui:{modal:null,menuOpen:false,submenus:[]}});localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();}.toString()+')()');
+  await until(()=>val('P5App.getState().stage==="setup"&&!!document.getElementById("p5-pool-count")'),'group setup');
+  assert(await val('('+function(flow){function put(id,v){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}));}put('setup-game','Group Stage');put('setup-session','Group Stage QA');document.getElementById('setup-session').dispatchEvent(new Event('input',{bubbles:true}));put('setup-date','2026-11-25');const time=document.getElementById('setup-time');put('setup-time',Array.from(time.options).find(x=>x.value).value);put('setup-courts','2');put('setup-format','total5');put('setup-match-flow',flow);put('p5-pool-count','2');put('p5-pool-top','1');put('p5-pool-wild','2');put('p5-pool-method','seeded');put('p5-pool-courts',flow==='continuous'?'dedicated':'shared');const b=document.querySelector('[data-act=setup-next]');if(b.disabled)return false;b.click();return true;}.toString()+')('+JSON.stringify(flow)+')'),'group native setup ready');
+  await until(()=>val('P5App.getState().stage==="registration"&&P5App.getState().mode==="fp-group-stage"'),'group registration');
+  await val('(()=>{for(const e of document.querySelectorAll("[data-person]"))e.value="P"+e.dataset.person+" "+e.dataset.slot;document.querySelector("[data-act=registration-start]").click();return true})()');
+  await until(()=>val('!!document.querySelector("[data-act=group-confirm]")'),'group draw review');
+  assert.equal(await val('P5Group.pools(P5App.getState()).map(x=>x.length).join(",")'),'3,3');
+  await val('document.querySelector("[data-act=group-confirm]").click();true');
+  await until(()=>val('P5App.getState().stage==="stage1"&&!!document.querySelector(".p5-group-standings")'),'group dashboard');
+  assert(await val('P5Group.verify(P5App.getState())'));
+  assert.equal(await val('P5Group.expected(P5App.getState()).length'),6);
+  assert.equal(await val('P5Group.complete(P5App.getState())'),false);
+  await val('document.querySelector("[data-act=group-view][data-pool=\\"0\\"]").click();true');
+  assert.equal(await val('document.querySelectorAll(".p5-group-standings .live-standings").length'),1);
+  await val('document.querySelector("[data-act=group-view][data-pool=all]").click();true');
+  for(let i=0;i<6;i++){
+   const match=await val('(()=>{const s=P5App.getState();if(s.matchFlow==="continuous")return P5Continuous.active(s)[0]?.id||null;return s.rounds[s.currentRound].matches.find(m=>m&&!m.confirmed)?.id||null;})()');
+   assert(match,'eligible group fixture '+flow+' '+i);
+   await val('(()=>{const el=Array.from(document.querySelectorAll("#americano button[data-act=score]")).find(b=>b.dataset.match==='+JSON.stringify(match)+');if(!el)throw Error("missing native score button");el.click();return true})()');
+   await until(isModal,'native group scoring');
+   await val('(()=>{const a=document.querySelector("#p5-score-a")||document.querySelector("#modal-a"),b=document.querySelector("#p5-score-b")||document.querySelector("#modal-b");a.value="3";b.value="2";a.dispatchEvent(new Event("change",{bubbles:true}));b.dispatchEvent(new Event("change",{bubbles:true}));document.querySelector("#p5-modal-root [data-act=modal-save]").click();return true})()');
+   if(flow==='continuous'){await until(()=>val('!!document.querySelector("#p5-modal-root [data-act=continuous-score-confirm]")'),'group score review');await val('document.querySelector("#p5-modal-root [data-act=continuous-score-confirm]").click();true');}
+   await until(async()=>!(await isModal()),'group score saved');
+   assert(await val('P5Group.verify(P5App.getState())'),'group schedule intact');
+   if(flow==='rounds'&&i<5&&await val('P5App.getState().rounds[P5App.getState().currentRound].matches.filter(Boolean).every(m=>m.confirmed)'))await val('document.querySelector("#americano [data-act=next-round]").click();true');
+  }
+  assert(await val('P5Group.complete(P5App.getState())'),'all pool fixtures confirmed');
+  await val('(()=>{const b=document.querySelector("#americano .p5-v26-session-control [data-act=finish-stage1]")||document.querySelector("#americano [data-act=continuous-stage2]");if(!b)throw Error("missing group finish");b.click();return true})()');
+  await until(isModal,'group finish confirmation');
+  await val('document.querySelector("#p5-modal-root [data-act=modal-save]").click();true');
+  await until(()=>val('P5App.getState().stage==="stage1finished"'),'group results');
+  await val('(()=>{for(const [id,v] of [["ko-format","single"],["ko-match-format","first4"],["ko-final-format","first6"]]){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}));}document.querySelector("[data-act=start-ko]").click();return true})()');
+  await until(()=>val('P5App.getState().ui.modal?.type==="qualification"'),'group qualification');
+  assert.equal(await val('P5App.getState().ui.modal.selectedIds.length'),4);
+  await val('document.querySelector("#p5-modal-root [data-act=qualification-confirm]").click();true');
+  await until(()=>val('P5App.getState().stage==="ko"'),'group KO dispatch');
+  const result=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<30){const m=s.ko.active[0];if(!m)throw Error('stalled bracket');const f=P5KO.matchFormat(s.ko,m.final);P5KO.confirm(s,m.id,[Number(f.slice(-1)),1]);}const snap=P5PublicResults.snapshot(s),pdf=P5DirectPDF.render(snap);return {stage:s.stage,champion:s.ko.champion,groups:snap.groups.map(g=>g.rows.length),records:snap.publicKO.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
+  assert.equal(result.stage,'champion');assert(result.champion?.length&&result.records===3&&result.pdf>1000);assert.deepEqual(result.groups,[3,3]);
+  console.log('PASS Group Stage '+flow+': native registration, draw, shared scoring, qualification, champion and PDF');
+ }
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

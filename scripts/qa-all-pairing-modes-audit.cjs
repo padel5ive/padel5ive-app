@@ -34,7 +34,9 @@ execute(fs.readFileSync('public/assets/p5-coach-opponent-diversity-lab.js','utf8
 const modes=env.P5EngineRegistry.modes(),expectedIds=[
  'fp-americano','fp-mexicano','individual-americano','individual-mexicano','structured-americano','structured-mexicano'
 ];
-assert.deepEqual(Array.from(modes,x=>x.id),expectedIds,'Expected six actual engines for eight conceptual styles');
+assert.deepEqual(Array.from(modes,x=>x.id),[...expectedIds,'fp-knockout'],'Six Stage 1 engines plus the standalone KO adapter');
+assert.equal(env.P5EngineRegistry.meta('fp-knockout').kind,'fixed');
+assert.throws(()=>env.P5EngineRegistry.engine('fp-knockout').build(),/canonical bracket/,'Standalone must never invoke a Stage 1 scheduler');
 const rand=seed=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let x=Math.imul(seed^seed>>>15,1|seed);x=x+Math.imul(x^x>>>7,61|x)^x;return((x^x>>>14)>>>0)/4294967296;};
 const key=(a,b)=>a<b?a+':'+b:b+':'+a;
 const fixture=(a,b)=>[a.slice().sort((x,y)=>x-y).join(':'),b.slice().sort((x,y)=>x-y).join(':')].sort().join('|');

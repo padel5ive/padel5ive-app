@@ -501,6 +501,63 @@ async function main(){
 
 
 
+
+ // Shared Stage 2 regression: all four pairing variants in both games,
+ // plus partial Continuous in all Americano pairing variants.
+ const stage2Original=await state();
+ for(const game of ['americano','mexicano']){
+  for(const pairing of ['normal','flexible','fp','structured']){
+   const mode=(['normal','flexible'].includes(pairing)?'individual':pairing)+'-'+game;
+   for(const flow of (game==='americano'?['rounds','continuous']:['rounds'])){
+    for(const format of ['single','double']){
+     const setup='('+function(mode,pairing,flow){
+      const s=P5App.getState(),fixed=pairing==='fp',structured=pairing==='structured';
+      const roster=Array.from({length:8},(_,i)=>({id:i+1,names:fixed?['P'+(i+1)+' A','P'+(i+1)+' B']:['P'+(i+1)],...(structured?{group:i<4?'A':'B'}:{})}));
+      const teams=fixed?[[[1],[2]],[[3],[4]],[[5],[6]],[[7],[8]]]:structured?[[[1,5],[2,6]],[[3,7],[4,8]]]:[[[1,2],[3,4]],[[5,6],[7,8]]];
+      const schedule=[];
+      for(let i=0;i<teams.length;i+=2)schedule.push({index:schedule.length,eligibleIds:roster.map(p=>p.id),matches:teams.slice(i,i+2).map((t,j)=>({id:'stage2-'+i+'-'+j,court:j+1,teams:t,confirmed:true,score:[3,2]}))});
+      Object.assign(s,{stage:'stage1',mode,matchFlow:flow,continuous:null,session:'Stage 2 QA',roster,nextId:9,courts:2,initialCourts:2,currentRound:schedule.length-1,viewRound:schedule.length-1,rounds:schedule,initialSchedule:schedule,matchFormat:'total5',ko:null,qualification:null,koFormat:'',koMatchFormat:'',koFinalFormat:'',sitout:[],sitoutPending:{},pendingParticipants:[],pendingCourts:null,groupConfig:{labels:['Left','Right']},rules:{...P5AdvancedRules.blank(),fixedEnabled:pairing==='flexible',pairs:pairing==='flexible'?[[1,2]]:[]},arrival:Object.fromEntries(roster.map(p=>[p.id,true])),availabilityById:Object.fromEntries(roster.map(p=>[p.id,'ACTIVE'])),ui:{...s.ui,modal:null,menuOpen:false,submenus:[],stageTab:'stage1'}});
+      if(flow==='continuous'){
+       const partialPlan=schedule.map(r=>({...r,matches:r.matches.map(m=>({...m,confirmed:false,score:null}))}));
+       if(!fixed)partialPlan.push({index:partialPlan.length,matches:[{id:'future',court:1,teams:structured?[[1,6],[2,5]]:pairing==='flexible'?[[1,2],[5,6]]:[[1,3],[5,7]]}]});
+       P5Continuous.create(s,partialPlan);
+       s.continuous.paused=true;
+       for(const m of P5Continuous.active(s)){m.score=[3,2];m.confirmed=true;}
+       if(P5Continuous.complete(s))throw Error('Expected partial cycle');
+      }
+      localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true;
+     }.toString()+')('+[mode,pairing,flow].map(JSON.stringify).join(',')+')';
+     await val(setup);
+     await until(()=>val('P5App.getState().stage==="stage1"&&P5App.getState().mode==='+JSON.stringify(mode)),'Stage 2 QA fixture');
+     const scores=await val('JSON.stringify(P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).map(m=>[m.id,m.score]))');
+     const clicked=await val('(()=>{const b=document.querySelector("#americano .p5-cont-run-actions [data-act=continuous-finish]")||document.querySelector("#americano .p5-v26-session-control [data-act=finish-stage1]")||document.querySelector("#americano [data-act=finish-stage1]");if(!b)return false;b.click();return true})()');
+     assert(clicked,'Finish Stage 1 action missing '+pairing+' '+game+' '+flow);
+     await until(isModal,'Stage 1 finish dialog');
+     if(await val('!!document.querySelector("#p5-modal-root [data-act=balance-finish]")')){
+      await val('document.querySelector("#p5-modal-root [data-act=balance-finish]").click();true');
+      await until(()=>val('!!document.querySelector("#p5-modal-root [data-act=modal-save]")'),'fairness warning confirmed');
+     }
+     await val('document.querySelector("#p5-modal-root [data-act=modal-save]").click();true');
+     await until(()=>val('P5App.getState().stage==="stage1finished"'),'all modes reach Stage 2 configuration '+pairing+' '+game+' '+flow);
+     await val('(()=>{for(const [id,v] of '+JSON.stringify([['ko-format',format],['ko-match-format','first4'],['ko-final-format','first6']])+'){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}));}return true})()');
+     await val('document.querySelector("#americano [data-act=start-ko]").click();true');
+     await until(()=>val('!!document.querySelector("#p5-modal-root [data-act=qualification-confirm]")'),'qualifiers '+pairing+' '+game+' '+flow);
+     await val('document.querySelector("#p5-modal-root [data-act=qualification-confirm]").click();true');
+     await until(()=>val('P5App.getState().stage==="ko"'),'KO dispatch '+pairing+' '+game+' '+flow+' '+format);
+     const result=await state();
+     assert.equal(result.ko.format,format);
+     assert(result.ko.active.length>0,'KO court must dispatch');
+     assert.equal(await val('JSON.stringify(P5App.getState().rounds.flatMap(r=>r.matches).filter(m=>m?.confirmed).map(m=>[m.id,m.score]))'),scores,'Stage 1 scores changed');
+     if(pairing==='structured')assert(result.ko.teams.every(t=>t.ids.length===2&&t.ids.filter(id=>id<=4).length===1),'Structured KO must retain Group A + B');
+     if(pairing==='flexible')assert(result.ko.teams.some(t=>t.ids.includes(1)&&t.ids.includes(2)),'Locked pair must remain together');
+     console.log('PASS Stage 2',game,pairing,flow,format);
+    }
+   }
+  }
+ }
+ await val('localStorage.setItem(P5App.key,'+JSON.stringify(JSON.stringify(stage2Original))+');location.reload();true');
+ await until(()=>val('P5App.getState().stage==="champion"'),'restore original QA state');
+
  // PR52 shared-foundation visual parity: measure real computed geometry at phone/tablet
  // sizes for every registered Americano/Mexicano pairing mode and match flow.
  const paritySamples=[];
@@ -593,7 +650,7 @@ async function main(){
    'arrival:Object.fromEntries(roster.map(p=>[p.id,true])),pendingParticipants:[],ui:{...s.ui,modal:null}});'+
    'localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();return true})()';
   await val(fixture);
-  await until(()=>val('!!document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-list")'),'By Rounds Resting UI '+device);
+  await until(()=>val('P5App.getState().session==="RESTING QA"&&P5App.getState().roster.length===18&&document.querySelectorAll("#americano .p5-v26-flow-combo>.p5-rest-card .resting-pair-chip").length===6'),'By Rounds Resting UI '+device);
   const restingLayout=await val('(()=>{'+
    'const card=document.querySelector("#americano .p5-v26-flow-combo>.p5-rest-card"),list=card?.querySelector(".resting-pair-list");'+
    'const chips=[...(list?.querySelectorAll(".resting-pair-chip")||[])];'+
@@ -616,6 +673,24 @@ async function main(){
   console.log('PASS By Rounds Resting Players '+device+': six balanced chips, 3x2, no overflow');
  }
 
+
+ // Standalone Tournament Mode: native setup -> registration -> bracket -> champion.
+ for(const format of ['single','double']){
+  const fresh='('+function(){const s=P5App.getState();Object.assign(s,{stage:'setup',mode:'',session:'',matchFlow:'',continuous:null,rounds:[],roster:[],ko:null,qualification:null,koFormat:'',koMatchFormat:'',koFinalFormat:'',matchFormat:'',courts:null,ui:{modal:null,menuOpen:false,submenus:[]}});localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();}.toString()+')()';
+  await val(fresh);
+  await until(()=>val('P5App.getState().stage==="setup"&&!!document.getElementById("setup-ko-type")'),'standalone setup');
+  const ready=await val('('+function(format){function put(id,v){const e=document.getElementById(id);if(!e)throw Error('Missing '+id);e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}));}put('setup-game','Knockout');put('setup-session','Standalone KO QA');document.getElementById('setup-session').dispatchEvent(new Event('input',{bubbles:true}));put('setup-date','2026-11-25');const time=document.getElementById('setup-time');put('setup-time',Array.from(time.options).find(x=>x.value).value);put('setup-courts','3');put('setup-format','first4');put('setup-ko-type',format);put('setup-ko-final','first6');const b=document.querySelector('[data-act=setup-next]');if(b.disabled)return false;b.click();return true;}.toString()+')('+JSON.stringify(format)+')');
+  assert(ready,'Standalone setup must enable Continue');
+  await until(()=>val('P5App.getState().stage==="registration"&&P5App.getState().mode==="fp-knockout"'),'standalone registration');
+  await val('(()=>{for(const e of document.querySelectorAll("[data-person]"))e.value="P"+e.dataset.person+" "+e.dataset.slot;document.querySelector("[data-act=registration-start]").click();return true})()');
+  await until(()=>val('P5App.getState().stage==="ko"&&!!document.querySelector("#p5-ko-bracket")'),'standalone KO starts without Stage 1');
+  const ko=await state();assert.equal(ko.rounds.length,0);assert.equal(ko.ko.format,format);assert.deepEqual(ko.ko.teams.map(x=>x.ids[0]),ko.roster.map(x=>x.id));
+  assert(!(await val('!!document.querySelector("[data-act=tab-stage1]")')),'Standalone hides Stage 1 tab');
+  const scored=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<40){const m=s.ko.active[0];if(!m)throw Error('KO stalled');const fmt=P5KO.matchFormat(s.ko,m.final),limit=Number(fmt.slice(-1));P5KO.confirm(s,m.id,fmt==='total5'?[3,2]:[limit,1]);}if(s.stage!=='champion')throw Error('Missing champion');const snap=P5PublicResults.snapshot(s);const pdf=P5DirectPDF.render(snap);localStorage.setItem(P5App.key,JSON.stringify(s));return {stage:s.stage,champion:s.ko.champion,runner:s.ko.runnerUp,records:snap.publicKO.length,rounds:snap.rounds.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
+  assert.equal(scored.stage,'champion');assert(scored.champion?.length&&scored.runner?.length&&scored.records>0&&scored.pdf>1000);assert.equal(scored.rounds,0);
+  await val('location.reload();true');await until(()=>val('P5App.getState().stage==="champion"&&!!document.querySelector(".champion-presentation")'),'standalone champion restored');
+  console.log('PASS standalone '+format+' native setup, seeds, bracket dispatch, champion, snapshot, PDF and reload');
+ }
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

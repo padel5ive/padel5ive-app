@@ -114,5 +114,9 @@
  for(const [i,m] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].entries())if(m[1].trim())new vm.Script(m[1],{filename:'unified#'+i});
  new vm.Script(p);new vm.Script(d);
  for(const [path,content] of [[file,html],[pub,p],[pdf,d],[api,a]])fs.writeFileSync(path,content);
+ // Normalize only newly introduced whitespace-only lines in the generated HTML.
+ // The native engines and all non-blank source lines stay byte-identical.
+ const diff=require('node:child_process').spawnSync('git',['diff','--check','--',file],{encoding:'utf8'});
+ if(diff.stdout){const lines=html.split('\n');let changed=false;for(const row of diff.stdout.split('\n')){const m=/^public\/modes\/unified\/index\.html:(\d+): trailing whitespace\.$/.exec(row);if(!m)continue;const i=Number(m[1])-1;if(/^[ \t]+$/.test(lines[i]||'')){lines[i]='';changed=true;}}if(changed)fs.writeFileSync(file,lines.join('\n'));}
  console.log('PASS Group Stage qualification recommendations, schedule, round formats, Bronze and podium integration');
 })();

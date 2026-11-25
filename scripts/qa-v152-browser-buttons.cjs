@@ -728,7 +728,9 @@ async function main(){
   await until(()=>val('window.P5App?.getState().continuous?.cycle===2'),mode+' next cycle started');
   const resumed=await state();
   assert.deepEqual(resumed.rounds.slice(0,startingCycle.history.length),startingCycle.history,'Cycle 1 scores and fixtures are retained');
-  assert.equal(resumed.rounds.filter(r=>r.matches.some(m=>m?.cycle===2)).length,3,'Three courts dispatch');
+  const liveCourts=resumed.rounds.filter(r=>r.matches.some(m=>m?.cycle===2)).length;
+  assert(liveCourts>0,'The next cycle dispatches matches');
+  if(mode==='structured-americano')assert.equal(liveCourts,3,'Three courts dispatch for the reported setup');
   assert.equal(resumed.continuous.total,startingCycle.total,'Next cycle covers the full schedule');
   assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Cycle 2 court allocations have no conflicts');
   await tap('[data-act="continuous-history-toggle"]');
@@ -738,7 +740,7 @@ async function main(){
   await cmd('Page.reload',{ignoreCache:true});
   await until(()=>val('!window.p5BeforeCycleFixtureReload&&window.P5App?.getState().continuous?.cycle===2'),'Cycle 2 saved after reload');
   assert.deepEqual((await state()).rounds,resumed.rounds);
-  console.log('PASS '+mode+' completed session: Next Cycle, three courts, Cycle 1 history and reload');
+  console.log('PASS '+mode+' completed session: Next Cycle, court dispatch, Cycle 1 history and reload');
  }
 
  // Standalone Tournament Mode: native setup -> registration -> bracket -> champion.

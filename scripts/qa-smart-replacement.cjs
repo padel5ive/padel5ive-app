@@ -21,6 +21,24 @@ const eligible=state([[saved],[target],[future]]);
 eligible.rounds[2].eligibleIds=[2,3];
 assert.equal(replacementPlan(eligible,target,0,0,3).changes.size,0);
 
+// Include both live changes in the optimizer, and apply future updates separately.
+const courtOne=match(1,2),courtTwo=match(3,4),queuedOne=match(3,2),queuedTwo=match(1,4);
+const earlier=Object.assign(match(5,6),{confirmed:true,score:[3,2]});
+const swapState=state([[earlier],[courtOne,courtTwo],[queuedOne,queuedTwo]]);
+const swapBefore=JSON.stringify(swapState);
+const swapPlan=replacementPlan(swapState,courtOne,0,0,3,{fixture:courtTwo,side:0,slot:0});
+assert.equal(JSON.stringify(swapState),swapBefore);
+assert(!swapPlan.changes.has(courtOne)&&!swapPlan.changes.has(courtTwo));
+assert.deepEqual(swapPlan.changes.get(queuedOne),[[1],[2]]);
+assert.deepEqual(swapPlan.changes.get(queuedTwo),[[3],[4]]);
+
+const sameCourt={teams:[[1,2],[3,4]],confirmed:false,score:null};
+const sameCourtFuture={teams:[[3,2],[1,4]],confirmed:false,score:null};
+const sameCourtState=state([[earlier],[sameCourt],[sameCourtFuture]]);
+const partnerSwap=replacementPlan(sameCourtState,sameCourt,0,0,3,{fixture:sameCourt,side:1,slot:0});
+assert.deepEqual(partnerSwap.changes.get(sameCourtFuture),[[1,2],[3,4]],'Both switched slots are included in planning');
+assert.deepEqual(sameCourt.teams,[[1,2],[3,4]],'Preview does not alter the live match');
+
 // Every legal first-match substitution in a full fixed-partner continuous cycle.
 for(let n=4;n<=12;n++){
   for(let id=3;id<=n;id++){

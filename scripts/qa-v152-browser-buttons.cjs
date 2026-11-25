@@ -700,6 +700,7 @@ async function main(){
   await until(()=>val('P5App.getState().stage==="registration"&&P5App.getState().mode==="fp-group-stage"'),'group registration');
   await val('(()=>{for(const e of document.querySelectorAll("[data-person]"))e.value="P"+e.dataset.person+" "+e.dataset.slot;document.querySelector("[data-act=registration-start]").click();return true})()');
   await until(()=>val('!!document.querySelector("[data-act=group-confirm]")'),'group draw review');
+  assert(await val('!!document.querySelector(".p5-group-schedule")&&!!document.querySelector("[data-act=group-recommend]")'),'Group recommendation and schedule');
   assert.equal(await val('P5Group.pools(P5App.getState()).map(x=>x.length).join(",")'),'3,3');
   await val('document.querySelector("[data-act=group-confirm]").click();true');
   await until(()=>val('P5App.getState().stage==="stage1"&&!!document.querySelector(".p5-group-standings")'),'group dashboard');
@@ -725,13 +726,14 @@ async function main(){
   await until(isModal,'group finish confirmation');
   await val('document.querySelector("#p5-modal-root [data-act=modal-save]").click();true');
   await until(()=>val('P5App.getState().stage==="stage1finished"'),'group results');
-  await val('(()=>{for(const [id,v] of [["ko-format","single"],["ko-match-format","first4"],["ko-final-format","first6"]]){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}));}document.querySelector("[data-act=start-ko]").click();return true})()');
+  await val('(()=>{for(const [id,v] of [["ko-format","single"],["ko-match-format","first4"],["ko-final-format","first6"],["group-ko-quarter","first4"],["group-ko-semi","first5"],["group-ko-bronze","yes"],["group-ko-bronze-format","total5"]]){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}));}document.querySelector("[data-act=start-ko]").click();return true})()');
   await until(()=>val('P5App.getState().ui.modal?.type==="qualification"'),'group qualification');
   assert.equal(await val('P5App.getState().ui.modal.selectedIds.length'),4);
+  assert(await val('!!document.querySelector(".p5-group-bracket-preview")&&!!document.querySelector(".p5-group-bronze")'),'Connected qualification preview with Bronze');
   await val('document.querySelector("#p5-modal-root [data-act=qualification-confirm]").click();true');
   await until(()=>val('P5App.getState().stage==="ko"'),'group KO dispatch');
-  const result=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<30){const m=s.ko.active[0];if(!m)throw Error('stalled bracket');const f=P5KO.matchFormat(s.ko,m.final);P5KO.confirm(s,m.id,[Number(f.slice(-1)),1]);}const snap=P5PublicResults.snapshot(s),pdf=P5DirectPDF.render(snap);return {stage:s.stage,champion:s.ko.champion,groups:snap.groups.map(g=>g.rows.length),records:snap.publicKO.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
-  assert.equal(result.stage,'champion');assert(result.champion?.length&&result.records===3&&result.pdf>1000);assert.deepEqual(result.groups,[3,3]);
+  const result=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<30){const m=s.ko.active[0];if(!m)throw Error('stalled bracket');const f=P5KO.matchFormat(s.ko,m.final,m.masterId);P5KO.confirm(s,m.id,f==='total5'?[3,2]:[Number(f.slice(-1)),1]);}const snap=P5PublicResults.snapshot(s),pdf=P5DirectPDF.render(snap);return {stage:s.stage,champion:s.ko.champion,third:s.ko.thirdPlace,groups:snap.groups.map(g=>g.rows.length),records:snap.publicKO.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
+  assert.equal(result.stage,'champion');assert(result.champion?.length&&result.third?.length&&result.records===4&&result.pdf>1000);assert.deepEqual(result.groups,[3,3]);
   console.log('PASS Group Stage '+flow+': native registration, draw, shared scoring, qualification, champion and PDF');
  }
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');

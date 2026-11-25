@@ -206,7 +206,8 @@ async function main(){
  await until(()=>val('!!document.querySelector("#americano .p5-person-action")'),'player name actions in court card');
  const original=await state();
  const first=original.rounds[0].matches.filter(Boolean)[0],targetMatchId=first.id;
- const future=JSON.stringify(original.rounds.slice(1));
+ const courtSlots=rounds=>rounds.map(r=>r.matches.map(m=>m && [m.id,m.court]));
+ const future=courtSlots(original.rounds.slice(1));
  const selector='#americano .p5-match-names .p5-person-action';
  await tap(selector);await until(isModal,'Replace Player modal');
  assert.equal(await val('document.querySelector("#p5-modal-root .p5-v2-modal h2")?.textContent'),'REPLACE PLAYER');
@@ -214,11 +215,14 @@ async function main(){
  assert(available.length>=1,'12 players / 2 courts should include eligible resting substitutes');
  const chosen=available[0],chosenId=Number(chosen.split(':')[0]);
  await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(chosen)+'})()');
+ await val('document.querySelector("#p5-replacement-select").dispatchEvent(new Event("change",{bubbles:true}))');
+ assert.match(await val('document.querySelector("#p5-replacement-preview").textContent'),/upcoming fixture/i);
+ assert.deepEqual((await state()).rounds,original.rounds,'Preview must leave fixtures intact');
  await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'one-match replacement confirmed');
  const replaced=await state(),current=replaced.rounds[0].matches.find(m=>m?.id===targetMatchId);
  assert(current.substitutions?.length===1,'Substitution metadata recorded');
  assert.equal(current.teams[0][0],chosenId,'Individual replacement changes this one fixture');
- assert.equal(JSON.stringify(replaced.rounds.slice(1)),future,'No full reshuffle of remaining matches');
+ assert.deepEqual(courtSlots(replaced.rounds.slice(1)),future,'No full reshuffle of remaining matches');
  assert(replaced.rounds.every(rd=>rd.matches.filter(Boolean).every(m=>!m.confirmed)),'Substitution cannot fabricate confirmed scores');
  console.log('PASS one-match replacement: tap name, eligible resting player, Save, no future reshuffle');
  assert.equal(current.teams[0][1],first.teams[0][1],'Replacement must NOT overwrite teammate');
@@ -226,7 +230,7 @@ async function main(){
  const normalCardHeight=await val('document.querySelector("#americano .court.p5sm-card")?.getBoundingClientRect().height');
  assert(normalCardHeight>0,'Round-by-round scorecard size reference available');
  const firstCardSelector='#americano .p5-match-names';
- assert.equal(await val('document.querySelector('+JSON.stringify(firstCardSelector)+')?.querySelectorAll(".p5-sub-badge").length'),1,'SUB badge must appear only on replaced name, not both teammates');
+ assert.equal(await val('document.querySelector('+JSON.stringify(firstCardSelector)+')?.querySelectorAll(".p5-sub-badge").length'),0,'Updated names appear without SUB badges');
  // Replace again within the SAME fixture; no global one-time limit.
  await tap(selector);await until(isModal,'second replacement in same match');
  const nextOptions=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
@@ -238,8 +242,8 @@ async function main(){
  assert.equal(replacedAgain.substitutions.length,1,'Repeated replacement updates same slot instead of duplicating substitution rows');
  assert.equal(replacedAgain.teams[0][0],Number(second.split(':')[0]),'Second replacement takes effect in target match');
  assert.equal(replacedAgain.teams[0][1],first.teams[0][1],'Original teammate preserved after repeated replacement');
- assert.equal(JSON.stringify(repeated.rounds.slice(1)),future,'Repeated replacements must not reshuffle future rounds');
- console.log('PASS repeated per-match replacement, teammate identity, single SUB badge and stable remaining rounds');
+ assert.deepEqual(courtSlots(repeated.rounds.slice(1)),future,'Repeated replacements must not reshuffle future rounds');
+ console.log('PASS repeated per-match replacement, teammate identity, badge-free names and stable courts');
 
  // Cancel replacement from score entry must restore selected draft score.
  await tap('#americano .p5-score-tap');await until(isModal,'native score entry after replacement');
@@ -297,10 +301,10 @@ async function main(){
  assert.equal(start.continuous.total,15,'6 pairs must play 15 unique fixtures');
  assert.equal(start.rounds.flatMap(r=>r.matches).filter(Boolean).length,2,'Two active courts dispatched');
  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Initial continuous scheduling valid');
- // iPhone substitution visual regression: fixed partner keeps a single SUB badge,
+ // iPhone substitution visual regression: fixed partner displays both names,
  // names remain within court cards and replacement participant stays physically busy.
  const fixedStart=await state(),fixedTarget=fixedStart.rounds.flatMap(r=>r.matches).find(m=>m&&!m.confirmed);
- const queuedFixed=JSON.stringify(fixedStart.continuous.queue),originalFixedId=fixedTarget.teams[0][0];
+ const originalFixedId=fixedTarget.teams[0][0];
  await tap('#americano .p5-cont-courts .p5-person-action');
  await until(isModal,'iPhone fixed-partner replacement modal');
  assert.equal(await val('document.querySelector("#p5-modal-root .p5-v2-modal h2")?.textContent'),'REPLACE FIXED PAIR','Fixed Partner replacement must use whole-pair selector');
@@ -313,11 +317,12 @@ async function main(){
  assert.equal(fixedChanged.teams[0][0],pickedId,'Fixed substitution replaces the complete pair ID');
  assert.notEqual(fixedChanged.teams[0][0],originalFixedId,'Original pair removed from selected fixture only');
  assert.equal(fixedChanged.substitutions?.filter(x=>x.wholePair).length,1,'Whole pair substitution recorded only once');
- assert.equal(JSON.stringify(fixedAfter.continuous.queue),queuedFixed,'Fixed pair replacement must not reshuffle remaining cycle fixtures');
+ const cycleFixtures=[...fixedAfter.continuous.queue,...fixedAfter.rounds.flatMap(r=>r.matches.filter(Boolean))];
+ assert.equal(new Set(cycleFixtures.map(m=>m.teams.flat().sort((a,b)=>a-b).join(':'))).size,15,'Adaptive queue restores every unique matchup');
  assert.equal(await val('document.querySelector("#americano .p5-pair-replace")?.innerText.includes("PAIR "+'+pickedId+')'),true,'Replacement renders both players from the new fixed pair');
- console.log('PASS Fixed Partner whole pair replacement, correct names, one-match scope and queue preserved');
+ console.log('PASS Fixed Partner whole pair replacement, correct names, adaptive queue with unique opponents');
 
- assert.equal(await val('document.querySelectorAll("#americano .p5-cont-courts .p5-sub-badge").length'),1,'Only one substituted player may get a SUB badge');
+ assert.equal(await val('document.querySelectorAll("#americano .p5-cont-courts .p5-sub-badge").length'),0,'Fixed pair names appear without SUB badges');
  assert(await val('P5Continuous.busyIds(P5App.getState()).has('+pickedId+')'),'Substitute is marked busy for all courts');
  const continuousHeight=await val('document.querySelector("#americano .p5-cont-courts .court.p5sm-card")?.getBoundingClientRect().height');
  console.log('SCORECARD PARITY HEIGHT',JSON.stringify({rounds:normalCardHeight,continuous:continuousHeight}));

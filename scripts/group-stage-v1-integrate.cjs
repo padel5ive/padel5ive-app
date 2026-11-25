@@ -94,6 +94,15 @@
  hs('<button type="button" class="p54-opt" disabled aria-disabled="true"><span class="p548-pair-name">Group Stage · Coming Soon</span></button>','<button type="button" class="p54-opt" data-pairing="group" data-label="Group Stage" aria-pressed="false"><span class="p548-pair-name">Group Stage</span><span class="p548-pair-desc">Pool Play · Qualification · Knockout</span></button>','home group tile');
  hs("encodeURIComponent(mode==='Tournament Mode'?'Knockout':mode)+'&pairing='+encodeURIComponent(pairing)","encodeURIComponent(mode==='Tournament Mode'?(pairing==='group'?'Group Stage':'Knockout'):mode)+'&pairing='+encodeURIComponent(pairing==='group'?'fixed':pairing)",'home group route');
  hs('Group Stage is coming soon.','Group Stage and direct Knockout.','home footer');
+ // Keep the internal route ID unchanged; only the visible title is shortened.
+ hs('<span class="p54-mode-name">Tournament Mode</span>','<span class="p54-mode-name">Tournament</span>','tournament visible title');
+ const koTile='<button type="button" class="p54-opt" data-pairing="fixed" data-label="Knockout" aria-pressed="true"><span class="p548-pair-name">Knockout</span><span class="p548-pair-desc">Single / Double Elimination</span></button>';
+ const groupTile='<button type="button" class="p54-opt" data-pairing="group" data-label="Group Stage" aria-pressed="false"><span class="p548-pair-name">Group Stage</span><span class="p548-pair-desc">Pool Play · Qualification · Knockout</span></button>';
+ hs(koTile+groupTile,groupTile.replace('aria-pressed="false"','aria-pressed="true"')+koTile.replace('aria-pressed="true"','aria-pressed="false"'),'group stage first');
+ hs("textContent='TOURNAMENT FORMAT';pairing='fixed';","textContent='TOURNAMENT FORMAT';pairing='group';",'default group stage');
+ hs("textContent='Tournament Mode · Knockout'","textContent='Tournament · Group Stage'",'default visible caption');
+ hs("textContent=mode+' · '+b.dataset.label","textContent=(mode==='Tournament Mode'?'Tournament':mode)+' · '+b.dataset.label",'selected visible caption');
+
  const styleEnd=html.lastIndexOf('</style>');
  if(styleEnd<0)throw Error('Missing style block');
  html=html.slice(0,styleEnd)+`

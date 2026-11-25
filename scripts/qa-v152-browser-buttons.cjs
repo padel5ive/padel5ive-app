@@ -49,6 +49,29 @@ async function startup(){
 async function main(){
  const {cmd,url}=await startup();
  async function val(expr){const r=await cmd('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error('Browser JS '+JSON.stringify(r.exceptionDetails));return r.result.value}
+
+ async function checkScorePickers(selector){
+  const shape=await val('('+function(selector){
+   const root=document.querySelector(selector),fields=[...(root?.querySelectorAll('select.p5-score-control')||[])];
+   if(fields.length!==2)return {count:fields.length};
+   const [a,b]=fields.map(e=>e.getBoundingClientRect());
+   const divider=root.querySelector('.p5-score-divider')?.getBoundingClientRect();
+   return {count:2,styled:fields.every(e=>{const s=getComputedStyle(e);return s.appearance==='none'&&s.backgroundImage.includes('image/svg+xml')&&s.textAlignLast==='center'}),
+    height:a.height,aligned:Math.abs(a.y-b.y)<=1&&Math.abs(a.width-b.width)<=1,
+    centered:!!divider&&Math.abs(a.y+a.height/2-divider.y-divider.height/2)<=1,
+    fits:a.x>=0&&b.right<=document.documentElement.clientWidth+1
+   };
+  }.toString()+')('+JSON.stringify(selector)+')');
+  assert(shape.count===2&&shape.styled&&shape.height>=44&&shape.aligned&&shape.centered&&shape.fits,
+   'Score picker layout drift '+selector+' '+JSON.stringify(shape));
+ }
+ async function pickScore(a,b,value){
+  return val('('+function(a,b,value){
+   const field=document.querySelector(a);
+   field.value=value;field.dispatchEvent(new Event('change',{bubbles:true}));
+   return [field.value,document.querySelector(b).value];
+  }.toString()+')('+[a,b,value].map(JSON.stringify).join(',')+')');
+ }
  const state=()=>val('P5App.getState()'),isModal=()=>val('!!document.querySelector("#p5-modal-root .p5-v2-modal")'),isStats=()=>val('!!document.querySelector("#p5ps-layer")');
  async function until(f,msg){for(let i=0;i<90;i++){try{if(await f())return}catch{}await nap(160)}let debug='';try{debug=JSON.stringify(await val('({stage:P5App?.getState()?.stage,body:document.querySelector("#americano")?.innerHTML?.slice(0,320),alert:document.querySelector("#toast")?.textContent,hasStats:!!document.querySelector(".p5-b41-leaderboard"),ready:document.readyState})'))}catch(e){debug=String(e)}const renderError=await val('(()=>{try{P5UI.render(P5App.getState());return "render successful"}catch(e){return e.stack||e.message}})()');throw Error('UI not ready: '+msg+' debug '+debug+' render '+renderError)}
  async function size(w,h){await cmd('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:w<700?3:2,mobile:w<700});await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})}
@@ -651,6 +674,7 @@ async function main(){
     assert(measured.overflow<=3,'Court cards must never horizontally overflow '+JSON.stringify({device,mode,flow,measured}));
     await tap('#americano .p5-stage1-score-grid>.court.p5sm-card .p5-score-tap');
     await until(isModal,'shared score modal '+device+' '+mode+' '+flow);
+    await checkScorePickers('#p5-modal-root .p5-score-entry');
     const modal=await val('(()=>{'+
      'const box=document.querySelector("#p5-modal-root .p5-cont-score-clean"),r=box?.getBoundingClientRect();'+
      'const fmt=box?.querySelector(".p5-polish-entry-overline span")?.textContent.trim();'+
@@ -658,7 +682,7 @@ async function main(){
      'const sideLabels=[...(box?.querySelectorAll(".p5-polish-team-label")||[])];'+
      'const duplicate=box?.querySelector("#modal-error");'+
      'return {exists:!!box,width:r?.width,format:fmt,hint,labelsHidden:sideLabels.every(x=>getComputedStyle(x).display==="none"),'+
-     'duplicateHidden:!!duplicate&&getComputedStyle(duplicate).display==="none",scoreInputs:box?.querySelectorAll(".p5-score-dual-select").length};'+
+     'duplicateHidden:!!duplicate&&getComputedStyle(duplicate).display==="none",scoreInputs:box?.querySelectorAll(".p5-score-control").length};'+
      '})()');
     assert(modal.exists&&modal.format==='TOTAL OF 5'&&modal.hint==='Enter one score; the other updates.'&&
      modal.labelsHidden&&modal.duplicateHidden&&modal.scoreInputs===2,
@@ -1091,6 +1115,18 @@ async function main(){
   await until(()=>val('P5App.getState().stage==="ko"&&!!document.querySelector("#p5-ko-bracket")'),'standalone KO starts without Stage 1');
   const ko=await state();assert.equal(ko.rounds.length,0);assert.equal(ko.ko.format,format);assert.deepEqual(ko.ko.teams.map(x=>x.ids[0]),ko.roster.map(x=>x.id));
   assert(!(await val('!!document.querySelector("[data-act=tab-stage1]")')),'Standalone hides Stage 1 tab');
+  const scoreTap='#p5-ko-live-courts button[data-act="score"][data-ko="1"]';
+  await tap(scoreTap);await until(isModal,'standalone Knockout score picker');
+  await checkScorePickers('#p5-modal-root .p5-score-entry');
+  assert.deepEqual(await pickScore('#p5-score-a','#p5-score-b','1'),['1','4']);
+  await tap('#p5-modal-root [data-act="modal-save"]');
+  await until(async()=>!(await isModal()),'standalone score saved');
+  assert.deepEqual(await val('(()=>{const k=P5App.getState().ko;return P5KO.graph(k)[k.history[0]].score})()'),[1,4]);
+  await tap("details[data-ko-history] > summary");
+  await tap('[data-act="edit-ko-result"]');await until(isModal,'knockout history score picker');
+  await checkScorePickers('#p5-modal-root .p5-score-entry');
+  assert.deepEqual(await val('[document.getElementById("p5-score-a").value,document.getElementById("p5-score-b").value]'),['1','4']);
+  await tap(cancel);await until(async()=>!(await isModal()),'historical score correction cancelled');
   const scored=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<40){const m=s.ko.active[0];if(!m)throw Error('KO stalled');const fmt=P5KO.matchFormat(s.ko,m.final),limit=Number(fmt.slice(-1));P5KO.confirm(s,m.id,fmt==='total5'?[3,2]:[limit,1]);}if(s.stage!=='champion')throw Error('Missing champion');const snap=P5PublicResults.snapshot(s);const pdf=P5DirectPDF.render(snap);localStorage.setItem(P5App.key,JSON.stringify(s));return {stage:s.stage,champion:s.ko.champion,runner:s.ko.runnerUp,records:snap.publicKO.length,rounds:snap.rounds.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
   assert.equal(scored.stage,'champion');assert(scored.champion?.length&&scored.runner?.length&&scored.records>0&&scored.pdf>1000);assert.equal(scored.rounds,0);
   await val('location.reload();true');await until(()=>val('P5App.getState().stage==="champion"&&!!document.querySelector(".champion-presentation")'),'standalone champion restored');
@@ -1145,6 +1181,105 @@ async function main(){
   assert.equal(result.stage,'champion');assert(result.champion?.length&&result.third?.length&&result.records===4&&result.pdf>1000);assert.deepEqual(result.groups,[3,3]);
   console.log('PASS Group Stage '+flow+': native registration, draw, shared scoring, qualification, champion and PDF');
  }
+
+ // All active Team Showdown pairing formats use the same score picker as Match Control.
+ await size(390,844);
+ const showdownURL=new URL('/modes/club-match/v097/',url).href;
+ await cmd('Page.navigate',{url:showdownURL});
+ await until(()=>val('!!window.ClubEngine?.individualCreateMatches'),'Team Showdown boot');
+ const activeModal='#p5-stage1-score-dialog';
+ const showdownKey='padel5ive-team-showdown-v090-individual-lab';
+ for(const mode of ['classic','multi','individual','individual-multi']){
+  const format=mode.startsWith('individual')?'first4':'total5';
+  const match=await val('('+function(mode,format,key){
+   const e=ClubEngine,s=e.newState(),individual=mode.startsWith('individual'),n=mode==='individual-multi'?8:4;
+   Object.assign(s.setup,{competitionFormat:individual?'individual':mode,sessionName:'Score Picker QA',
+    date:'2026-11-25',clubs:{A:'Team A',B:'Team B'},pairs:n,courts:2,format,divisionCounts:{men:2,women:2,mixed:0},
+    individualDivision:mode==='individual-multi'?'multi':'single',individualCounts:{single:n,men:4,women:4}});
+   for(const c of ['A','B']){
+    s.roster[c]=e.roster(n,c);s.roster[c].forEach((p,i)=>{
+     if(individual)p.players=p.players.slice(0,1);
+     p.players.forEach((q,j)=>q.name=c+' Player '+(i+1)+' '+(j+1));
+    });
+   }
+   e.createMatches(s);localStorage.setItem(key,JSON.stringify(s));window.p5BeforeScoreReload=true;location.reload();
+   return e.liveCourts(s)[0].id;
+  }.toString()+')('+[mode,format,showdownKey].map(JSON.stringify).join(',')+')');
+  const button='[data-action="open-stage1-score"][data-id="'+match+'"]';
+  await until(()=>val('!window.p5BeforeScoreReload&&!!document.querySelector('+JSON.stringify(button)+')'),mode+' Team Showdown match');
+  await tap(button);
+  await checkScorePickers(activeModal);
+  const applied=await pickScore(activeModal+' #modal-a',activeModal+' #modal-b','1');
+  assert.deepEqual(applied,['1','4']);
+  await tap(activeModal+' [data-action="complete-stage1"]');
+  await tap(activeModal+' [data-action="commit-stage1"]');
+  const saved=await val('JSON.parse(localStorage.getItem('+JSON.stringify(showdownKey)+')).schedule.flat().find(m=>m.id==='+JSON.stringify(match)+')');
+  assert.equal(saved.status,'completed');assert.deepEqual([saved.scoreA,saved.scoreB],[1,4]);
+
+  if(mode==='classic'){
+   await tap('[data-action="toggle-rounds"]');
+   await tap('[data-action="view-round"][data-value="1"]');
+   await tap('[data-action="edit-stage1-result"][data-id="'+match+'"]');
+   const history='.history-inline-editor';
+   await checkScorePickers(history);
+   assert.deepEqual(await val('[...document.querySelectorAll(".history-inline-editor select")].map(e=>e.value)'),['1','4']);
+   assert.deepEqual(await pickScore(history+' [data-side=A]',history+' [data-side=B]','3'),['3','2']);
+   await tap(history+' [data-action="save-stage1-amend"]');
+   const edited=await val('JSON.parse(localStorage.getItem('+JSON.stringify(showdownKey)+')).schedule.flat().find(m=>m.id==='+JSON.stringify(match)+')');
+   assert.deepEqual([edited.scoreA,edited.scoreB],[3,2]);
+  }
+  console.log('PASS Team Showdown '+mode+' score picker, review and save');
+ }
+ // Stage 2 requires a tiebreak winner on even totals. Stage 3 uses a First-to pick.
+ for(const kind of ['duel','final']){
+  const matchId=await val('('+function(kind,key){
+   const e=ClubEngine,s=e.newState(),n=4;
+   Object.assign(s.setup,{sessionName:'Duel Score QA',date:'2026-11-25',clubs:{A:'Team A',B:'Team B'},pairs:n,courts:2,format:'total5'});
+   for(const c of ['A','B']){s.roster[c]=e.roster(n,c);s.roster[c].forEach((p,i)=>p.players.forEach((q,j)=>q.name=c+' Player '+(i+1)+' '+(j+1)));}
+   e.createMatches(s);while(e.liveCourts(s).length)e.assignCourtResult(s,e.liveCourts(s)[0].id,3,2);
+   const a=s.roster.A[0].players.map(p=>p.id),b=s.roster.B[0].players.map(p=>p.id);
+   const duel=e.makeStage2(s,1,'total4').matches[0].id;
+   e.setDuelLineup(s,duel,a,b);
+   let id=duel;
+   if(kind==='final'){e.setDuelScore(s,duel,0,4);id=e.startFinal(s,'first4',1).matches[0].id;e.setFinalLineup(s,a,b,id);}
+   localStorage.setItem(key,JSON.stringify(s));window.p5BeforeScoreReload=true;location.reload();return id;
+  }.toString()+')('+[kind,showdownKey].map(JSON.stringify).join(',')+')');
+  const button='[data-action="open-duel-score"][data-id="'+matchId+'"]';
+  const dialog='#p5-duel-score-dialog';
+  await until(()=>val('!window.p5BeforeScoreReload&&!!document.querySelector('+JSON.stringify(button)+')'),kind+' editor');
+  await tap(button);await checkScorePickers(dialog);
+  assert.deepEqual(await pickScore(dialog+' [data-custom-score][data-side=A]',dialog+' [data-custom-score][data-side=B]','2'),[ '2',kind==='duel'?'2':'4']);
+  const review=dialog+' [data-action="review-'+kind+'-score"]';
+  if(kind==='duel'){
+   await tap(review);
+   assert(!(await val('!!document.querySelector("#p5-duel-score-dialog [data-action=confirm-duel-score]")')),'A tied duel requires a tiebreak winner');
+   await val('document.querySelector("#p5-duel-score-dialog [data-tie]").value="B"');
+  }
+  await tap(review);await tap(dialog+' [data-action="confirm-duel-score"]');
+  const saved=await val('JSON.parse(localStorage.getItem('+JSON.stringify(showdownKey)+')).'+(kind==='duel'?'stage2':'stage3')+'.matches[0]');
+  assert.deepEqual([saved.scoreA,saved.scoreB,saved.winner],[2,kind==='duel'?2:4,'B']);
+  console.log('PASS Team Showdown '+kind+' score picker, review and save');
+ }
+
+ const legacyURL=new URL('/modes/club-match/',url).href;
+ await cmd('Page.navigate',{url:legacyURL});
+ await until(()=>val('!!window.ClubEngine&&!ClubEngine.individualCreateMatches'),'saved Classic boot');
+ const legacyKey='padel5ive-team-showdown-state-v3';
+ const firstLegacy=await val('('+function(key){
+  const e=ClubEngine,s=e.newState();
+  Object.assign(s.setup,{sessionName:'Saved Classic QA',date:'2026-11-25',clubs:{A:'Team A',B:'Team B'},courts:2,format:'total6'});
+  for(const c of ['A','B'])s.roster[c].forEach((p,i)=>p.players.forEach((q,j)=>q.name=c+' Player '+(i+1)+' '+(j+1)));
+  e.createMatches(s);localStorage.setItem(key,JSON.stringify(s));window.p5BeforeScoreReload=true;location.reload();return e.liveCourts(s)[0].id;
+ }.toString()+')('+JSON.stringify(legacyKey)+')');
+ const legacyCourt='.live-court[data-court-match="'+firstLegacy+'"]';
+ await until(()=>val('!window.p5BeforeScoreReload&&!!document.querySelector('+JSON.stringify(legacyCourt)+')'),'legacy saved match');
+ await checkScorePickers(legacyCourt);
+ assert.deepEqual(await pickScore(legacyCourt+' [data-side=A]',legacyCourt+' [data-side=B]','3'),['3','3']);
+ await tap(legacyCourt+' [data-action="complete-stage1"]');
+ await tap(legacyCourt+' [data-action="commit-stage1"]');
+ const legacyScore=await val('JSON.parse(localStorage.getItem('+JSON.stringify(legacyKey)+')).schedule.flat().find(m=>m.id==='+JSON.stringify(firstLegacy)+')');
+ assert.deepEqual([legacyScore.scoreA,legacyScore.scoreB],[3,3]);
+ console.log('PASS saved Classic Team Showdown score picker and draw');
  console.log('PASS v1.5.2 touch acceptance — privacy, statistics, edit, status, scoring, native buttons');
 }
 main().catch(e=>{console.error('FAIL v1.5.2 interactive QA',e.stack||e);process.exitCode=1}).finally(cleanup);

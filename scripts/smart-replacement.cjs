@@ -319,8 +319,8 @@ function integrate() {
   edit(
     '  const currentQueue=c.queue.concat(taken.map(m=>({key:m.fixtureKey,teams:m.originalTeams?m.originalTeams.map(t=>t.slice()):m.teams.map(t=>t.slice())})));',
     `  const currentQueue=[
-   ...c.queue.map(f=>({key:f.key,teams:f.adaptiveBaseTeams||f.teams})),
-   ...taken.map(m=>({key:m.fixtureKey,teams:m.adaptiveBaseTeams||m.originalTeams||m.teams}))
+   ...c.queue.map(f=>({key:f.key,teams:c.rosterRevision?f.teams:(f.adaptiveBaseTeams||f.teams)})),
+   ...taken.map(m=>({key:m.fixtureKey,teams:c.rosterRevision?m.teams:(m.adaptiveBaseTeams||m.originalTeams||m.teams)}))
   ];`
   );
   edit("  const unique=new Set(all.map(m=>m.fixtureKey));", `  const keys=all.map(m=>m.fixtureKey).concat(c.queue.map(f=>f.key));

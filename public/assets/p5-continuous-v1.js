@@ -31,6 +31,35 @@
   if(!queue.length)throw Error('The schedule has no fixtures');
   return queue;
  }
+ function addParticipants(s,ids,plan){
+  const c=s.continuous,entrants=new Set(ids);
+  const counts=count(s);
+  const offsets=c.joinedGamesOffset??={};
+  const peers=s.roster.map(p=>p.id).filter(id=>!entrants.has(id)&&!s.sitout?.includes(id)&&s.arrival?.[id]!==false);
+  const baseline=peers.length?Math.min(...peers.map(id=>counts[id]+(offsets[id]||0))):0;
+  for(const id of entrants)offsets[id]=baseline;
+  if(c.fixed){
+   const roster=s.roster.map(p=>p.id);
+   for(let i=0;i<roster.length;i++)for(let j=i+1;j<roster.length;j++){
+    const a=roster[i],b=roster[j];
+    if(entrants.has(a)||entrants.has(b))c.queue.push({teams:[[a],[b]],key:pairKey(a,b)});
+   }
+  }else{
+   const revision=(c.rosterRevision||0)+1;
+   c.rosterRevision=revision;
+   c.queue=cycleQueue(s,false,plan).map((fixture,i)=>({...fixture,key:'JOIN'+revision+':'+i}));
+  }
+  c.total=c.scheduled+c.queue.length;
+  dispatch(s);
+ }
+ function dispatchHistory(s){
+  const offsets=s.continuous.joinedGamesOffset||{};
+  const counts=count(s),sequence=allMatches(s);
+  const last=Object.fromEntries(s.roster.map(p=>[p.id,-1]));
+  for(let i=0;i<sequence.length;i++)for(const id of sequence[i].teams.flat())last[id]=i;
+  for(const id of Object.keys(offsets))counts[id]=(counts[id]||0)+offsets[id];
+  return {counts,last,sequence,offsets};
+ }
  function create(s,precomputed){
   if(!String(s.mode||'').endsWith('-americano'))throw Error('Continuous is only available for Americano');
   if(!Array.isArray(s.roster)||s.roster.length<2)throw Error('Insufficient participants');
@@ -52,10 +81,8 @@
   let created=0;
   for(const court of freeCourts(s)){
    if(!c.queue.length)break;
-   const running=usedIds(active(s)),counts=count(s);
-   const sequence=allMatches(s);
-   const last=Object.fromEntries(s.roster.map(p=>[p.id,-1]));
-   for(let k=0;k<sequence.length;k++)for(const id of sequence[k].teams.flat())last[id]=k;
+   const running=usedIds(active(s));
+   const {counts,sequence,last,offsets}=dispatchHistory(s);
    const candidates=[];
    for(let i=0;i<c.queue.length;i++){
     const f=c.queue[i],ids=f.teams.flat();
@@ -67,10 +94,11 @@
     const immediate=ids.filter(id=>last[id]===sequence.length-1).length;
     // Fairness first; always prefer least-used players and longer rest.
     const score=-(maxG*15000+minG*1800)-immediate*800+recovery*16-i*.025;
-    candidates.push({i,score});
+    const firstMatch=ids.filter(id=>Object.hasOwn(offsets,id)&&last[id]===-1).length;
+    candidates.push({i,score,firstMatch});
    }
    if(!candidates.length)continue; // idle court is safer than a repeat/conflict
-   candidates.sort((a,b)=>b.score-a.score||a.i-b.i);
+   candidates.sort((a,b)=>b.firstMatch-a.firstMatch||b.score-a.score||a.i-b.i);
    const selected=c.queue.splice(candidates[0].i,1)[0];
    const n=c.serial++;
    const m={id:'CONT'+c.cycle+'M'+(n+1),court,teams:selected.teams.map(x=>x.slice()),
@@ -85,10 +113,8 @@
  }
  function preview(s,limit=5){
   const c=s.continuous;if(!c)return [];
-  const running=active(s),busy=usedIds(running),counts=count(s);
-  const sequence=allMatches(s);
-  const last=Object.fromEntries(s.roster.map(p=>[p.id,-1]));
-  for(let k=0;k<sequence.length;k++)for(const id of sequence[k].teams.flat())last[id]=k;
+  const busy=usedIds(active(s));
+  const {counts,sequence,last,offsets}=dispatchHistory(s);
   return c.queue.map((fixture,index)=>{
    const ids=fixture.teams.flat();
    const valid=ids.length===new Set(ids).size&&!ids.some(id=>s.sitout?.includes(id)||s.arrival?.[id]===false);
@@ -98,8 +124,9 @@
    const recovery=ids.reduce((sum,id)=>sum+Math.max(0,sequence.length-1-(last[id]??-1)),0);
    const immediate=ids.filter(id=>last[id]===sequence.length-1).length;
    const score=-(maxG*15000+minG*1800)-immediate*800+recovery*16-index*.025;
-   return {key:fixture.key,teams:fixture.teams.map(x=>x.slice()),ready,score,index};
-  }).sort((a,b)=>Number(b.ready)-Number(a.ready)||b.score-a.score||a.index-b.index).slice(0,Math.max(0,limit));
+   const firstMatch=ids.filter(id=>Object.hasOwn(offsets,id)&&last[id]===-1).length;
+   return {key:fixture.key,teams:fixture.teams.map(x=>x.slice()),ready,score,index,firstMatch};
+  }).sort((a,b)=>Number(b.ready)-Number(a.ready)||b.firstMatch-a.firstMatch||b.score-a.score||a.index-b.index).slice(0,Math.max(0,limit));
  }
  function complete(s){
   const c=s.continuous;
@@ -130,7 +157,7 @@
   if(!complete(s))throw Error('Complete every fixture in this cycle before starting another');
   if(!String(s.mode||'').endsWith('-americano'))throw Error('Next Cycle is only available for Americano');
   const queue=cycleQueue(s,c.fixed,plan);
-  c.cycle++;c.queue=queue;c.total=queue.length;c.scheduled=0;c.paused=false;c.serial=0;
+  c.cycle++;c.queue=queue;c.total=queue.length;c.scheduled=0;c.paused=false;c.serial=0;c.rosterRevision=0;
   dispatch(s);return c.cycle;
  }
  function verify(s){
@@ -143,5 +170,5 @@
     total:c.total,scheduled:c.scheduled,remaining:c.queue.length,inProgress:live.length,completed:all.filter(m=>m.confirmed).length,
     cycle:c.cycle,paused:!!c.paused,fullCycleDone:complete(s)};
  }
- root.P5Continuous=Object.freeze({create,dispatch,preview,active,count,complete,nextCycle,reshuffleOpening,verify,pairKey,busyIds:s=>usedIds(active(s))});
+ root.P5Continuous=Object.freeze({create,dispatch,preview,active,count,complete,nextCycle,addParticipants,reshuffleOpening,verify,pairKey,busyIds:s=>usedIds(active(s))});
 })(typeof window!=='undefined'?window:globalThis);

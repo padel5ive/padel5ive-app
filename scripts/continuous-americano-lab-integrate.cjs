@@ -30,6 +30,58 @@ function continuousCyclePlan(){
   const base=P5AdvancedRules.constrained(s)?P5AdvancedRules.build(s,random):structured?P5Structured.build(s,random):ENG[s.mode].build(ids,s.courts,random);
   return P5Fair532.optimize(base,[],ids,random,{coaches:P5AdvancedRules.coachIds(s),structured,availableIds:ids});
  }
+ function addContinuousParticipant(entry){
+  if(s.stage!=='stage1'||s.matchFlow!=='continuous'||!s.mode.endsWith('-americano'))return;
+  if(!entry&&!s.pendingParticipants.length)return;
+  const before=clone(s);
+  try{
+   // Include additions saved under the old Next Cycle flow.
+   if(entry)s.pendingParticipants.push(entry);
+   const firstIndex=s.roster.length;
+   applyPendingParticipants();
+   const ids=s.roster.slice(firstIndex).map(p=>p.id);
+   for(const id of ids)s.availabilityById[id]=P5Availability.ACTIVE;
+   P5Availability.sync(s);
+   s.needsAvailabilityRebuild=false;
+   const c=s.continuous;
+   let plan=[];
+   if(!c.fixed){
+    // Native recovery treats dispatched lineups as protected partner history.
+    // The copies are never stored or used to award points.
+    const history=s.rounds.flatMap(r=>{
+     const matches=r.matches.filter(m=>m?.cycle===c.cycle&&!m.skipped);
+     return matches.length?[{...r,matches:matches.map(m=>({...m,confirmed:true}))}]:[];
+    });
+    // Keep fixtures possible for temporarily unavailable players. Dispatch
+    // still uses the real availability and occupied courts.
+    const available=Object.fromEntries(s.roster.map(p=>[p.id,P5Availability.ACTIVE]));
+    const recovery={...s,rounds:history,availabilityById:available,currentRound:history.length-1};
+    if(P5Structured.is(s)||P5AdvancedRules.constrained(s)){
+     const remaining=Math.max(1,Math.ceil(c.queue.length/s.courts));
+     recovery.rounds=history.concat(Array.from({length:remaining},()=>({matches:[]})));
+    }
+    plan=P5Structured.is(s)?P5Structured.rebuild(recovery,random):
+     P5AdvancedRules.constrained(s)?P5AdvancedRules.rebuild(recovery,random):P5Recovery.rebuild(recovery,random);
+    const scheduled=new Set(plan.flatMap(r=>r.matches.flatMap(m=>m?.teams.flat()||[])));
+    if(ids.some(id=>!scheduled.has(id)))throw Error('Could not schedule every new participant.');
+    for(const round of plan)P5EngineRegistry.validateRound(round,s);
+   }
+   P5Continuous.addParticipants(s,ids,plan);
+   if(!P5Continuous.verify(s).valid)throw Error('Continuous schedule failed integrity validation.');
+   logAction('Continuous check-in · '+ids.length+' new participant(s) · cycle '+c.cycle);
+   s.ui.modal=null;
+   if(!save())throw Error('Unable to save participant.');
+  }catch(error){
+   s=before;
+   render();
+   return toast('Participant not added: '+error.message);
+  }
+  undo.push(JSON.stringify({...before,ui:undefined}));
+  if(undo.length>80)undo.shift();
+  redo=[];
+  render();
+  toast('Checked in · ready for the next available match');
+ }
  function changeContinuousCourts(next){
   const before=clone(s);
   try{
@@ -77,7 +129,7 @@ function continuousCyclePlan(){
   redo=[];
   render();
  }
-swap(' function start(){collectRegistration();',[continuousCyclePlan,startNextContinuousCycle,changeContinuousCourts].map(fn=>fn.toString()).join('\n')+'\n'+controller+'\n function start(){collectRegistration();','continuous controller functions');
+swap(' function start(){collectRegistration();',[continuousCyclePlan,startNextContinuousCycle,changeContinuousCourts,addContinuousParticipant].map(fn=>fn.toString()).join('\n')+'\n'+controller+'\n function start(){collectRegistration();','continuous controller functions');
 swap('  const engine=ENG[s.mode];snapshot();try{',"  if(s.matchFlow==='continuous')return startContinuous();\n  const engine=ENG[s.mode];snapshot();try{",'route registration start');
 swap('function findMatch(id,ko=false){const matches=ko?s.ko?.rounds[s.ko.roundIndex]?.matches:s.rounds[s.viewRound]?.matches;',"function findMatch(id,ko=false){const matches=ko?s.ko?.rounds[s.ko.roundIndex]?.matches:s.matchFlow==='continuous'?s.rounds.flatMap(r=>r.matches||[]):s.rounds[s.viewRound]?.matches;",'find live match across all continuous court rounds');
 swap('s.ui.modal=null;save();render();toast(ko?',"s.ui.modal=null;if(!ko&&s.matchFlow==='continuous'&&!alreadyConfirmed){applySitoutQueue();P5Continuous.dispatch(s);}save();render();toast(ko?",'release court after confirmed score');
@@ -89,12 +141,21 @@ swap('if(x.rounds.length)P5EngineRegistry.validateSchedule(x.rounds,{...x,roster
 swap('if(next===s.courts){s.pendingCourts=null;', "if(s.stage==='stage1'&&s.matchFlow==='continuous')return changeContinuousCourts(next);if(next===s.courts){s.pendingCourts=null;",'route Continuous court changes');
 swap('if(s.stage!=="stage1"||!flexibleRoundScoring(s)||!s.pendingCourts||!currentDone())',
  "if(s.stage!=='stage1'||s.matchFlow==='continuous'||!flexibleRoundScoring(s)||!s.pendingCourts||s.pendingParticipants?.length||!currentDone())",'route court changes by flow and keep queued roster changes together');
-swap("} · Next Round</button>", "} · Next ${s.matchFlow==='continuous'?'Cycle':'Round'}</button>",'show Add Participant timing');
+swap("} · Next Round</button>", "} · Next ${s.matchFlow==='continuous'?'Available Match':'Round'}</button>",'show Add Participant timing');
 swap('Participants join only after the active round is fully scored. Historical fixtures remain intact.',
- "${s.matchFlow==='continuous'?'Participants join at the start of the next cycle.':'Participants join only after the active round is fully scored.'} Historical fixtures remain intact.",'explain enrollment timing');
-swap("m.type==='add-live'?'Queue for Next Round'", "m.type==='add-live'?(s.matchFlow==='continuous'?'Queue for Next Cycle':'Queue for Next Round')",'label participant queue action');
+ "${s.matchFlow==='continuous'?'The new participant can play as soon as a court and eligible lineup are available.':'Participants join only after the active round is fully scored.'} Historical fixtures remain intact.",'explain enrollment timing');
+swap("m.type==='add-live'?'Queue for Next Round'", "m.type==='add-live'?(s.matchFlow==='continuous'?'Add & Check In':'Queue for Next Round')",'label participant queue action');
+
+const rosterAddLabel="} · Next ${s.matchFlow==='continuous'?'Available Match':'Round'}</button>";
+swap(rosterAddLabel,rosterAddLabel+
+ "${s.matchFlow==='continuous'&&s.mode.endsWith('-americano')&&s.pendingParticipants?.length?`<button type=\"button\" class=\"p5-b31-add-player\" data-act=\"continuous-check-in-queued\">Check In Queued (${s.pendingParticipants.length})</button>`:''}",'offer check-in for saved cycle queue');
+swap("'back-roster','add-live',","'back-roster','add-live','continuous-check-in-queued',",'allow legacy queue action inside roster modal');
+swap("   case 'add-live':","   case 'continuous-check-in-queued':addContinuousParticipant();break;\n   case 'add-live':",'check in saved additions by request');
 swap("title:ENG[s.mode].kind==='individual'?'Add Player · Next Round':'Add Fixed Pair · Next Round'", "title:ENG[s.mode].kind==='individual'?'Add Player':'Add Fixed Pair'",'keep participant dialog title consistent');
-swap("queued · joins the next round.", "queued · joins the next ${s.matchFlow==='continuous'?'cycle':'round'}.",'confirm participant queue timing');
+swap("  snapshot();s.pendingParticipants.push({names,...(P5Structured.is(s)?{group:document.getElementById('p5-51-live-group')?.value||'A'}:{})});",
+ `  const entry={names,...(P5Structured.is(s)?{group:document.getElementById('p5-51-live-group')?.value||'A'}:{})};
+  if(s.matchFlow==='continuous')return addContinuousParticipant(entry);
+  snapshot();s.pendingParticipants.push(entry);`,'register late entrants in the active Continuous cycle');
 swap('Change active court capacity. Court changes queue until the active round is finished. Protected later rounds retain their fixtures; untouched rounds are repacked.',
  "${s.matchFlow==='continuous'&&s.stage==='stage1'?'New courts can start as soon as a fixture is eligible. Courts being closed finish their current matches first.':'Change active court capacity. Court changes queue until the active round is finished. Protected later rounds retain their fixtures; untouched rounds are repacked.'}",'explain Continuous court adjustments');
 swap('court change queued for the next eligible round.', "court change queued ${s.matchFlow==='continuous'&&s.stage==='stage1'?'until closing courts finish.':'for the next eligible round.'}",'show correct pending court status');

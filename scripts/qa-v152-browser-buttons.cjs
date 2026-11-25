@@ -881,7 +881,15 @@ async function main(){
    const ids=roster.map(p=>p.id),engine=P5EngineRegistry.engine(mode),rng=()=>0.37;
    const plan=engine.dynamic?[engine.next(s,P5UI.statistics(s),rng)]:structured?P5Structured.build(s,rng):engine.build(ids,2,rng);
    s.initialSchedule=plan;
-   if(flow==='continuous')P5Continuous.create(s,plan);
+   if(flow==='continuous'){
+    P5Continuous.create(s,plan);
+    for(let i=0;i<8;i++){
+     const played=P5Continuous.active(s)[0];
+     if(!played)throw Error('QA cycle ran out of matches before late check-in');
+     played.score=[3,2];played.confirmed=true;
+     P5Continuous.dispatch(s);
+    }
+   }
    else{ s.rounds=plan;s.continuous=null; }
    localStorage.setItem(P5App.key,JSON.stringify(s));
    window.p5BeforeResourcesReload=true;
@@ -912,14 +920,49 @@ async function main(){
    await tap(save);
    await until(async()=>!(await isModal()),'participant queued');
   };
+  if(mode==='fp-americano'&&flow==='continuous'){
+   await val(`(()=>{
+    const s=P5App.getState();
+    s.pendingParticipants=[{names:['Previously Queued','Previously Queued Partner']}];
+    localStorage.setItem(P5App.key,JSON.stringify(s));window.p5BeforeResourcesReload=true;location.reload();
+   })()`);
+   await until(()=>val('!window.p5BeforeResourcesReload&&window.P5App?.getState().pendingParticipants.length===1'),'saved next-cycle addition restored');
+   await openResource('manage-players');
+   await tap('[data-act="continuous-check-in-queued"]');
+   await until(async()=>!(await isModal()),'saved next-cycle player checked in');
+   assert.equal((await state()).pendingParticipants.length,0);
+   assert.equal((await state()).roster.at(-1).names[0],'Previously Queued');
+  }
   await add('New Player A','A');
   if(mode.startsWith('structured-'))await add('New Player B','B');
-  assert.equal((await state()).pendingParticipants.length,mode.startsWith('structured-')?2:1);
-  assert.equal((await state()).roster.length,initial.roster.length,'Queued participant cannot alter the active roster');
-  await requestCourts(3);
+  const additions=mode.startsWith('structured-')?2:1;
+  const registered=await state();
   if(flow==='continuous'){
+   assert.equal(registered.continuous.cycle,1);
+   assert.equal(registered.pendingParticipants.length,0);
+   assert.equal(registered.roster.length,initial.roster.length+additions+(mode==='fp-americano'?1:0));
+   assert.deepEqual(registered.rounds,initial.rounds,'Check-in preserves eight prior results and the entire live lineup');
+   const entrant=registered.roster.find(p=>p.names[0]==='New Player A').id;
+   assert.equal(registered.availabilityById[entrant],'ACTIVE','New participant is checked in immediately');
+   assert(await val('P5Continuous.verify(P5App.getState()).valid'));
+   const nextOpening=await val(`(()=>{
+    const s=P5App.getState(),live=P5Continuous.active(s),entrants=s.roster.filter(p=>p.names[0].startsWith('New Player')||p.names[0]==='Previously Queued').map(p=>p.id);
+    return live.find(match=>{
+     const occupied=new Set(live.filter(m=>m!==match).flatMap(m=>m.teams.flat()));
+     return s.continuous.queue.some(f=>f.teams.flat().some(id=>entrants.includes(id))&&f.teams.flat().every(id=>!occupied.has(id)));
+    })?.id;
+   })()`);
+   assert(nextOpening,'At least one safe newcomer fixture can use the next free court');
+   await confirmManagementScore(nextOpening,flow);
+   const beforeResize=await state();
+   const dispatched=beforeResize.rounds.slice(registered.rounds.length).flatMap(r=>r.matches.filter(Boolean));
+   assert(dispatched.some(m=>m.teams.flat().some(id=>id>=initial.nextId)),'A new participant plays the next available match in Cycle 1');
+   assert.equal(beforeResize.continuous.cycle,1);
+   assert.deepEqual(beforeResize.rounds.slice(0,initial.rounds.length).flatMap(r=>r.matches.filter(m=>m?.confirmed&&m.id!==nextOpening)),
+    initial.rounds.flatMap(r=>r.matches.filter(m=>m?.confirmed)),'First eight scores remain unchanged');
+   await requestCourts(3);
    assert.equal((await state()).courts,3,'Continuous court increase applied');
-   assert.deepEqual((await state()).rounds.slice(0,initial.rounds.length),initial.rounds,'Court increase keeps existing fixtures');
+   assert.deepEqual((await state()).rounds.slice(0,beforeResize.rounds.length),beforeResize.rounds,'Court increase keeps existing fixtures');
    await requestCourts(1);
    assert.equal((await state()).pendingCourts,1,'Reduction queued while closing courts are live');
    const closing=await val('P5Continuous.active(P5App.getState()).filter(m=>m.court>1).map(m=>m.id)');
@@ -938,13 +981,16 @@ async function main(){
    await until(()=>val('!window.p5BeforeResourcesReload&&!!document.querySelector("[data-act=continuous-next-cycle]")'),'next cycle action');
    const completed=await state();
    await tap('[data-act="continuous-next-cycle"]');
-   await until(()=>val('P5App.getState().continuous?.cycle===2'),'queued roster applied at cycle start');
+   await until(()=>val('P5App.getState().continuous?.cycle===2'),'start the next cycle with the expanded roster');
    const next=await state();
    assert.deepEqual(next.rounds.slice(0,completed.rounds.length),completed.rounds,'Cycle 1 retained');
    assert.equal(next.pendingParticipants.length,0);
    assert(next.roster.some(p=>p.names[0]==='New Player A'));
    assert(await val('(()=>{const s=P5App.getState();return [...P5Continuous.active(s),...s.continuous.queue].some(m=>m.teams.flat().includes(s.roster.find(p=>p.names[0]==="New Player A").id))})()'),'New arrival receives a fixture');
   }else{
+   assert.equal(registered.pendingParticipants.length,additions);
+   assert.equal(registered.roster.length,initial.roster.length,'Queued participant cannot alter the active roster');
+   await requestCourts(3);
    assert.equal((await state()).pendingCourts,3,'Round-based court change queued');
    for(const m of initialMatches)await confirmManagementScore(m.id,flow);
    const afterScores=await state();

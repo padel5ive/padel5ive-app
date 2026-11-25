@@ -399,6 +399,39 @@ async function main(){
  assert(await val('!!document.querySelector(".p5-cont-stage .p5-cont-courts")'),'iPad shared continuous dashboard rendered');
  console.log('PASS iPad landscape Continuous shared court layout');
 
+
+ const availabilityBefore=await state();
+ const liveIds=new Set((await val('P5Continuous.active(P5App.getState())')).flatMap(m=>m.teams.flat()));
+ const restingId=availabilityBefore.roster.find(p=>!liveIds.has(p.id)).id;
+ const playingId=liveIds.values().next().value;
+ async function setContinuousParticipation(id,choice){
+  await tap(name+'[data-id="'+id+'"]');
+  await until(isStats,'continuous participant stats');
+  await tap('[data-p5ps-status]');
+  await until(isModal,'continuous participation dialog');
+  await tap(choice);
+  await tap(save);
+ }
+ await setContinuousParticipation(restingId,sitout);
+ await until(async()=>!(await isModal()),'resting participant marked Sit Out');
+ let availabilityAfter=await state();
+ assert.equal(availabilityAfter.availabilityById[restingId],'SIT_OUT');
+ assert.deepEqual(availabilityAfter.rounds,availabilityBefore.rounds,'Continuous Sit Out cannot rebuild live or scored matches');
+ assert.deepEqual(availabilityAfter.continuous,availabilityBefore.continuous,'Continuous Sit Out keeps fixture IDs and pause state');
+ await setContinuousParticipation(restingId,active);
+ await until(async()=>!(await isModal()),'resting participant returned');
+ assert.deepEqual((await state()).continuous,availabilityBefore.continuous);
+ await setContinuousParticipation(playingId,sitout);
+ await until(()=>val('P5App.getState().ui.modal?.title==="Participant Update Rejected"'),'on-court participant remains available for score confirmation');
+ availabilityAfter=await state();
+ assert.equal(availabilityAfter.availabilityById[playingId],'ACTIVE','Reject cannot commit a partial availability change');
+ assert.deepEqual(availabilityAfter.rounds,availabilityBefore.rounds);
+ assert.deepEqual(availabilityAfter.continuous,availabilityBefore.continuous);
+ await tap(cancel);
+ assert(await val('P5Continuous.verify(P5App.getState()).valid'));
+ assert(await val('(()=>{const s=P5App.getState();s.continuous.queue[0].key=P5Continuous.active(s)[0].fixtureKey;return !P5Continuous.verify(s).valid;})()'),'Queue rejects keys that were already dispatched');
+ console.log('PASS Continuous participation after replacement: preserve live courts, scores, pause and pending fixture keys');
+
  // The user must be able to finish a strict cycle then browse/edit it in Cycle 2.
  await val([
   '(()=>{const s=P5App.getState();s.continuous.paused=false;',
@@ -773,6 +806,24 @@ async function main(){
    assert.deepEqual(partnerSwap.rounds[1].matches[0].teams,[[3,2],[5,4]],'Partners swap in one match');
    assert.deepEqual(partnerSwap.rounds[1].matches.slice(1),lineups.slice(1),'Other live and scored courts remain unchanged');
    assert.deepEqual(partnerSwap.rounds[0].matches[0],checkpoint.history);
+  }
+
+  if(mode.endsWith('-mexicano')){
+   for(const fixtureId of ['SW-ONE','SW-TWO']){
+    await tap('[data-act="score"][data-match="'+fixtureId+'"] .p5-score-tap');
+    await val('(()=>{const score=document.getElementById("p5-score-a");score.value="3";score.dispatchEvent(new Event("change",{bubbles:true}));})()');
+    await tap(save);
+    await until(async()=>!(await isModal()),'count score on the swapped lineup');
+   }
+   const played=await state();
+   const scores=played.rounds[1].matches;
+   assert(scores.every(m=>m.confirmed),'All modified matches use native scoring');
+   const expected=await val('(()=>{const s=P5App.getState();let seed=s.seed;const random=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;};return P5EngineRegistry.engine(s.mode).next(s,P5App.statistics(),random).matches.map(m=>m.teams);})()');
+   await tap('[data-act="next-round"]');
+   await until(()=>val('P5App.getState().currentRound===2'),'Mexicano rebuilt the next round');
+   const next=await state();
+   assert.deepEqual(next.rounds[1].matches,scores,'Next-round matchmaking preserves confirmed swaps');
+   assert.deepEqual(next.rounds[2].matches.map(m=>m.teams),expected,'Next round uses canonical rankings after scoring the swapped lineups');
   }
   console.log('PASS '+mode+'/'+flow+' swap: same court, cross-court, eligibility and score protection');
  }

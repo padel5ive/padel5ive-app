@@ -227,6 +227,24 @@ function setReplacementSlot(match,side,slot,incoming,fixed,at) {
   match.teams[side][slot]=incoming;
 }
 
+function validateReplacementSchedule(s, target, swap, changes) {
+  const affected=new Set([target,...changes.keys()]);
+  if(swap)affected.add(swap.fixture);
+  if(s.matchFlow==='continuous'){
+    if(!P5Continuous.verify(s).valid)throw Error('Continuous court assignments or queue are inconsistent');
+    for(const fixture of affected){
+      P5EngineRegistry.validateRound({matches:[{id:fixture.key,court:1,...fixture}]},s);
+    }
+    return;
+  }
+  s.rounds.forEach((round,index)=>{
+    if(!round.matches.some(m=>affected.has(m)))return;
+    // Historic fixtures can still use a court removed from later rounds.
+    const courts=index<s.currentRound?Math.max(s.courts,...round.matches.map(m=>m?.court||0)):s.courts;
+    P5EngineRegistry.validateRound(round,{...s,courts});
+  });
+}
+
 function saveReplacement(){
   const draft=s.ui.modal;
   if(draft?.type!=='replacement'||s.stage!=='stage1')return;
@@ -245,6 +263,7 @@ function saveReplacement(){
       if(s.matchFlow==='continuous')fixture.adaptiveBaseTeams??=fixture.teams;
       fixture.teams=teams;
     }
+    validateReplacementSchedule(s,match,swap,plan.changes);
     const courts=candidate.sameMatch?'C'+match.court:'C'+match.court+' / C'+candidate.court;
     logAction(swap?(candidate.sameMatch?'Partner swap · ':'Court swap · ')+draft.current.name+' ↔ '+candidate.name+' · '+courts:
       'One-match substitution · '+draft.current.name+' → '+candidate.name+' · '+match.id);
@@ -286,7 +305,7 @@ function integrate() {
   edit('matchId:id,side,slot,current,fromScore,draftScore','matchId:id,side,slot,current,court:m.court,fromScore,draftScore');
   edit("    if(a)a.value=m.draftScore.a;if(b)b.value=m.draftScore.b;",
     "    if(a)a.value=m.draftScore.a;if(b)b.value=m.draftScore.b;\n    if($('modal-a'))$('modal-a').value=m.draftScore.a;if($('modal-b'))$('modal-b').value=m.draftScore.b;");
-  const controller=[replacementPlan,replacementSelection,replacementSchedule,renderReplacementPreview,setReplacementSlot,saveReplacement];
+  const controller=[replacementPlan,replacementSelection,replacementSchedule,renderReplacementPreview,setReplacementSlot,validateReplacementSchedule,saveReplacement];
   replaceSection(' function saveReplacement(){',' function continuousReviewScore(){',
     controller.map(fn=>fn.toString()).join('\n')+'\n');
   edit("document.addEventListener('change',e=>{if(e.target?.id==='setup-match-flow')",
@@ -300,6 +319,20 @@ function integrate() {
    ...taken.map(m=>({key:m.fixtureKey,teams:m.adaptiveBaseTeams||m.originalTeams||m.teams}))
   ];`
   );
+  edit("  const unique=new Set(all.map(m=>m.fixtureKey));", `  const keys=all.map(m=>m.fixtureKey).concat(c.queue.map(f=>f.key));
+  const queueValid=c.scheduled===all.length&&c.total===keys.length&&keys.every(key=>typeof key==='string'&&key.length>0)&&new Set(keys).size===keys.length;
+  const liveCycleValid=live.every(m=>m.cycle===c.cycle);`);
+  edit('valid:unique.size===all.length&&courts.size===live.length','valid:queueValid&&liveCycleValid&&courts.size===live.length');
+  edit("  if(s.stage!=='stage1'||!s.needsAvailabilityRebuild)return;", `  if(s.stage!=='stage1'||!s.needsAvailabilityRebuild)return;
+  if(s.matchFlow==='continuous'){
+   if(!P5Continuous.verify(s).valid)throw Error('Continuous schedule and queue are inconsistent.');
+   if(P5Continuous.active(s).some(m=>!P5Availability.eligibleMatch(s,m)))
+    throw Error('Replace this participant or confirm their active match before changing availability.');
+   P5Availability.hydrate(s);
+   P5Continuous.dispatch(s);
+   s.needsAvailabilityRebuild=false;
+   return;
+  }`);
   fs.writeFileSync(file,html);
 }
 if(require.main===module) integrate();

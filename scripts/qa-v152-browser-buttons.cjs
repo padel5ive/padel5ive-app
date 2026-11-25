@@ -211,7 +211,7 @@ async function main(){
  const selector='#americano .p5-match-names .p5-person-action';
  await tap(selector);await until(isModal,'Replace Player modal');
  assert.equal(await val('document.querySelector("#p5-modal-root .p5-v2-modal h2")?.textContent'),'REPLACE PLAYER');
- const available=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
+ const available=await val('Array.from(document.querySelectorAll("#p5-replacement-select optgroup:first-of-type option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
  assert(available.length>=1,'12 players / 2 courts should include eligible resting substitutes');
  const chosen=available[0],chosenId=Number(chosen.split(':')[0]);
  await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(chosen)+'})()');
@@ -233,10 +233,10 @@ async function main(){
  assert.equal(await val('document.querySelector('+JSON.stringify(firstCardSelector)+')?.querySelectorAll(".p5-sub-badge").length'),0,'Updated names appear without SUB badges');
  // Replace again within the SAME fixture; no global one-time limit.
  await tap(selector);await until(isModal,'second replacement in same match');
- const nextOptions=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
- const second=nextOptions.find(x=>x!==chosen);
+ const nextOptions=await val('Array.from(document.querySelectorAll("#p5-replacement-select optgroup:first-of-type option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
+ const second=nextOptions.find(x=>x!==chosen&&Number(x.split(':')[0])!==first.teams[0][0]);
  assert(second,'At least one different resting replacement should remain');
- await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(second)+'})()');
+ await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(second)+';document.querySelector("#p5-replacement-select").dispatchEvent(new Event("change",{bubbles:true}))})()');
  await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'second replacement saved');
  const repeated=await state(),replacedAgain=repeated.rounds[0].matches.find(m=>m?.id===targetMatchId);
  assert.equal(replacedAgain.substitutions.length,1,'Repeated replacement updates same slot instead of duplicating substitution rows');
@@ -308,10 +308,10 @@ async function main(){
  await tap('#americano .p5-cont-courts .p5-person-action');
  await until(isModal,'iPhone fixed-partner replacement modal');
  assert.equal(await val('document.querySelector("#p5-modal-root .p5-v2-modal h2")?.textContent'),'REPLACE FIXED PAIR','Fixed Partner replacement must use whole-pair selector');
- const readyFixed=await val('Array.from(document.querySelectorAll("#p5-replacement-select option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
+ const readyFixed=await val('Array.from(document.querySelectorAll("#p5-replacement-select optgroup:first-of-type option")).filter(x=>x.value&&!x.disabled).map(x=>x.value)');
  assert(readyFixed.length,'Resting fixed-pair players available for substitution');
  const picked=readyFixed[0],pickedId=Number(picked.split(':')[0]);
- await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(picked)+'})()');
+ await val('(()=>{document.querySelector("#p5-replacement-select").value='+JSON.stringify(picked)+';document.querySelector("#p5-replacement-select").dispatchEvent(new Event("change",{bubbles:true}))})()');
  await tap('#p5-modal-root [data-act="replace-save"]');await until(async()=>!(await isModal()),'fixed partner substitution confirmed');
  const fixedAfter=await state(),fixedChanged=fixedAfter.rounds.flatMap(r=>r.matches).find(m=>m?.id===fixedTarget.id);
  assert.equal(fixedChanged.teams[0][0],pickedId,'Fixed substitution replaces the complete pair ID');
@@ -692,6 +692,73 @@ async function main(){
  }
 
 
+
+
+ // Native dropdown, both sides of a swap, and score protection in each Americano/Mexicano pairing.
+ for(const [mode,flow] of [
+  ['individual-americano','rounds'],['individual-americano','continuous'],
+  ['fp-americano','rounds'],['fp-americano','continuous'],
+  ['structured-americano','rounds'],['structured-americano','continuous'],
+  ['individual-mexicano','rounds'],['fp-mexicano','rounds'],['structured-mexicano','rounds']
+ ]){
+  const checkpoint=await val('('+function(mode,flow){
+   const s=P5App.getState(),fixed=mode.startsWith('fp-'),structured=mode.startsWith('structured-');
+   const roster=Array.from({length:16},(_,i)=>({id:i+1,names:fixed?['Player '+(i+1),'Partner '+(i+1)]:['Player '+(i+1)],group:i%2===0?'A':'B'}));
+   const match=(id,court,a,b,scored=false)=>({id,court,teams:fixed?[[a],[b]]:[[a,a+1],[b,b+1]],
+    confirmed:scored,score:scored?[3,2]:null,cycle:1,fixtureKey:id});
+   const history=match('SW-HISTORY',1,5,13,true);
+   const matches=[match('SW-ONE',1,1,3),match('SW-TWO',2,5,7),match('SW-SCORED',3,9,11,true)];
+   const rounds=[{index:0,matches:[history]},{index:1,matches}];
+   Object.assign(s,{stage:'stage1',mode,matchFlow:flow,roster,ko:null,courts:3,nextId:17,currentRound:1,
+    viewRound:1,rounds,initialSchedule:rounds,initialCourts:3,pendingCourts:null,needsAvailabilityRebuild:false,
+    pendingParticipants:[],rules:P5AdvancedRules.blank(),groupConfig:{labels:['Left','Right']},
+    session:'Court Swap · QA',matchFormat:'total5',sitout:[],sitoutPending:{},
+    continuous:flow==='continuous'?{cycle:1,queue:[],total:4,scheduled:4,paused:false,fixed,serial:4}:null,
+    availabilityById:Object.fromEntries(roster.map(p=>[p.id,p.id===15?'SIT_OUT':'ACTIVE'])),
+    ui:{...s.ui,modal:null,menuOpen:false,p5Pr36View:'rounds',contArrivalOpen:false,contHistoryOpen:false}});
+   P5Availability.sync(s);
+   localStorage.setItem(P5App.key,JSON.stringify(s));
+   window.p5BeforeSwapReload=true;
+   location.reload();
+   return {history,matches};
+  }.toString()+')('+[mode,flow].map(JSON.stringify).join(',')+')');
+  await size(390,844);
+  const source='[data-act="replace-player"][data-match="SW-ONE"][data-side="0"][data-slot="0"]';
+  await until(()=>val('document.readyState==="complete"&&!window.p5BeforeSwapReload&&!!document.querySelector('+JSON.stringify(source)+')'),mode+'/'+flow+' swap fixture ready');
+  await tap(source);
+  await until(()=>val('!!document.getElementById("p5-replacement-select")'),'replacement selector');
+  const candidate=await val('(()=>{const o=Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="5:0");return {name:o.textContent.trim(),group:o.parentElement.label,disabled:o.disabled};})()');
+  assert.match(candidate.name,/1 played · Court 2/);
+  if(mode.startsWith('fp-'))assert.match(candidate.name,/Player 5 & Partner 5/);
+  assert.equal(candidate.group,'ON COURT · SWAP');
+  assert.equal(candidate.disabled,false);
+  assert.equal(await val('Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="15:0").disabled'),true,'Sit Out blocked');
+  if(flow==='rounds')assert.match(await val('Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="9:0").textContent'),/Score entered/);
+  if(mode.startsWith('structured-'))assert.equal(await val('Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="6:0").disabled'),true,'Cross-group swap blocked');
+  const selectSwap='(()=>{const e=document.getElementById("p5-replacement-select");e.value="5:0";e.dispatchEvent(new Event("change",{bubbles:true}));})()';
+  await val(selectSwap);
+  assert.equal(await val('document.querySelector("[data-act=replace-save]").textContent'),'Confirm Swap');
+  assert.match(await val('document.getElementById("p5-replacement-preview").textContent'),/Court 1.*Player 1.*out.*Player 5.*in[\s\S]+Court 2.*Player 5.*out.*Player 1.*in/);
+  await tap('[data-act="replace-cancel"]');
+  assert.deepEqual((await state()).rounds[1].matches,checkpoint.matches,'Cancel leaves both courts unchanged');
+  await tap(source);
+  await val(selectSwap);
+  await tap('[data-act="replace-save"]');
+  const result=await state(),lineups=result.rounds[1].matches;
+  assert.deepEqual(lineups[0].teams,[[5,...checkpoint.matches[0].teams[0].slice(1)],checkpoint.matches[0].teams[1]]);
+  assert.deepEqual(lineups[1].teams,[[1,...checkpoint.matches[1].teams[0].slice(1)],checkpoint.matches[1].teams[1]]);
+  assert.deepEqual(lineups[2],checkpoint.matches[2],'Confirmed court scores and assignments stay intact');
+  assert.deepEqual(result.rounds[0].matches[0],checkpoint.history,'Prior scores stay intact');
+  const scoredCard='[data-act="score"][data-match="SW-ONE"] .p5-score-tap';
+  await tap(scoredCard);
+  await val('(()=>{const score=document.getElementById("p5-score-a");score.value="3";score.dispatchEvent(new Event("change",{bubbles:true}));})()');
+  await tap('#p5-modal-root '+source);
+  assert.equal(await val('Array.from(document.getElementById("p5-replacement-select").options).find(o=>o.value==="1:0").disabled'),true,'An entered draft locks swap');
+  await tap('[data-act="replace-cancel"]');
+  assert.equal(await val('document.getElementById("p5-score-a").value'),'3','Cancel preserves draft');
+  await tap('#p5-modal-root [data-act="modal-cancel"]');
+  console.log('PASS '+mode+'/'+flow+' swap: match count, two courts, eligibility, cancel and score protection');
+ }
 
  // Resume a pre-upgrade completed Continuous session with no saved Next Cycle state.
  for(const mode of ['structured-americano','individual-americano']){

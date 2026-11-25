@@ -21,6 +21,17 @@ const eligible=state([[saved],[target],[future]]);
 eligible.rounds[2].eligibleIds=[2,3];
 assert.equal(replacementPlan(eligible,target,0,0,3).changes.size,0);
 
+// Include both live changes in the optimizer, and apply future updates separately.
+const courtOne=match(1,2),courtTwo=match(3,4),queuedOne=match(3,2),queuedTwo=match(1,4);
+const earlier=Object.assign(match(5,6),{confirmed:true,score:[3,2]});
+const swapState=state([[earlier],[courtOne,courtTwo],[queuedOne,queuedTwo]]);
+const swapBefore=JSON.stringify(swapState);
+const swapPlan=replacementPlan(swapState,courtOne,0,0,3,{fixture:courtTwo,side:0,slot:0});
+assert.equal(JSON.stringify(swapState),swapBefore);
+assert(!swapPlan.changes.has(courtOne)&&!swapPlan.changes.has(courtTwo));
+assert.deepEqual(swapPlan.changes.get(queuedOne),[[1],[2]]);
+assert.deepEqual(swapPlan.changes.get(queuedTwo),[[3],[4]]);
+
 // Every legal first-match substitution in a full fixed-partner continuous cycle.
 for(let n=4;n<=12;n++){
   for(let id=3;id<=n;id++){

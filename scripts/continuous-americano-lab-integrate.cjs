@@ -30,10 +30,33 @@ function continuousCyclePlan(){
   const base=P5AdvancedRules.constrained(s)?P5AdvancedRules.build(s,random):structured?P5Structured.build(s,random):ENG[s.mode].build(ids,s.courts,random);
   return P5Fair532.optimize(base,[],ids,random,{coaches:P5AdvancedRules.coachIds(s),structured,availableIds:ids});
  }
+ function changeContinuousCourts(next){
+  const before=clone(s);
+  try{
+   s.pendingCourts=next===s.courts?null:next;
+   P5Continuous.dispatch(s);
+   if(!P5Continuous.verify(s).valid)throw Error('Continuous schedule failed integrity validation');
+   const queued=s.pendingCourts!=null;
+   logAction(queued?'Continuous court change queued · '+next:'Continuous courts active · '+s.courts);
+   s.ui.modal=null;
+   if(!save())throw Error('Unable to save court change');
+  }catch(error){
+   s=before;
+   render();
+   return toast('Court change rejected: '+error.message);
+  }
+  undo.push(JSON.stringify({...before,ui:undefined}));
+  if(undo.length>80)undo.shift();
+  redo=[];
+  render();
+  toast(s.pendingCourts?next+' courts queued · closing courts finish their active matches first':s.courts+' courts active');
+ }
  function startNextContinuousCycle(){
   if(s.stage!=='stage1'||s.matchFlow!=='continuous'||!P5Continuous.complete(s))return;
   const before=clone(s);
   try{
+   applyPendingParticipants();
+   s.needsAvailabilityRebuild=false;
    s.availabilityById=Object.fromEntries(s.roster.map(p=>[p.id,P5Availability.ACTIVE]));
    s.sitoutPending={};
    P5Availability.sync(s);
@@ -54,15 +77,50 @@ function continuousCyclePlan(){
   redo=[];
   render();
  }
-swap(' function start(){collectRegistration();',[continuousCyclePlan,startNextContinuousCycle].map(fn=>fn.toString()).join('\n')+'\n'+controller+'\n function start(){collectRegistration();','continuous controller functions');
+swap(' function start(){collectRegistration();',[continuousCyclePlan,startNextContinuousCycle,changeContinuousCourts].map(fn=>fn.toString()).join('\n')+'\n'+controller+'\n function start(){collectRegistration();','continuous controller functions');
 swap('  const engine=ENG[s.mode];snapshot();try{',"  if(s.matchFlow==='continuous')return startContinuous();\n  const engine=ENG[s.mode];snapshot();try{",'route registration start');
 swap('function findMatch(id,ko=false){const matches=ko?s.ko?.rounds[s.ko.roundIndex]?.matches:s.rounds[s.viewRound]?.matches;',"function findMatch(id,ko=false){const matches=ko?s.ko?.rounds[s.ko.roundIndex]?.matches:s.matchFlow==='continuous'?s.rounds.flatMap(r=>r.matches||[]):s.rounds[s.viewRound]?.matches;",'find live match across all continuous court rounds');
 swap('s.ui.modal=null;save();render();toast(ko?',"s.ui.modal=null;if(!ko&&s.matchFlow==='continuous'&&!alreadyConfirmed){applySitoutQueue();P5Continuous.dispatch(s);}save();render();toast(ko?",'release court after confirmed score');
 swap("if(ko)P5KO.confirm(s,m.id,[a,b]);","const alreadyConfirmed=!!m.confirmed;\n   if(ko)P5KO.confirm(s,m.id,[a,b]);",'identify historical correction before dispatch');
 swap(' function finish(skipBalanceCheck=false){'," function finish(skipBalanceCheck=false){if(s.matchFlow==='continuous')return finishContinuous();",'finish continuous without fabricated round gate');
 swap("   case 'score':scoreModal", "   case 'continuous-pause':if(s.matchFlow==='continuous'&&s.continuous){snapshot();s.continuous.paused=!s.continuous.paused;if(!s.continuous.paused)P5Continuous.dispatch(s);save();render();}break;\n   case 'continuous-next-cycle':startNextContinuousCycle();break;\n   case 'continuous-finish':finishContinuous('final');break;\n   case 'continuous-stage2':finishContinuous('ko');break;\n   case 'continuous-arrival-open':s.ui.contArrivalOpen=!s.ui.contArrivalOpen;render();break;\n   case 'continuous-arrival-toggle':continuousArrivalToggle(Number(el.dataset.id));break;\n   case 'continuous-reshuffle':continuousReshuffle();break;\n   case 'score':scoreModal",'continuous actions');
-swap("function action(act,el,scoreSide){if(!", "function action(act,el,scoreSide){if(s.matchFlow==='continuous'&&s.stage==='stage1'&&act==='reset-stage1')return resetContinuous();\n  if(s.matchFlow==='continuous'&&s.stage==='stage1'&&['next-round','advance-schedule','fill-empty-court','add-live','manage-courts'].includes(act))return toast('Continuous: pause and finish active fixtures before changing the fixture cycle.');\n  if(!",'disable round-specific actions in continuous');
+swap("function action(act,el,scoreSide){if(!", "function action(act,el,scoreSide){if(s.matchFlow==='continuous'&&s.stage==='stage1'&&act==='reset-stage1')return resetContinuous();\n  if(s.matchFlow==='continuous'&&s.stage==='stage1'&&['next-round','advance-schedule','fill-empty-court'].includes(act))return toast('Continuous: pause and finish active fixtures before changing the fixture cycle.');\n  if(!",'disable round-specific actions in continuous');
 swap('if(x.rounds.length)P5EngineRegistry.validateSchedule(x.rounds,{...x,roster:x.roster});',"if(x.rounds.length){if(x.matchFlow==='continuous'){if(!P5Continuous.verify(x).valid)throw Error('Continuous fixture integrity failure');}else P5EngineRegistry.validateSchedule(x.rounds,{...x,roster:x.roster});}",'safe backup import for continuous data');
+swap('if(next===s.courts){s.pendingCourts=null;', "if(s.stage==='stage1'&&s.matchFlow==='continuous')return changeContinuousCourts(next);if(next===s.courts){s.pendingCourts=null;",'route Continuous court changes');
+swap('if(s.stage!=="stage1"||!flexibleRoundScoring(s)||!s.pendingCourts||!currentDone())',
+ "if(s.stage!=='stage1'||s.matchFlow==='continuous'||!flexibleRoundScoring(s)||!s.pendingCourts||s.pendingParticipants?.length||!currentDone())",'route court changes by flow and keep queued roster changes together');
+swap("} · Next Round</button>", "} · Next ${s.matchFlow==='continuous'?'Cycle':'Round'}</button>",'show Add Participant timing');
+swap('Participants join only after the active round is fully scored. Historical fixtures remain intact.',
+ "${s.matchFlow==='continuous'?'Participants join at the start of the next cycle.':'Participants join only after the active round is fully scored.'} Historical fixtures remain intact.",'explain enrollment timing');
+swap("m.type==='add-live'?'Queue for Next Round'", "m.type==='add-live'?(s.matchFlow==='continuous'?'Queue for Next Cycle':'Queue for Next Round')",'label participant queue action');
+swap("title:ENG[s.mode].kind==='individual'?'Add Player · Next Round':'Add Fixed Pair · Next Round'", "title:ENG[s.mode].kind==='individual'?'Add Player':'Add Fixed Pair'",'keep participant dialog title consistent');
+swap("queued · joins the next round.", "queued · joins the next ${s.matchFlow==='continuous'?'cycle':'round'}.",'confirm participant queue timing');
+swap('Change active court capacity. Court changes queue until the active round is finished. Protected later rounds retain their fixtures; untouched rounds are repacked.',
+ "${s.matchFlow==='continuous'&&s.stage==='stage1'?'New courts can start as soon as a fixture is eligible. Courts being closed finish their current matches first.':'Change active court capacity. Court changes queue until the active round is finished. Protected later rounds retain their fixtures; untouched rounds are repacked.'}",'explain Continuous court adjustments');
+swap('court change queued for the next eligible round.', "court change queued ${s.matchFlow==='continuous'&&s.stage==='stage1'?'until closing courts finish.':'for the next eligible round.'}",'show correct pending court status');
+swap('  if(s.viewRound!==s.currentRound){s.viewRound=s.currentRound;render();return;}',
+ '  if(s.viewRound!==s.currentRound&&!(forceAdvance&&flexibleRoundScoring(s))){s.viewRound=s.currentRound;render();return;}','apply queued changes from Americano round navigation');
+swap('   const changedSitout=applySitoutQueue(),added=applyPendingParticipants();', `   if(forceAdvance&&flexibleRoundScoring(s)){
+    // The scoring view can finish several rounds before applying roster changes.
+    while(s.currentRound+1<s.rounds.length){
+     const next=s.rounds[s.currentRound+1].matches.filter(Boolean);
+     if(!next.length||!next.every(m=>m.confirmed))break;
+     s.currentRound++;
+    }
+   }
+   const changedSitout=applySitoutQueue(),added=applyPendingParticipants();`,'keep completed rounds during roster advancement');
+swap('P5EngineRegistry.validateFreshRound(s.rounds[s.currentRound],s.rounds.slice(0,s.currentRound),s);save();render();',
+ 'P5EngineRegistry.validateFreshRound(s.rounds[s.currentRound],s.rounds.slice(0,s.currentRound),s);if(added)s.needsAvailabilityRebuild=false;save();render();','avoid rebuilding the same roster change twice');
+swap("try{const plan=clone(s.initialSchedule||[]);s.sitout=[];s.sitoutPending={};s.pendingParticipants=[];P5Continuous.create(s,plan);",
+ `try{
+    s.availabilityById=Object.fromEntries(s.roster.map(p=>[p.id,P5Availability.ACTIVE]));
+    P5Availability.sync(s);
+    s.pendingParticipants=[];s.pendingCourts=null;s.needsAvailabilityRebuild=false;
+    const saved=clone(s.initialSchedule||[]);
+    const scheduledIds=new Set(saved.flatMap(r=>r.matches.filter(Boolean).flatMap(m=>m.teams.flat())));
+    const sameRoster=scheduledIds.size===s.roster.length&&s.roster.every(p=>scheduledIds.has(p.id));
+    const keepPlan=s.mode==='fp-group-stage'||(s.initialCourts===s.courts&&sameRoster);
+    P5Continuous.create(s,keepPlan?saved:continuousCyclePlan());`,'reset uses current roster and capacity');
 const css="\n#americano .p5-cont-stage .p5-v26-ondeck-line > span:only-child{grid-column:1/-1}\n/* Continuous Americano · same native dashboard components */\n#americano .p5-cont-stage .p5-cont-desc{margin:8px 0 14px;line-height:1.6;font-size:12px;color:#b4c2cb}\n#americano .p5-cont-courts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}\n#americano .p5-cont-courts .court{min-width:0;min-height:160px}\n#americano .p5-cont-actions{display:flex;flex-wrap:wrap;gap:10px;margin:17px 0}\n#americano .p5-cont-actions button{min-height:44px;min-width:160px;flex:1}\n#americano .p5-cont-rest{display:flex;flex-wrap:wrap;gap:9px;border:1px solid #4d585d;background:#1a252d;border-radius:10px;padding:12px;margin:15px 0;color:#b7c4c6;font-size:11px;line-height:1.6}\n#americano .p5-cont-rest b{color:#d6bd94;white-space:nowrap}\n#americano .p5-cont-history{margin:15px 0;border-top:1px solid #3e4b52;padding-top:12px}\n#americano .p5-cont-history summary{font-size:12px;color:#e1c5a1;cursor:pointer}\n#americano .p5-cont-history>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #38464e;font-size:11px}\n#americano .p5-cont-history>div>b{white-space:nowrap;color:#edce9c}\n#americano .p5-cont-cycle-complete{border:1px solid #8c7959;background:#2a302d;border-radius:12px;padding:16px;margin:17px 0;display:grid;gap:10px}\n#americano .p5-cont-cycle-complete strong{letter-spacing:.12em;color:#ebd5af;font-size:12px}\n#americano .p5-cont-cycle-complete p{font-size:12px;color:#c0c9c8;margin:0}\n#americano .p5-cont-cycle-complete button{min-height:44px}\n@media(max-width:700px){#americano .p5-cont-courts{grid-template-columns:1fr}#americano .p5-cont-actions button{min-width:0}#americano .p5-cont-rest{display:block}}\n";
 const end=html.lastIndexOf('</style>');if(end<0)throw Error('No final stylesheet');html=html.slice(0,end)+'\n/* PADEL 5IVE LAB CONTINUOUS */\n'+css+'\n'+html.slice(end);
 fs.writeFileSync(file,html);console.log('Continuous Americano integrated using shared registration, dashboard, score, KO and reporting');

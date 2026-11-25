@@ -16,7 +16,7 @@
  const queued=s=>s.continuous?.queue||[];
  const freeCourts=s=>{
   const playing=new Set(active(s).map(m=>m.court));
-  return Array.from({length:s.courts},(_,i)=>i+1).filter(x=>!playing.has(x));
+  return Array.from({length:Math.min(s.courts,s.pendingCourts??s.courts)},(_,i)=>i+1).filter(x=>!playing.has(x));
  };
  function cycleQueue(s,fixed,precomputed){
   let queue=[];
@@ -42,7 +42,13 @@
   return s.continuous;
  }
  function dispatch(s){
-  const c=s.continuous;if(!c||c.paused)return 0;
+  const c=s.continuous;
+  if(!c)return 0;
+  if(s.pendingCourts&&!active(s).some(m=>m.court>s.pendingCourts)){
+   s.courts=s.pendingCourts;
+   s.pendingCourts=null;
+  }
+  if(c.paused)return 0;
   let created=0;
   for(const court of freeCourts(s)){
    if(!c.queue.length)break;

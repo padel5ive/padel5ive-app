@@ -841,6 +841,148 @@ async function main(){
   console.log('PASS '+mode+'/'+flow+' swap: same court, cross-court, eligibility and score protection');
  }
 
+ // Verify both resource buttons from Menu & Settings in every supported flow.
+ async function openResource(action){
+  await val(`(()=>{const menu=document.querySelector('details[data-menu-key="root"]');if(!menu.open)menu.querySelector('summary').click();
+   const section=menu.querySelector('details[data-submenu="roster"]');if(!section.open)section.querySelector('summary').click();
+  })()`);
+  await tap('[data-act="'+action+'"]');
+  await until(isModal,action+' modal');
+ }
+ async function requestCourts(count){
+  await openResource('manage-courts');
+  await val('document.getElementById("court-count-menu").value='+JSON.stringify(String(count)));
+  await tap(save);
+  await until(async()=>!(await isModal()),'court capacity saved');
+ }
+ async function confirmManagementScore(matchId,flow){
+  await tap('[data-act="score"][data-match="'+matchId+'"] .p5-score-tap');
+  await until(isModal,'score '+matchId);
+  await val(`(()=>{const input=document.getElementById('p5-score-a');input.value='3';input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await tap(save);
+  if(flow==='continuous')await tap('[data-act="continuous-score-confirm"]');
+  await until(async()=>!(await isModal()),'score confirmed '+matchId);
+ }
+ for(const [mode,flow] of [
+  ['individual-americano','rounds'],['individual-americano','continuous'],
+  ['fp-americano','rounds'],['fp-americano','continuous'],
+  ['structured-americano','rounds'],['structured-americano','continuous'],
+  ['individual-mexicano','rounds'],['fp-mexicano','rounds'],['structured-mexicano','rounds']
+ ]){
+  await val('('+function(mode,flow){
+   const s=P5App.getState(),fixed=mode.startsWith('fp-'),structured=mode.startsWith('structured-');
+   const roster=Array.from({length:fixed?8:16},(_,i)=>({id:i+1,names:fixed?['Player '+(i+1),'Partner '+(i+1)]:['Player '+(i+1)],group:i%2===0?'A':'B'}));
+   Object.assign(s,{stage:'stage1',mode,matchFlow:flow,roster,ko:null,courts:2,nextId:roster.length+1,currentRound:0,
+    viewRound:0,rounds:[],initialCourts:2,pendingCourts:null,needsAvailabilityRebuild:false,pendingParticipants:[],
+    rules:P5AdvancedRules.blank(),groupConfig:{labels:['Left','Right']},session:'Resource QA',matchFormat:'total5',
+    availabilityById:Object.fromEntries(roster.map(p=>[p.id,'ACTIVE'])),
+    ui:{...s.ui,modal:null,menuOpen:false,p5Pr36View:'rounds',contArrivalOpen:false,contHistoryOpen:false}});
+   P5Availability.sync(s);
+   const ids=roster.map(p=>p.id),engine=P5EngineRegistry.engine(mode),rng=()=>0.37;
+   const plan=engine.dynamic?[engine.next(s,P5UI.statistics(s),rng)]:structured?P5Structured.build(s,rng):engine.build(ids,2,rng);
+   s.initialSchedule=plan;
+   if(flow==='continuous')P5Continuous.create(s,plan);
+   else{ s.rounds=plan;s.continuous=null; }
+   localStorage.setItem(P5App.key,JSON.stringify(s));
+   window.p5BeforeResourcesReload=true;
+   location.reload();
+  }.toString()+')('+[mode,flow].map(JSON.stringify).join(',')+')');
+  await size(390,844);
+  await until(()=>val('document.readyState==="complete"&&!window.p5BeforeResourcesReload&&window.P5App?.getState().session==="Resource QA"'),'resource dashboard ready');
+  const initial=await state(),initialMatches=initial.rounds[0].matches.filter(Boolean);
+  await openResource('manage-players');
+  await tap('.p5-b31-roster-list [data-act="manage-participant"][data-id="1"]');
+  await until(()=>val('!!document.querySelector("#p5-modal-root [data-rename-id]")'),'rename participant');
+  await val('document.querySelector("#p5-modal-root [data-rename-id]").value="Renamed Player"');
+  await tap(save);
+  await until(async()=>!(await isModal()),'saved rename');
+  assert.equal((await state()).roster[0].names[0],'Renamed Player');
+  assert.deepEqual((await state()).rounds,initial.rounds,'Rename leaves fixtures intact');
+
+  const add=async (label,group)=>{
+   await openResource('manage-players');
+   await tap('[data-act="add-live"]');
+   await until(()=>val('!!document.getElementById("live-add-a")'),'add participant form');
+   await val('('+function(label,group){
+    document.getElementById('live-add-a').value=label;
+    const partner=document.getElementById('live-add-b'),selector=document.getElementById('p5-51-live-group');
+    if(partner)partner.value=label+' Partner';
+    if(selector)selector.value=group;
+   }.toString()+')('+[label,group].map(JSON.stringify).join(',')+')');
+   await tap(save);
+   await until(async()=>!(await isModal()),'participant queued');
+  };
+  await add('New Player A','A');
+  if(mode.startsWith('structured-'))await add('New Player B','B');
+  assert.equal((await state()).pendingParticipants.length,mode.startsWith('structured-')?2:1);
+  assert.equal((await state()).roster.length,initial.roster.length,'Queued participant cannot alter the active roster');
+  await requestCourts(3);
+  if(flow==='continuous'){
+   assert.equal((await state()).courts,3,'Continuous court increase applied');
+   assert.deepEqual((await state()).rounds.slice(0,initial.rounds.length),initial.rounds,'Court increase keeps existing fixtures');
+   await requestCourts(1);
+   assert.equal((await state()).pendingCourts,1,'Reduction queued while closing courts are live');
+   const closing=await val('P5Continuous.active(P5App.getState()).filter(m=>m.court>1).map(m=>m.id)');
+   for(const id of closing)await confirmManagementScore(id,flow);
+   assert.equal((await state()).courts,1,'Closing courts retire after scoring');
+   assert(await val('P5Continuous.active(P5App.getState()).every(m=>m.court===1)&&P5Continuous.verify(P5App.getState()).valid'));
+   await val(`(()=>{
+    const s=P5App.getState();let remaining=s.continuous.total;
+    while(!P5Continuous.complete(s)&&remaining--){
+     const m=P5Continuous.active(s)[0];if(!m)throw Error('Cycle stalled');
+     m.score=[3,2];m.confirmed=true;P5Continuous.dispatch(s);
+    }
+    if(!P5Continuous.complete(s))throw Error('Cycle incomplete');
+    localStorage.setItem(P5App.key,JSON.stringify(s));window.p5BeforeResourcesReload=true;location.reload();
+   })()`);
+   await until(()=>val('!window.p5BeforeResourcesReload&&!!document.querySelector("[data-act=continuous-next-cycle]")'),'next cycle action');
+   const completed=await state();
+   await tap('[data-act="continuous-next-cycle"]');
+   await until(()=>val('P5App.getState().continuous?.cycle===2'),'queued roster applied at cycle start');
+   const next=await state();
+   assert.deepEqual(next.rounds.slice(0,completed.rounds.length),completed.rounds,'Cycle 1 retained');
+   assert.equal(next.pendingParticipants.length,0);
+   assert(next.roster.some(p=>p.names[0]==='New Player A'));
+   assert(await val('(()=>{const s=P5App.getState();return [...P5Continuous.active(s),...s.continuous.queue].some(m=>m.teams.flat().includes(s.roster.find(p=>p.names[0]==="New Player A").id))})()'),'New arrival receives a fixture');
+  }else{
+   assert.equal((await state()).pendingCourts,3,'Round-based court change queued');
+   for(const m of initialMatches)await confirmManagementScore(m.id,flow);
+   const afterScores=await state();
+   if(afterScores.pendingParticipants.length){
+    const action=mode.endsWith('-mexicano')?'next-round':'advance-schedule';
+    for(let attempt=0;attempt<2&&(await state()).pendingParticipants.length;attempt++)await tap('[data-act="'+action+'"]');
+   }
+   await until(()=>val('P5App.getState().roster.some(p=>p.names[0]==="New Player A")'),'queued participants added at the next-round boundary');
+   const next=await state();
+   assert.equal(next.courts,3);
+   for(const m of afterScores.rounds[0].matches.filter(Boolean))assert.deepEqual(next.rounds[0].matches.find(x=>x?.id===m.id),m);
+   assert(await val('(()=>{const s=P5App.getState();return P5EngineRegistry.validateSchedule(s.rounds,s).matches>0})()'));
+  }
+
+  const restingId=await val(`(()=>{
+   const s=P5App.getState();
+   const assigned=s.matchFlow==='continuous'?P5Continuous.active(s):s.rounds[s.viewRound].matches.filter(Boolean);
+   const onCourt=new Set(assigned.flatMap(m=>m.teams.flat()));
+   return s.roster.find(p=>!onCourt.has(p.id)&&P5Availability.status(s,p.id)==='ACTIVE')?.id;
+  })()`);
+  assert(restingId,'A resting player must be available for participation tests');
+  const confirmedMatches=s=>s.rounds.flatMap(r=>r.matches.filter(m=>m?.confirmed));
+  const beforeStatus=confirmedMatches(await state());
+  for(const [choice,expected] of [[sitout,'SIT_OUT'],[active,'ACTIVE']]){
+   await openResource('manage-players');
+   await tap('.p5-b31-roster-list [data-act="manage-participant"][data-id="'+restingId+'"]');
+   await until(()=>val('!!document.querySelector("[data-act=participant-toggle]")'),'participation controls');
+   await tap(choice);
+   await tap(save);
+   await until(async()=>!(await isModal()),'participation setting saved');
+   const afterStatus=await state();
+   assert.equal(afterStatus.availabilityById[restingId],expected);
+   assert.deepEqual(confirmedMatches(afterStatus),beforeStatus,'Participation changes preserve confirmed results');
+  }
+  console.log('PASS '+mode+'/'+flow+' Manage Players & Courts: rename, add, Sit Out/Return, capacity and protected scores');
+
+ }
+
  // Resume a pre-upgrade completed Continuous session with no saved Next Cycle state.
  for(const mode of ['structured-americano','individual-americano']){
   const startingCycle=await val('('+function(mode){

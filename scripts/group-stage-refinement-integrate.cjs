@@ -13,7 +13,7 @@
  all('P5KO.matchFormat(s.ko,m.match.final)','P5KO.matchFormat(s.ko,m.match.final,m.match.masterId)');
  all('P5KO.matchFormat(s.ko,m.final,m.masterId):m.ko?', 'P5KO.matchFormat(s.ko,m.final,m.masterId):m.ko?');
  one("const plan=P5Group.build({...s,initialCourts:s.courts},random);","const plan=P5Group.build({...s,initialCourts:s.courts},()=>0.5);",'stable confirmed group schedule');
- one("if(isKO||game.value==='Group Stage')pairing.value='fixed';","if(isKO||game.value==='Group Stage')pairing.value='fixed';if(game.value==='Group Stage'&&$('setup-match-flow')&&!$('setup-match-flow').value)$('setup-match-flow').value='rounds';",'default By Rounds');
+ // Use the shared Select match flow placeholder for fresh Group Stage sessions.
  // Qualification rules are editable until the draw is confirmed.
  function recommendPanel(s,esc){
   const sizes=Array.from({length:s.tournamentGroup.count},(_,i)=>s.roster.filter(p=>s.groupDraw[p.id]===i).length);
@@ -103,6 +103,12 @@
  d=edit(d,"if(ended)doc.add(championPage(data,winner,runner,true,","if(ended&&data.ko?.thirdPlace?.length){doc.add(masthead('Official Podium',pg++)+text(52,H-140,'OFFICIAL PODIUM',28,'F2','ink')+text(52,H-210,'01  CHAMPION',12,'F2','gold')+text(52,H-242,ell(winner,65),23,'F2','ink')+text(52,H-305,'02  RUNNER-UP',12,'F2','gold')+text(52,H-337,ell(runner,65),23,'F2','ink')+text(52,H-400,'03  THIRD PLACE',12,'F2','gold')+text(52,H-432,ell(team(data.ko.thirdPlace),65),23,'F2','ink'));}\n  if(ended)doc.add(championPage(data,winner,runner,true,",'PDF podium page');
  const close=html.lastIndexOf('</style>');html=html.slice(0,close)+`
  #americano .p5-group-schedule{margin-top:14px}
+ #americano .p5-group-fields{align-items:start}
+ #americano .p5-group-fields label{min-width:0}
+ #americano .p5-group-fields select{width:100%;min-width:0;min-height:49px;color-scheme:dark}
+ #americano .p5-group-fields select:has(option[value=""]:checked){color:#9eacb7!important}
+ #americano .p5-group-setup>p{font-size:12px;line-height:1.45;margin:10px 0 0}
+
  .p5-group-refine,.p5-group-bronze{margin:12px 0;padding:12px;border:1px solid rgba(194,171,137,.3);border-radius:10px}
  .p5-group-options{display:flex;flex-wrap:wrap;gap:8px}.p5-group-options button[aria-pressed="true"]{border-color:#d1af86;color:#eacdaa}
  .p5-group-time-list{max-height:410px;overflow:auto}.p5-group-wave{margin:8px 0;padding:10px;border:1px solid #46545d;border-radius:8px}

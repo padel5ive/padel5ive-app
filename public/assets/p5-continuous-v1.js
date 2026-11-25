@@ -18,10 +18,7 @@
   const playing=new Set(active(s).map(m=>m.court));
   return Array.from({length:s.courts},(_,i)=>i+1).filter(x=>!playing.has(x));
  };
- function create(s,precomputed){
-  if(!String(s.mode||'').endsWith('-americano'))throw Error('Continuous is only available for Americano');
-  if(!Array.isArray(s.roster)||s.roster.length<2)throw Error('Insufficient participants');
-  const fixed=s.mode==='fp-americano';
+ function cycleQueue(s,fixed,precomputed){
   let queue=[];
   if(fixed){
    const ids=s.roster.map(x=>x.id);
@@ -31,6 +28,14 @@
    if(!Array.isArray(precomputed)||!precomputed.length)throw Error('A certified complete precomputed cycle is required');
    queue=precomputed.flatMap(r=>(r.matches||[]).filter(Boolean).map(m=>({teams:m.teams.map(ids=>ids.slice()),key:String(m.id)})));
   }
+  if(!queue.length)throw Error('The schedule has no fixtures');
+  return queue;
+ }
+ function create(s,precomputed){
+  if(!String(s.mode||'').endsWith('-americano'))throw Error('Continuous is only available for Americano');
+  if(!Array.isArray(s.roster)||s.roster.length<2)throw Error('Insufficient participants');
+  const fixed=s.mode==='fp-americano';
+  const queue=cycleQueue(s,fixed,precomputed);
   s.continuous={cycle:1,queue,total:queue.length,scheduled:0,paused:false,fixed,serial:0};
   s.rounds=[];s.currentRound=0;s.viewRound=0;
   dispatch(s);
@@ -117,10 +122,8 @@
  function nextCycle(s,plan){
   const c=s.continuous;
   if(!complete(s))throw Error('Complete every fixture in this cycle before starting another');
-  if(!c.fixed)throw Error('New individual cycles require regenerated partner coverage');
-  const ids=s.roster.map(x=>x.id);const queue=[];
-  for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)
-   queue.push({teams:[[ids[i]],[ids[j]]],key:pairKey(ids[i],ids[j])});
+  if(!String(s.mode||'').endsWith('-americano'))throw Error('Next Cycle is only available for Americano');
+  const queue=cycleQueue(s,c.fixed,plan);
   c.cycle++;c.queue=queue;c.total=queue.length;c.scheduled=0;c.paused=false;c.serial=0;
   dispatch(s);return c.cycle;
  }

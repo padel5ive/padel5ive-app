@@ -692,6 +692,57 @@ async function main(){
  }
 
 
+
+ // Resume a pre-upgrade completed Continuous session with no saved Next Cycle state.
+ for(const mode of ['structured-americano','individual-americano']){
+  const startingCycle=await val('('+function(mode){
+   const s=P5App.getState(),structured=mode==='structured-americano',n=structured?16:12,courts=3;
+   const roster=Array.from({length:n},(_,i)=>({id:i+1,names:['Player '+(i+1)],...(structured?{group:i<n/2?'A':'B'}:{})}));
+   Object.assign(s,{stage:'stage1',mode,matchFlow:'continuous',continuous:null,roster,nextId:n+1,courts,
+    initialCourts:courts,groupConfig:{labels:['Left','Right']},rules:P5AdvancedRules.blank(),matchFormat:'total5',
+    session:'Completed Continuous QA',ko:null,sitout:[],sitoutPending:{},pendingParticipants:[],
+    availabilityById:Object.fromEntries(roster.map(p=>[p.id,'ACTIVE'])),ui:{...s.ui,modal:null,contHistoryOpen:false}});
+   P5Availability.sync(s);
+   const ids=roster.map(p=>p.id),rng=()=>0.37;
+   const base=structured?P5Structured.build(s,rng):P5EngineRegistry.engine(mode).build(ids,courts,rng);
+   const plan=P5Fair532.optimize(base,[],ids,rng,{structured,availableIds:ids});
+   s.initialSchedule=plan;
+   P5Continuous.create(s,plan);
+   let remaining=s.continuous.total;
+   while(!P5Continuous.complete(s)&&remaining--){
+    const m=P5Continuous.active(s)[0];
+    if(!m)throw Error('Cycle 1 stalled');
+    m.confirmed=true;m.score=[3,2];
+    P5Continuous.dispatch(s);
+   }
+   if(!P5Continuous.complete(s))throw Error('Cycle 1 still incomplete');
+   localStorage.setItem(P5App.key,JSON.stringify(s));
+   window.p5BeforeCycleFixtureReload=true;
+   location.reload();
+   return {total:s.continuous.total,history:s.rounds};
+  }.toString()+')('+JSON.stringify(mode)+')');
+  if(mode==='structured-americano')assert.equal(startingCycle.total,33,'Matches production reproduction');
+  await size(390,844);
+  await until(()=>val('!window.p5BeforeCycleFixtureReload&&!!document.querySelector("[data-act=continuous-next-cycle]")'),mode+' completed session resumed');
+  await tap('[data-act="continuous-next-cycle"]');
+  await until(()=>val('window.P5App?.getState().continuous?.cycle===2'),mode+' next cycle started');
+  const resumed=await state();
+  assert.deepEqual(resumed.rounds.slice(0,startingCycle.history.length),startingCycle.history,'Cycle 1 scores and fixtures are retained');
+  const liveCourts=resumed.rounds.filter(r=>r.matches.some(m=>m?.cycle===2)).length;
+  assert(liveCourts>0,'The next cycle dispatches matches');
+  if(mode==='structured-americano')assert.equal(liveCourts,3,'Three courts dispatch for the reported setup');
+  assert.equal(resumed.continuous.total,startingCycle.total,'Next cycle covers the full schedule');
+  assert(await val('P5Continuous.verify(P5App.getState()).valid'),'Cycle 2 court allocations have no conflicts');
+  await tap('[data-act="continuous-history-toggle"]');
+  await tap('[data-act="continuous-history-cycle"][data-cycle="1"]');
+  assert(await val('!!document.querySelector(".p5-cont-fixtures [data-act=score]")'),'Archived score remains editable');
+  await val('window.p5BeforeCycleFixtureReload=true');
+  await cmd('Page.reload',{ignoreCache:true});
+  await until(()=>val('!window.p5BeforeCycleFixtureReload&&window.P5App?.getState().continuous?.cycle===2'),'Cycle 2 saved after reload');
+  assert.deepEqual((await state()).rounds,resumed.rounds);
+  console.log('PASS '+mode+' completed session: Next Cycle, court dispatch, Cycle 1 history and reload');
+ }
+
  // Standalone Tournament Mode: native setup -> registration -> bracket -> champion.
  for(const format of ['single','double']){
   const fresh='('+function(){const s=P5App.getState();Object.assign(s,{stage:'setup',mode:'',session:'',matchFlow:'',continuous:null,rounds:[],roster:[],ko:null,qualification:null,koFormat:'',koMatchFormat:'',koFinalFormat:'',matchFormat:'',courts:null,ui:{modal:null,menuOpen:false,submenus:[]}});localStorage.setItem(P5App.key,JSON.stringify(s));location.reload();}.toString()+')()';

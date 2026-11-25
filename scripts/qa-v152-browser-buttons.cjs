@@ -747,7 +747,7 @@ async function main(){
     pendingParticipants:[],rules:P5AdvancedRules.blank(),groupConfig:{labels:['Left','Right']},
     session:'Court Swap · QA',matchFormat:'total5',sitout:[],sitoutPending:{},
     continuous:flow==='continuous'?{cycle:1,queue:[],total:4,scheduled:4,paused:false,fixed,serial:4}:null,
-    availabilityById:Object.fromEntries(roster.map(p=>[p.id,p.id===15?'SIT_OUT':'ACTIVE'])),
+    availabilityById:Object.fromEntries(roster.map(p=>[p.id,p.id>=15?'SIT_OUT':'ACTIVE'])),
     ui:{...s.ui,modal:null,menuOpen:false,p5Pr36View:'rounds',contArrivalOpen:false,contHistoryOpen:false}});
    P5Availability.sync(s);
    localStorage.setItem(P5App.key,JSON.stringify(s));

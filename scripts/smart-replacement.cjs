@@ -142,7 +142,21 @@ function integrate() {
   }`;
   edit("document.addEventListener('change',e=>{if(e.target?.id==='setup-match-flow')","document.addEventListener('change',e=>{"+preview+"if(e.target?.id==='setup-match-flow')");
   edit("if(!c)return toast('Selected player", "if(!c||!replacementEligible(s,m.teams[draft.side][draft.slot],id)||activeReplacementMatches(m).some(f=>f.teams.flat().includes(id)))return toast('Selected player");
-  edit('   m.originalTeams=original;', '   const plan=replacementPlan(s,m,draft.side,draft.slot,id);\n   for(const [fixture,teams] of plan.changes)fixture.teams=teams;\n   m.originalTeams=original;');
+  edit('   m.originalTeams=original;', `   const plan=replacementPlan(s,m,draft.side,draft.slot,id);
+   for(const [fixture,teams] of plan.changes){
+    if(s.matchFlow==='continuous')fixture.adaptiveBaseTeams??=fixture.teams;
+    fixture.teams=teams;
+   }
+   m.originalTeams=original;`);
+  edit('   const slots=Array(s.courts).fill(null);slots[court-1]=m;',
+    '   if(selected.adaptiveBaseTeams)m.adaptiveBaseTeams=selected.adaptiveBaseTeams;\n   const slots=Array(s.courts).fill(null);slots[court-1]=m;');
+  edit(
+    '  const currentQueue=c.queue.concat(taken.map(m=>({key:m.fixtureKey,teams:m.originalTeams?m.originalTeams.map(t=>t.slice()):m.teams.map(t=>t.slice())})));',
+    `  const currentQueue=[
+   ...c.queue.map(f=>({key:f.key,teams:f.adaptiveBaseTeams||f.teams})),
+   ...taken.map(m=>({key:m.fixtureKey,teams:m.adaptiveBaseTeams||m.originalTeams||m.teams}))
+  ];`
+  );
   edit("toast('Player replaced for this match only')","toast('Replacement saved · '+plan.changes.size+' upcoming fixtures adjusted')");
   fs.writeFileSync(file,html);
 }

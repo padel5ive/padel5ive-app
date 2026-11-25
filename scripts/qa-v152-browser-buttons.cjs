@@ -319,6 +319,19 @@ async function main(){
  assert.equal(fixedChanged.substitutions?.filter(x=>x.wholePair).length,1,'Whole pair substitution recorded only once');
  const cycleFixtures=[...fixedAfter.continuous.queue,...fixedAfter.rounds.flatMap(r=>r.matches.filter(Boolean))];
  assert.equal(new Set(cycleFixtures.map(m=>m.teams.flat().sort((a,b)=>a-b).join(':'))).size,15,'Adaptive queue restores every unique matchup');
+ const reshuffledFixtures=await val(`(()=>{
+  const s=P5App.getState();
+  P5Continuous.reshuffleOpening(s,()=>0.5);
+  return [...s.continuous.queue,...P5Continuous.active(s)].map(m=>m.teams.flat().sort((a,b)=>a-b).join(':'));
+ })()`);
+ assert.deepEqual(reshuffledFixtures.sort(),cycleFixtures.map(m=>m.teams.flat().sort((a,b)=>a-b).join(':')).sort(),'Opening reshuffle restores the complete original cycle');
+ await val('window.p5BeforeReplacementReload=true');
+ await cmd('Page.reload',{ignoreCache:true});
+ await until(()=>val('!window.p5BeforeReplacementReload&&!!window.P5App&&!!document.querySelector("#americano .p5-cont-courts .p5-person-action")'),'replacement after refresh');
+ assert.deepEqual((await state()).rounds,fixedAfter.rounds,'Saved replacement survives reload');
+ assert.deepEqual((await state()).continuous.queue,fixedAfter.continuous.queue,'Adjusted queue survives reload');
+ assert.deepEqual(fixedAfter.rounds.slice(1),fixedStart.rounds.slice(1),'Replacement preserves the other live court');
+
  assert.equal(await val('document.querySelector("#americano .p5-pair-replace")?.innerText.includes("PAIR "+'+pickedId+')'),true,'Replacement renders both players from the new fixed pair');
  console.log('PASS Fixed Partner whole pair replacement, correct names, adaptive queue with unique opponents');
 

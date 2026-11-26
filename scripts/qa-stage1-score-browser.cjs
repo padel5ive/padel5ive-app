@@ -382,8 +382,9 @@ async function main(){
    assert.equal(after.w,before.w-1);
    assert.equal(after.l,before.l+1);
    assert.equal(after.p,before.p+1-oldScore[0]);
+   await run(()=>{window.p5BeforeMexicanoCorrectionReload=true;});
    await send('Page.reload',{ignoreCache:true});
-   await until('const s=P5App?.getState();return s?.viewRound===0&&s.rounds[0].matches[0].score[0]===1;');
+   await until('const s=window.P5App?.getState();return !window.p5BeforeMexicanoCorrectionReload&&s?.viewRound===0&&s.rounds[0].matches[0].score[0]===1&&!!document.querySelector(".next-round-btn");');
    const gate=await run(()=>{
     const next=()=>document.querySelector('.next-round-btn[data-act="next-round"]').click();
     next();

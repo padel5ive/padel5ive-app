@@ -5,11 +5,21 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
 const {spawn,spawnSync}=require('node:child_process'),{setTimeout:nap}=require('node:timers/promises');
 let server,chrome,ws,profile;
 const webRoot=path.resolve('public');
+const sharedResults=new Map();
 async function cleanup(){try{ws?.close()}catch{}try{chrome?.kill('SIGKILL')}catch{}try{server?.close()}catch{}try{if(profile)fs.rmSync(profile,{recursive:true,force:true})}catch{}}
 async function startup(){
  server=http.createServer((req,res)=>{
   try{
-   const reqPath=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+   const request=new URL(req.url,'http://localhost');
+   const reqPath=decodeURIComponent(request.pathname);
+   if(reqPath==='/api/unified-results'){
+    const data=sharedResults.get(request.searchParams.get('id'));
+    return res.writeHead(data?200:404,{'content-type':'application/json'}).end(JSON.stringify(data?{data}:{error:'Fixture not found'}));
+   }
+   if(reqPath.startsWith('/u/')&&sharedResults.has(reqPath.slice(3))){
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
+    return fs.createReadStream(path.join(webRoot,'results/unified/index.html')).pipe(res);
+   }
    const file=path.resolve(webRoot,'.'+reqPath);
    if(!file.startsWith(webRoot+path.sep)){res.writeHead(403);return res.end();}
    const f=fs.statSync(file).isDirectory()?path.join(file,'index.html'):file;
@@ -80,6 +90,46 @@ async function main(){
   assert(!loc.missing,'Missing button '+sel);assert(loc.visible,'Hidden button '+sel);assert(!loc.covered,'Covered button '+sel+' by '+loc.hit);
   await cmd('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:loc.x,y:loc.y}]});
   await cmd('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await nap(200);
+ }
+
+ async function checkSharedKnockout(id,snapshot){
+  sharedResults.set(id,snapshot);
+  const resultURL=new URL('/u/'+id,url);
+  await cmd('Page.navigate',{url:resultURL.href});
+  await until(()=>val('location.pathname==='+JSON.stringify(resultURL.pathname)+'&&!!document.querySelector("#knockout")'),'published knockout bracket');
+  await tap('.share-tabs a[href="#ko-match-history"]');
+  const history=await val(`(()=>{
+   const section=document.querySelector('#ko-match-history');
+   const rows=[...section.querySelectorAll('[data-ko-history-match]')];
+   return {title:section.querySelector('h2').textContent,hash:location.hash,bracket:!!document.querySelector('#knockout'),
+    stage1:!!document.querySelector('#round-results'),actions:section.querySelectorAll('button, input').length,
+    matches:rows.map(row=>({id:Number(row.dataset.koHistoryMatch),label:row.querySelector('small').textContent,
+     names:row.querySelector('.result-text').textContent,score:row.querySelector('.score').textContent,visible:row.getBoundingClientRect().height>0}))
+   };
+  })()`);
+  assert.equal(history.title,'Knockout Match History');
+  assert.equal(history.hash,'#ko-match-history','Match History tab jumps to the official ledger');
+  assert.equal(history.actions,0,'History is read-only');
+  assert.equal(history.stage1,snapshot.mode!=='fp-knockout','Stage 1 help and history appear only for two-stage events');
+  const ids=history.matches.map(m=>m.id);
+  assert.equal(new Set(ids).size,snapshot.publicKO.length,'Each confirmed fixture appears once');
+  assert.deepEqual(ids.slice().sort((a,b)=>a-b),snapshot.publicKO.map(m=>m.id).sort((a,b)=>a-b));
+  const newest=snapshot.ko.history?.filter(id=>ids.includes(id)).at(-1);
+  if(newest)assert.equal(ids[0],newest,'Latest recorded result first');
+  for(const m of history.matches){
+   const match=snapshot.publicKO.find(x=>x.id===m.id);
+   assert.equal(m.score,match.score.join(' – '));
+   assert(m.visible,'Confirmed match row can be seen');
+   for(const team of [match.teamA,match.teamB]){
+    assert(m.names.includes(team.map(member=>snapshot.roster.find(p=>p.id===member).names.join(' & ')).join(' & ')));
+   }
+  }
+  for(const [matchId,label] of [[31,'Grand Final Reset'],[32,'Bronze Match']]){
+   const special=history.matches.find(m=>m.id===matchId);
+   if(special)assert.match(special.label,new RegExp(label));
+  }
+  await cmd('Page.navigate',{url});
+  await until(()=>val('!!window.P5App?.getState()?.stage'),'returned to Match Control');
  }
  const name='#americano .p5-b41-leaderboard .live-standings tbody button.mc38-rename[data-act="manage-participant"]';
  const active='#p5-modal-root .p5-b31-status-choice [data-status="active"]',sitout='#p5-modal-root .p5-b31-status-choice [data-status="sitout"]';
@@ -1127,10 +1177,13 @@ async function main(){
   await checkScorePickers('#p5-modal-root .p5-score-entry');
   assert.deepEqual(await val('[document.getElementById("p5-score-a").value,document.getElementById("p5-score-b").value]'),['1','4']);
   await tap(cancel);await until(async()=>!(await isModal()),'historical score correction cancelled');
-  const scored=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<40){const m=s.ko.active[0];if(!m)throw Error('KO stalled');const fmt=P5KO.matchFormat(s.ko,m.final),limit=Number(fmt.slice(-1));P5KO.confirm(s,m.id,fmt==='total5'?[3,2]:[limit,1]);}if(s.stage!=='champion')throw Error('Missing champion');const snap=P5PublicResults.snapshot(s);const pdf=P5DirectPDF.render(snap);localStorage.setItem(P5App.key,JSON.stringify(s));return {stage:s.stage,champion:s.ko.champion,runner:s.ko.runnerUp,records:snap.publicKO.length,rounds:snap.rounds.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
+  const scored=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<40){const m=s.ko.active[0];if(!m)throw Error('KO stalled');const fmt=P5KO.matchFormat(s.ko,m.final),limit=Number(fmt.slice(-1));const won=fmt==='total5'?[3,2]:[limit,1];P5KO.confirm(s,m.id,m.masterId===30?won.reverse():won);}if(s.stage!=='champion')throw Error('Missing champion');const snap=P5PublicResults.snapshot(s);const pdf=P5DirectPDF.render(snap);localStorage.setItem(P5App.key,JSON.stringify(s));return {stage:s.stage,champion:s.ko.champion,runner:s.ko.runnerUp,records:snap.publicKO.length,rounds:snap.rounds.length,snapshot:snap,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
   assert.equal(scored.stage,'champion');assert(scored.champion?.length&&scored.runner?.length&&scored.records>0&&scored.pdf>1000);assert.equal(scored.rounds,0);
   await val('location.reload();true');await until(()=>val('P5App.getState().stage==="champion"&&!!document.querySelector(".champion-presentation")'),'standalone champion restored');
-  console.log('PASS standalone '+format+' native setup, seeds, bracket dispatch, champion, snapshot, PDF and reload');
+  if(format==='double')assert(scored.snapshot.publicKO.some(m=>m.id===31),'Double Elimination fixture includes a Grand Final Reset');
+  else delete scored.snapshot.ko.history; // Published snapshots without chronological ordering still show all results.
+  await checkSharedKnockout('qa-ko-'+format,scored.snapshot);
+  console.log('PASS standalone '+format+' native setup, seeds, bracket dispatch, champion, snapshot, public match history, PDF and reload');
  }
 
  // Group Stage native end-to-end: 6 pairs, 2 pools of 3, top 1 + 2 wildcards.
@@ -1171,15 +1224,55 @@ async function main(){
   await until(isModal,'group finish confirmation');
   await val('document.querySelector("#p5-modal-root [data-act=modal-save]").click();true');
   await until(()=>val('P5App.getState().stage==="stage1finished"'),'group results');
-  await val('(()=>{for(const [id,v] of [["ko-format","single"],["ko-match-format","first4"],["ko-final-format","first6"],["group-ko-quarter","first4"],["group-ko-semi","first5"],["group-ko-bronze","yes"],["group-ko-bronze-format","total5"]]){const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}));}document.querySelector("[data-act=start-ko]").click();return true})()');
+
+  const formatFields=['ko-format','ko-match-format','group-ko-quarter','group-ko-semi','ko-final-format'];
+  for(const [width,height] of [[390,844],[1194,834]]){
+   await size(width,height);
+   const layout=await val('('+function(formatFields){
+    const fields=[...document.querySelectorAll('.p5-b2-ko-config select')].filter(e=>formatFields.includes(e.id));
+    return {ids:fields.map(e=>e.id),options:fields.slice(1).map(e=>[...e.options].slice(1).map(o=>o.value)),
+     height:fields.map(e=>e.getBoundingClientRect().height),roundY:fields.slice(2).map(e=>Math.round(e.getBoundingClientRect().y))};
+   }.toString()+')('+JSON.stringify(formatFields)+')');
+   assert.deepEqual(layout.ids,formatFields,'Setup order follows the Knockout rounds');
+   assert(layout.options.every(items=>items.join(',')==='total5,first4,first5,first6'),'All match formats offer the same options');
+   assert(layout.height.every(h=>h>0&&Math.abs(h-layout.height[0])<1),'All format controls have the same height');
+   assert(width>700?new Set(layout.roundY).size===1:layout.roundY[0]<layout.roundY[1]&&layout.roundY[1]<layout.roundY[2],
+    'Quarterfinal, Semifinal and Grand Final render in order at width '+width);
+  }
+  await size(390,844);
+  const format=flow==='rounds'?'single':'double';
+  const configured=await val('('+function(format){
+   const put=(id,v)=>{const e=document.getElementById(id);e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}));};
+   put('ko-format',format);put('ko-match-format','first4');put('group-ko-quarter','first6');put('ko-final-format','first6');
+   if(format==='single'){put('group-ko-semi','first5');put('group-ko-bronze','yes');put('group-ko-bronze-format','total5');}
+   document.querySelector('[data-act=start-ko]').click();
+   document.querySelector('#p5-modal-root [data-act=modal-cancel]').click();
+   if(format==='double')put('ko-match-format','total5');
+   const s=P5App.getState(),semi=document.getElementById('group-ko-semi');
+   const result={quarter:document.getElementById('group-ko-quarter').value,semi:semi.value,
+    hint:semi.options[0].textContent,bronzeHidden:document.getElementById('group-bronze-field').hidden,stored:s.groupKOOptions};
+   document.querySelector('[data-act=start-ko]').click();
+   return result;
+  }.toString()+')('+JSON.stringify(format)+')');
+  assert.equal(configured.quarter,'first6','Explicit Quarterfinal format survives re-entering setup');
+  assert.equal(configured.semi,format==='single'?'first5':'','The inherited Semifinal stays selected when the regular format changes');
+  assert.equal(configured.stored.semi,configured.semi);
+  assert.equal(configured.hint,'Same as regular · '+(format==='single'?'First to 4':'Total of 5'));
+  assert.equal(configured.bronzeHidden,format==='double');
   await until(()=>val('P5App.getState().ui.modal?.type==="qualification"'),'group qualification');
   assert.equal(await val('P5App.getState().ui.modal.selectedIds.length'),4);
-  assert(await val('!!document.querySelector(".p5-group-bracket-preview")&&!!document.querySelector(".p5-group-bronze")'),'Connected qualification preview with Bronze');
+  assert(await val('!!document.querySelector(".p5-group-bracket-preview")'),'Connected qualification preview');
+  assert.equal(await val('!!document.querySelector(".p5-group-bracket-preview .p5-group-bronze")'),format==='single','Bronze appears only in Single Elimination');
   await val('document.querySelector("#p5-modal-root [data-act=qualification-confirm]").click();true');
   await until(()=>val('P5App.getState().stage==="ko"'),'group KO dispatch');
-  const result=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<30){const m=s.ko.active[0];if(!m)throw Error('stalled bracket');const f=P5KO.matchFormat(s.ko,m.final,m.masterId);P5KO.confirm(s,m.id,f==='total5'?[3,2]:[Number(f.slice(-1)),1]);}const snap=P5PublicResults.snapshot(s),pdf=P5DirectPDF.render(snap);return {stage:s.stage,champion:s.ko.champion,third:s.ko.thirdPlace,groups:snap.groups.map(g=>g.rows.length),records:snap.publicKO.length,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
-  assert.equal(result.stage,'champion');assert(result.champion?.length&&result.third?.length&&result.records===4&&result.pdf>1000);assert.deepEqual(result.groups,[3,3]);
-  console.log('PASS Group Stage '+flow+': native registration, draw, shared scoring, qualification, champion and PDF');
+
+  const formats=await val(`(()=>{const k=P5App.getState().ko;return [P5KO.matchFormat(k,false,13),P5KO.matchFormat(k,false,21),P5KO.matchFormat(k,true,k.format==='single'?25:30),k.bronzeEnabled]})()`);
+  assert.deepEqual(formats,['first6',format==='single'?'first5':'total5','first6',format==='single']);
+  const result=await val('('+function(){const s=P5App.getState();let n=0;while(s.stage==='ko'&&n++<30){const m=s.ko.active[0];if(!m)throw Error('stalled bracket');const f=P5KO.matchFormat(s.ko,m.final,m.masterId);P5KO.confirm(s,m.id,f==='total5'?[3,2]:[Number(f.slice(-1)),1]);}const snap=P5PublicResults.snapshot(s),pdf=P5DirectPDF.render(snap);return {stage:s.stage,champion:s.ko.champion,third:s.ko.thirdPlace,groups:snap.groups.map(g=>g.rows.length),records:snap.publicKO.length,snapshot:snap,pdf:pdf.size??pdf.length??pdf.byteLength};}.toString()+')()');
+  assert.equal(result.stage,'champion');assert(result.champion?.length&&result.records===(format==='single'?4:6)&&result.pdf>1000);
+  assert.equal(Boolean(result.third?.length),format==='single');assert.deepEqual(result.groups,[3,3]);
+  await checkSharedKnockout('qa-group-'+flow,result.snapshot);
+  console.log('PASS Group Stage '+flow+': ordered formats, round inheritance, public match history, champion and PDF');
  }
 
  // All active Team Showdown pairing formats use the same score picker as Match Control.

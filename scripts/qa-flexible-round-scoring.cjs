@@ -15,7 +15,7 @@ function extract(from,to){
 }
 for(const anchor of [
  'p5-v5825-flex-round-styles','ROUND NAVIGATION',
- 'data-p5-status','if(!ko&&!flexibleRoundScoring(s)',
+ 'data-p5-status','if(!ko&&P5UI.roundScoreLocked(s,m))',
  'data-act="round" data-round="${r+1}">Next Round →',
  's.rounds=s.rounds.slice(0,endRound+1)',
  'if(flexible){for(const rd of s.rounds)'
@@ -58,6 +58,7 @@ vm.runInContext(html.slice(availStart,availEnd),ctx);
 ctx.P5Availability=ctx.window.P5Availability;
 assert.equal(typeof ctx.P5Availability.eligibleMatch,'function','Availability must be real engine module');
 vm.runInContext(source,ctx);
+Object.assign(ctx.P5UI,{mexicanoScoreCorrection:ctx.mexicanoScoreCorrection,roundScoreLocked:ctx.roundScoreLocked});
 ctx.s={
  mode:'fp-americano',stage:'stage1',currentRound:0,viewRound:23,
  rounds:Array.from({length:24},(_,i)=>({matches:[
@@ -120,4 +121,28 @@ ctx.s.viewRound=23;
 vm.runInContext("scoreModal('r23c1',false)",ctx);
 assert.equal(ctx.s.ui.modal,null,'Mexicano future scoring must remain gated');
 assert(notices.some(n=>n.includes('Mexicano round')),'Mexicano guard notice missing');
-console.log('PASS v5.8.26 flexible Americano: Next browses unscored rounds; R24 3–2 → R20 pending → R24 4–1; unscored-cycle extension; finish preserves; Mexicano gated.');
+for(const mode of ['fp-mexicano','individual-mexicano','structured-mexicano']){
+ ctx.s.mode=mode;
+ ctx.s.viewRound=0;
+ ctx.s.currentRound=1;
+ ctx.s.needsAvailabilityRebuild=true;
+ ctx.s.pendingCourts=1;
+ ctx.s.rounds[0].matches[0].confirmed=true;
+ ctx.s.rounds[0].matches[0].score=[3,2];
+ ctx.s.rounds[0].matches[0].matchFormat='total5';
+ const currentRound=structuredClone(ctx.s.rounds[1]);
+ ctx.repairAvailabilitySchedule=()=>{throw Error('Score corrections must not rebuild schedule');};
+ ctx.p5AutoApplyQueuedCourtChange=()=>{throw Error('Score corrections must not apply queued court changes');};
+ vm.runInContext("scoreModal('r0c1',false)",ctx);
+ assert.equal(ctx.s.ui.modal?.title,'Edit Match Score',mode+' historical score opens');
+ ctx.nextScore=[1,4];
+ vm.runInContext('saveScore()',ctx);
+ assert.deepEqual(Array.from(ctx.s.rounds[0].matches[0].score),[1,4]);
+ assert.deepEqual(ctx.s.rounds[1],currentRound,mode+' keeps current round');
+ assert.equal(ctx.s.pendingCourts,1);
+ assert.equal(ctx.s.needsAvailabilityRebuild,true);
+ assert.equal(ctx.s.currentRound,1);
+ assert.equal(ctx.s.viewRound,0);
+ assert.equal(ctx.s.ui.modal,null);
+}
+console.log('PASS Flexible Americano scoring; Mexicano corrections across all pairings preserve existing fixtures and keep future scoring locked.');

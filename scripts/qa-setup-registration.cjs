@@ -33,7 +33,8 @@ function testCase(query,existingMode){
  const fields={
   'setup-session':{value:'Test'},'setup-date':{value:'2026-11-11'},'setup-time':{value:'12:00'},
   'setup-game':game,'setup-pairing':pair,'setup-courts':{value:'1'},
-  'setup-format':{value:'total5'},'setup-date-display':dateDisplay
+  'setup-format':{value:'total5',options:['total4','total5','total6','first4','first5','first6'].map(value=>({value}))},
+  'setup-match-flow':{value:'rounds'},'setup-date-display':dateDisplay
  };
  const ctx={s:{stage:'setup',mode:existingMode},window:{__P54_PREVIEW_QUERY:null},
   location:{search:query},URLSearchParams,Date,Number,Set,Boolean,

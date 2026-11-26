@@ -41,6 +41,8 @@ ctx.window=ctx;
 vm.runInContext(html.slice(availStart,availEnd),ctx);
 ctx.P5Availability=ctx.window.P5Availability;
 assert.equal(typeof ctx.P5Availability.eligibleMatch,'function','Real Availability eligibility is required in isolated scoring test');
+vm.runInContext(fn('isLiveMexicano','roundScoreState'),ctx);
+ctx.P5UI.mexicanoScoreCorrection=ctx.mexicanoScoreCorrection;
 vm.runInContext(code,ctx);
 assert(!html.includes("||s.pendingCourts)?\`<button type=\"button\" class=\"p5-flex-schedule-advance\""),'Extra button must not appear for court-only change');
 assert(html.includes('P5-PR29-AUTO-COURT-APPLY'));

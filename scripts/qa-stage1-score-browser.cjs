@@ -52,7 +52,7 @@ async function main(){
    if(r.exceptionDetails)throw Error('Chrome JS: '+(r.exceptionDetails.text||'exception')+' '+(r.exceptionDetails.exception?.description||''));
    return r.result?.value;
   };
-  const run=fn=>evalJS('return ('+fn.toString()+')();');
+  const run=(fn,...args)=>evalJS('return ('+fn.toString()+')(...'+JSON.stringify(args)+');');
   const until=async(expression)=>{
    while(Date.now()<deadline){try{const v=await evalJS(expression);if(v)return v;}catch{}
     await delay(150);
@@ -316,6 +316,111 @@ async function main(){
   assert(ipad.namesCentered&&ipad.scoreRowGap<2,'iPad names and scoreboxes must align symmetrically: '+JSON.stringify(ipad));
   console.log('PASS iPhone 390px: PR36 exclusive Rounds/Leaderboard tabs (legacy ordering fallback); iPad 1194px split preserved.');
   console.log('PASS Chrome: Round 2 court header/footer open score modal; 3-2 + 4-1 saved; Round 1 pending; navigation intact; upper arrows removed.');
+
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:3,mobile:true});
+  for(const mode of ['fp-mexicano','individual-mexicano','structured-mexicano']){
+   const seeded=await run(mode=>{
+    const s=P5App.getState(),fixed=mode.startsWith('fp-'),structured=mode.startsWith('structured-');
+    const oldFormat=structured?'first4':'total5',matchFormat=structured?'first5':'total6';
+    const roster=Array.from({length:8},(_,i)=>({id:i+1,names:fixed?['Player '+(i+1)+' A','Player '+(i+1)+' B']:['Player '+(i+1)],
+     ...(structured?{group:i<4?'A':'B'}:{})}));
+    Object.assign(s,{mode,stage:'stage1',matchFlow:'rounds',continuous:null,session:'Mexicano Correction QA',
+     courts:2,matchFormat:oldFormat,roster,nextId:9,rounds:[],initialSchedule:null,currentRound:0,viewRound:0,
+     rules:P5AdvancedRules.blank(),sitout:[],sitoutPending:{},arrival:{},availabilityById:{},
+     needsAvailabilityRebuild:false,pendingParticipants:[],pendingCourts:null,ko:null,qualification:null});
+    const engine=P5EngineRegistry.engine(mode),next=()=>engine.next(s,P5UI.statistics(s),()=>.61);
+    const opening=next();
+    opening.matches.forEach(m=>Object.assign(m,{matchFormat:oldFormat,score:structured?[4,2]:[3,2],confirmed:true}));
+    s.rounds.push(opening);
+    s.matchFormat=matchFormat;
+    s.rounds.push(next());
+    s.currentRound=s.viewRound=1;
+    const result={rounds:s.rounds,stats:P5UI.statistics(s),oldFormat,matchId:opening.matches[0].id};
+    localStorage.setItem(P5App.key,JSON.stringify(s));
+    return result;
+   },mode);
+   await send('Page.reload',{ignoreCache:true});
+   await until('return P5App?.getState()?.mode==='+JSON.stringify(mode)+'&&P5App.getState().viewRound===1&&!!document.querySelector(".p5-score-tap");');
+   const oldScore=seeded.rounds[0].matches[0].score;
+   const viewed=await run(()=>{
+    document.querySelector('.roundbuttons [data-round="0"]').click();
+    const card=document.querySelector('.p5-stage1-score-grid>.p5sm-card');
+    const button=card.querySelector('.p5-score-tap');
+    const ready=!button.disabled&&button.getAttribute('aria-label').startsWith('Edit score');
+    button.click();
+    const title=document.querySelector('#p5-modal-root h2')?.textContent;
+    const format=document.querySelector('.p5-score-dual')?.dataset.p5ScoreFormat;
+    const score=['a','b'].map(side=>Number(document.getElementById('p5-score-'+side)?.value));
+    return {ready,title,format,score};
+   });
+   assert.deepEqual(viewed,{ready:true,title:'EDIT MATCH SCORE',format:seeded.oldFormat,score:oldScore},mode+' opens the saved score from a prior round');
+   const edited=await run(matchId=>{
+    document.querySelector('#p5-modal-root [data-act="modal-cancel"]').click();
+    document.querySelector('.next-round-btn[data-act="next-round"]').click();
+    document.querySelector('[data-act="view-schedule"]').click();
+    const history=[...document.querySelectorAll('button[data-act="edit-mexicano-score"]')];
+    history.find(b=>b.dataset.match===matchId).click();
+    const score=document.getElementById('p5-score-a');
+    score.value='1';
+    score.dispatchEvent(new Event('change',{bubbles:true}));
+    document.querySelector('#p5-modal-root [data-act="modal-save"]').click();
+    const s=P5App.getState();
+    return {rounds:s.rounds,currentRound:s.currentRound,viewRound:s.viewRound,stats:P5UI.statistics(s),controls:history.length,
+     shown:document.querySelector('.p5-stage1-score-grid>.p5sm-card .p5-score-tap')?.textContent};
+   },seeded.matchId);
+   assert.equal(edited.controls,2,'Only scored fixtures have history edit actions');
+   assert.equal(edited.shown,'1');
+   assert.equal(edited.currentRound,1);
+   assert.equal(edited.viewRound,0);
+   const intended=structuredClone(seeded.rounds);
+   intended[0].matches[0].score=[1,4];
+   intended[0].matches[0].skipped=false;
+   assert.deepEqual(edited.rounds,intended,mode+' only updates the selected result');
+   const player=intended[0].matches[0].teams[0][0];
+   const before=seeded.stats.find(x=>x.id===player),after=edited.stats.find(x=>x.id===player);
+   assert.equal(after.g,before.g);
+   assert.equal(after.w,before.w-1);
+   assert.equal(after.l,before.l+1);
+   assert.equal(after.p,before.p+1-oldScore[0]);
+   await run(()=>{window.p5BeforeMexicanoCorrectionReload=true;});
+   await send('Page.reload',{ignoreCache:true});
+   await until('const s=window.P5App?.getState();return !window.p5BeforeMexicanoCorrectionReload&&s?.viewRound===0&&s.rounds[0].matches[0].score[0]===1&&!!document.querySelector(".next-round-btn");');
+   const gate=await run(()=>{
+    const next=()=>document.querySelector('.next-round-btn[data-act="next-round"]').click();
+    next();
+    next();
+    const s=P5App.getState();
+    return {round:s.currentRound,total:s.rounds.length,title:document.querySelector('#p5-modal-root h2')?.textContent};
+   });
+   assert.deepEqual(gate,{round:1,total:2,title:'Finish Round First'},mode+' keeps sequential scoring for upcoming rounds');
+   const advanced=await run(()=>{
+    document.querySelector('#p5-modal-root [data-act="modal-cancel"]').click();
+    const active=P5App.getState().rounds[1].matches;
+    for(const fixture of active){
+     document.querySelector('.p5-score-tap[data-match="'+fixture.id+'"]').click();
+     const input=document.getElementById('p5-score-a');
+     input.value='1';
+     input.dispatchEvent(new Event('change',{bubbles:true}));
+     document.querySelector('#p5-modal-root [data-act="modal-save"]').click();
+    }
+    document.querySelector('.p5-score-tap[data-match="'+active[0].id+'"]').click();
+    const currentEditable=document.querySelector('#p5-modal-root h2')?.textContent==='EDIT MATCH SCORE';
+    document.querySelector('#p5-modal-root [data-act="modal-cancel"]').click();
+    const before=P5App.getState();
+    const expected=P5EngineRegistry.engine(before.mode).next(before,P5UI.statistics(before),()=>{
+     before.seed=(1664525*before.seed+1013904223)>>>0;
+     return before.seed/4294967296;
+    });
+    document.querySelector('.next-round-btn[data-act="next-round"]').click();
+    const after=P5App.getState();
+    return {round:after.currentRound,currentEditable,expected,generated:after.rounds[2],saved:after.rounds[0].matches[0].score};
+   });
+   assert.equal(advanced.currentEditable,true);
+   assert.equal(advanced.round,2);
+   assert.deepEqual(advanced.generated,advanced.expected,mode+' builds the next round using corrected standings');
+   assert.deepEqual(advanced.saved,[1,4]);
+   console.log('PASS '+mode+' score correction, original format, standings, reload and dynamic next round.');
+  }
  }finally{
   try{ws?.close();}catch{}
   if(proc&&!proc.killed)proc.kill('SIGTERM');

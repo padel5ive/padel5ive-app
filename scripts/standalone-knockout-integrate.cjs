@@ -51,7 +51,7 @@
  p=edit(p,"'structured-mexicano']);","'structured-mexicano','fp-knockout']);",'public mode allowlist');
  p=edit(p,"return data.mode.includes('mexicano')?'MEXICANO':'AMERICANO';","return data.mode==='fp-knockout'?'KNOCKOUT':data.mode.includes('mexicano')?'MEXICANO':'AMERICANO';",'public mode title');
  p=edit(p,"const stage1Intro=hasKO?","const stage1Intro=hasKO&&data.mode!=='fp-knockout'?",'public stage1 intro');
- p=edit(p,"const tabs=hasKO?","const tabs=data.mode==='fp-knockout'?'<nav class=\"share-tabs\" aria-label=\"Results sections\"><a href=\"#overview\">Overview</a><a href=\"#knockout\">Bracket</a></nav>':hasKO?",'public tabs');
+ p=edit(p,"const tabs=hasKO?","const tabs=data.mode==='fp-knockout'?`<nav class=\"share-tabs\" aria-label=\"Results sections\"><a href=\"#overview\">Overview</a><a href=\"#knockout\">Bracket</a>${historyLink}</nav>`:hasKO?",'public tabs');
  p=edit(p,"+stage1Intro+leaderboard()+rounds()+analysis()+","+(data.mode==='fp-knockout'?'':stage1Intro+leaderboard()+rounds()+analysis())+",'public direct result sections');
  d=edit(d,"mode=String(data.mode).includes('mexicano')?'Mexicano':'Americano'","mode=data.mode==='fp-knockout'?'Knockout':String(data.mode).includes('mexicano')?'Mexicano':'Americano'",'PDF title');
  d=edit(d,"coverPage(data,mode,pairing,session,matches.length)","coverPage(data,mode,pairing,session,data.mode==='fp-knockout'?ko.length:matches.length)",'PDF match count');

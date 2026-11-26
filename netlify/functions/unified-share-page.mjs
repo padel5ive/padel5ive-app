@@ -55,7 +55,7 @@ export default async function handler(request,context){
  '<div class="p5-unified-fixed-backdrop" aria-hidden="true"></div>'+
  '<main class="wrap" id="app"><div class="load-panel"><div class="eyebrow">PADEL 5IVE · MATCH CONTROL</div><h1>Official Results</h1><p>Loading published results…</p></div></main>'+
  '<script defer src="/assets/p5-results-nav-v5514.js"></script>'+
- '<script defer src="/assets/p5-interactive-results.js"></script>'+
+ '<script defer src="/assets/p5-interactive-results.js?v=ko-history-1"></script>'+
  '<script defer src="/phase57/champion-render-v571.js"></script>'+
  '</body></html>';
  return response(request.method==='HEAD'?'':html);

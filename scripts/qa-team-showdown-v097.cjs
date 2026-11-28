@@ -69,6 +69,7 @@ function checkOpponentDraw(seed, latestFirst, withLateArrival, multi=false){
   !engine.liveCourts(state).some(m=>m.a===i||m.a2===i)):null;
  if(late!==null)engine.toggleArrival(state,'A',late);
  const scored=new Map();
+ let sawConditional=false;
  for(let i=0;i<expectedMatches;i++){
   const live=engine.liveCourts(state);
   assert(live.length&&live.length<=3,'court dispatch stalled or exceeded capacity');
@@ -78,12 +79,38 @@ function checkOpponentDraw(seed, latestFirst, withLateArrival, multi=false){
    assert.equal(new Set(players).size,players.length,'player was booked on two live courts');
   }
   const match=live.reduce((first,m)=>(latestFirst?m.sequence>first.sequence:m.sequence<first.sequence)?m:first);
+  const beforePreview=JSON.stringify(state);
+  const monitor=engine.individualNextMatchMonitor(state,100);
+  assert.equal(JSON.stringify(state),beforePreview,'monitor changed the live session');
+  const key=m=>[m.id,m.a,m.a2,m.b,m.b2].join(':');
+  const expected=new Map();
+  for(const courtMatch of live){
+   const copy=JSON.parse(beforePreview);
+   const {assigned}=engine.assignCourtResult(copy,courtMatch.id,3,2);
+   for(const m of assigned){
+    const entry=expected.get(key(m))||{courts:[],first:0};
+    entry.courts.push(courtMatch.court);
+    if(m===assigned[0])entry.first++;
+    expected.set(key(m),entry);
+   }
+  }
+  assert.equal(monitor.length,expected.size,'monitor omitted a possible refill or showed a stale fixture');
+  for(const row of monitor){
+   const entry=expected.get(key(row));
+   assert(entry,'displayed pairing cannot be called after any live court finishes');
+   assert.equal(row.finishingCourts.join(','),entry.courts.join(','));
+   assert.equal(row.confirmedNext,entry.first===live.length);
+   sawConditional ||= !row.confirmedNext;
+  }
+
   for(const m of live)scored.set(m.id,[m.a,m.a2,m.b,m.b2].join(','));
   engine.assignCourtResult(state,match.id,3,2);
   if(i===10)assert(engine.validateSavedState(JSON.parse(JSON.stringify(state))),'active session cannot be restored');
   if(late!==null&&i===5)engine.toggleArrival(state,'A',late);
  }
  draw();
+ assert(sawConditional,'test must exercise court-dependent next matches');
+ assert.equal(engine.individualNextMatchMonitor(state).length,0);
  for(const m of fixtures){
   assert.equal(m.status,'completed');
   assert.equal(m.scoreA,3);assert.equal(m.scoreB,2);
@@ -94,4 +121,22 @@ for(const seed of [1000,2000,3000])checkOpponentDraw(seed,false,false);
 checkOpponentDraw(1731,true,false);
 checkOpponentDraw(2700,false,true);
 checkOpponentDraw(1800,false,false,true);
-console.log('PASS Team Showdown 8 vs 8: full partner/opponent coverage, continuous dispatch, late arrival and division offsets');
+const panelSource=read('source/team-showdown-next-match-panel.js');
+const panelContext={
+ state:{}, rows:[], pending:[{id:'next'}],
+ esc:s=>s, matchSideName:(side,m)=>m[side], matchCategoryBadge:()=>'', teamColor:()=>'',
+};
+panelContext.E={
+ pendingMatches:()=>panelContext.pending,
+ liveCourts:()=>[{court:1},{court:2}],
+ individualNextMatchMonitor:()=>panelContext.rows
+};
+const panel=new vm.Script(panelSource+'\nindividualPrepareNextMatchHTML();');
+assert.match(panel.runInNewContext(panelContext),/No match can start after just one court finishes/);
+panelContext.rows=[{A:'Pair A',B:'Pair B',finishingCourts:[2],confirmedNext:false}];
+assert.match(panel.runInNewContext(panelContext),/Pair A.*Pair B.*WAITING FOR C2/);
+panelContext.rows=[{A:'Pair C',B:'Pair D',finishingCourts:[1,2],confirmedNext:true}];
+assert.match(panel.runInNewContext(panelContext),/Pair C.*Pair D.*UP NEXT/);
+panelContext.rows=[];panelContext.pending=[];
+assert.match(panel.runInNewContext(panelContext),/All matches allocated/);
+console.log('PASS Team Showdown 8 vs 8: full partner/opponent coverage, continuous dispatch, next-match monitor, late arrival and division offsets');

@@ -77,6 +77,13 @@ replaceEngine(' const penalty=v=>v<=2?(v===0?15:0):v===3?250:v===4?1900:1900+(v-
 replaceEngine('const pen=v=>v===0?22:v===1?0:v===2?0:v===3?180:v===4?1300:1300+(v-4)*2000;',
  'const pen=individualOpponentPenalty;');
 
+const nextMatchMonitor=fs.readFileSync('source/team-showdown-next-match.js','utf8');
+const nextMatchPanel=fs.readFileSync('source/team-showdown-next-match-panel.js','utf8');
+replaceEngine('return {individualMode,individualSegments,',
+ nextMatchMonitor+'\nreturn {individualNextMatchMonitor,individualMode,individualSegments,');
+replaceEngine('function prepareNextMatchHTML(){',
+ nextMatchPanel+'\nfunction prepareNextMatchHTML(){\n if(individualActive())return individualPrepareNextMatchHTML();');
+
 const menu='<details class="mc32-advanced"><summary>Advanced Settings';
 const session='<details class="mc32-advanced"><summary>Session Management</summary><div class="mc32-advanced-body"><button type="button" data-p58-cloud class="p58-menu-action">CLOUD SESSION</button></div></details>\n';
 if(html.split(menu).length!==2)throw Error('v097 native menu drift');

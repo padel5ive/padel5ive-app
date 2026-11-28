@@ -1,5 +1,5 @@
 /* PADEL 5IVE · Team Showdown v0.9.7 staging-only adapter.
- * Frozen source is recovered by checksum; engine scheduling/scoring untouched.
+ * Frozen source is recovered by checksum before runtime adapters.
  */
 'use strict';
 const fs=require('node:fs'),crypto=require('node:crypto'),vm=require('node:vm');
@@ -25,6 +25,58 @@ for(const [i,m] of [...source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>
  * This avoids breaking all the validated UI/PWA/Cloud adapters on Classic + Fixed.
  */
 let html=source;
+function replaceEngine(fragment,replacement){
+ if(html.split(fragment).length!==2)throw Error('Team Showdown opponent adapter source drift: '+fragment.slice(0,100));
+ html=html.replace(fragment,replacement);
+}
+const opponentDraw=fs.readFileSync('source/team-showdown-individual-opponents.js','utf8');
+replaceEngine('function individualBuildDivision(n,start,division,rnd){',
+ opponentDraw+'\nfunction individualBuildDivision(n,start,division,rnd,courts){\n if(n===8&&courts===3)return individualBuildThreeCourtDraw(start,division,rnd);');
+replaceEngine('individualBuildDivision(d.count,d.start,d.id,rnd)', 'individualBuildDivision(d.count,d.start,d.id,rnd,courts)');
+
+// Preserve the best round-safe draw found by the existing bounded search.
+replaceEngine(`const penalty=v=>v===0?14:v===1?0:v===2?0:v===3?90:v===4?450:450+(v-4)*600;
+ const size=fixtures.length,tries=Math.max(4000,size*1000);`,
+ `const penalty=individualOpponentPenalty;
+ const size=fixtures.length,tries=Math.max(4000,size*1000);
+ let score=0;for(const row of encounter)for(const count of row)score+=penalty(count);
+ if(score===0)return;
+ let bestScore=score,bestDuos=fixtures.map(m=>[m.b,m.b2]);`);
+replaceEngine('const temperature=step<tries*.2?20:step<tries*.5?7:step<tries*.85?3:0;',
+ 'const temperature=step<tries*.15?6:step<tries*.45?3:step<tries*.8?1.8:0;');
+replaceEngine(`for(let i=0;i<x.length;i++){[x[i].b,y[i].b]=[y[i].b,x[i].b];[x[i].b2,y[i].b2]=[y[i].b2,x[i].b2];}
+  }
+ }
+}`,`for(let i=0;i<x.length;i++){[x[i].b,y[i].b]=[y[i].b,x[i].b];[x[i].b2,y[i].b2]=[y[i].b2,x[i].b2];}
+   score+=delta;
+   if(score<bestScore){
+    bestScore=score;bestDuos=fixtures.map(m=>[m.b,m.b2]);
+    if(bestScore===0)break;
+   }
+  }
+ }
+ fixtures.forEach((m,i)=>{[m.b,m.b2]=bestDuos[i];});
+}`);
+
+// A pending-duo swap can fill a court or rebalance play counts. Retain the
+// planned opponent quality across those swaps while a legal fixture can run.
+replaceEngine('return {seg,a:a.slice(0,65),b:b.slice(0,65)};',
+ 'return {seg,a:a.slice(0,65),b:b.slice(0,65),pending:list};');
+const rescueStart='   let best=null;\n   for(const {seg,a:readyA,b:readyB}';
+const rescueEnd='   choice=x;\n';
+const rescue=html.indexOf(rescueStart),rescueEndIndex=html.indexOf(rescueEnd,rescue);
+if(rescue<0||rescueEndIndex<0)throw Error('Team Showdown court rescue source drift');
+replaceEngine(html.slice(rescue,rescueEndIndex+rescueEnd.length),`   const best=individualFindOpponentRotation(byDivision,total,globallyCounted,globallyPlayed,maxOriginal,ledger,s.setup.courts);
+   if(!best)break;
+   const {fixtures,change}=best;
+   individualRotateOpponentDuos(fixtures);
+   for(const [k,v] of change)if(v)globallyCounted[Math.floor(k/total)][k%total]+=v;
+   choice=fixtures[0];
+`);
+replaceEngine(' const penalty=v=>v<=2?(v===0?15:0):v===3?250:v===4?1900:1900+(v-4)*(v-4)*3500;\n','');
+replaceEngine('const pen=v=>v===0?22:v===1?0:v===2?0:v===3?180:v===4?1300:1300+(v-4)*2000;',
+ 'const pen=individualOpponentPenalty;');
+
 const menu='<details class="mc32-advanced"><summary>Advanced Settings';
 const session='<details class="mc32-advanced"><summary>Session Management</summary><div class="mc32-advanced-body"><button type="button" data-p58-cloud class="p58-menu-action">CLOUD SESSION</button></div></details>\n';
 if(html.split(menu).length!==2)throw Error('v097 native menu drift');

@@ -80,7 +80,7 @@ function checkOpponentDraw(seed, latestFirst, withLateArrival, multi=false){
   }
   const match=live.reduce((first,m)=>(latestFirst?m.sequence>first.sequence:m.sequence<first.sequence)?m:first);
   const beforePreview=JSON.stringify(state);
-  const monitor=engine.individualNextMatchMonitor(state,100);
+  const monitor=engine.individualNextMatchMonitor(state);
   assert.equal(JSON.stringify(state),beforePreview,'monitor changed the live session');
   const key=m=>[m.id,m.a,m.a2,m.b,m.b2].join(':');
   const expected=new Map();
@@ -94,8 +94,16 @@ function checkOpponentDraw(seed, latestFirst, withLateArrival, multi=false){
     expected.set(key(m),entry);
    }
   }
-  assert.equal(monitor.length,expected.size,'monitor omitted a possible refill or showed a stale fixture');
-  for(const row of monitor){
+  const eligible=engine.pendingMatches(state).filter(m=>[
+   ...[m.a,m.a2].map(i=>['A',i]), ...[m.b,m.b2].map(i=>['B',i])
+  ].every(([side,i])=>state.arrival[side][i]!==false&&!state.sitOut[side][i]));
+  const near=monitor.filter(m=>m.finishingCourts.length);
+  const onDeck=monitor.slice(near.length);
+  assert.equal(near.length,Math.min(2,new Set([...expected.keys()].map(key=>key.split(':')[0])).size));
+  assert.equal(monitor.length,Math.min(5,eligible.length+near.filter(row=>!eligible.some(m=>m.id===row.id)).length));
+  assert.equal(new Set(monitor.map(m=>m.id)).size,monitor.length);
+  assert(onDeck.every(row=>!row.finishingCourts.length&&!row.confirmedNext&&eligible.some(m=>key(m)===key(row))));
+  for(const row of near){
    const entry=expected.get(key(row));
    assert(entry,'displayed pairing cannot be called after any live court finishes');
    assert.equal(row.finishingCourts.join(','),entry.courts.join(','));
@@ -137,6 +145,12 @@ panelContext.rows=[{A:'Pair A',B:'Pair B',finishingCourts:[2],confirmedNext:fals
 assert.match(panel.runInNewContext(panelContext),/Pair A.*Pair B.*WAITING FOR C2/);
 panelContext.rows=[{A:'Pair C',B:'Pair D',finishingCourts:[1,2],confirmedNext:true}];
 assert.match(panel.runInNewContext(panelContext),/Pair C.*Pair D.*UP NEXT/);
+panelContext.rows=[{A:'Pair E',B:'Pair F',finishingCourts:[],confirmedNext:false}];
+const standbyPanel=panel.runInNewContext(panelContext);
+assert.match(standbyPanel,/No match can start after just one court finishes/);
+assert.match(standbyPanel,/ON DECK · ORDER MAY CHANGE/);
+assert.match(standbyPanel,/Pair E.*Pair F.*ON DECK/);
+assert.doesNotMatch(standbyPanel,/NEXT ON COURT/);
 panelContext.rows=[];panelContext.pending=[];
 assert.match(panel.runInNewContext(panelContext),/All matches allocated/);
 console.log('PASS Team Showdown 8 vs 8: full partner/opponent coverage, continuous dispatch, next-match monitor, late arrival and division offsets');
